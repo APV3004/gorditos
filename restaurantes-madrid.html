@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gorditos · Dónde comer en Madrid</title>
+<meta name="description" content="Guía personal de restaurantes en Madrid: filtra por zona, tipo de cocina y precio.">
+<meta name="color-scheme" content="light dark">
+
+<!-- Web app en iOS (Añadir a pantalla de inicio) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Gorditos">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Color de la barra de estado / UI del navegador, uno por esquema -->
+<meta name="theme-color" content="#F1EEE2" media="(prefers-color-scheme: light)" data-scheme="light">
+<meta name="theme-color" content="#171712" media="(prefers-color-scheme: dark)" data-scheme="dark">
+<meta name="theme-color" content="#F1EEE2" media="not all" data-scheme="manual">
+
+<link rel="apple-touch-icon" href="./icon-512.png">
+<link rel="icon" href="./icon-512.png" sizes="512x512" type="image/png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F1EEE2;
+    --paper-raised: #FAF8F1;
+    --ink: #1D2B22;
+    --ink-soft: #5B6459;
+    --line: #D8D2BE;
+    --line-input: #8F8874;
+    --accent: #9C6B22;
+    --accent-strong: #7A5119;
+    --wine: #7B3131;
+    --green: #2B4A3A;
+    --chip-bg: #E7E1CD;
+    --chip-active-bg: #2B4A3A;
+    --chip-active-fg: #F1EEE2;
+    --flag-bg: #F3E3C9;
+    --flag-fg: #7A5119;
+    --danger: #7B3131;
+    --danger-bg: #F1DEDE;
+    --warn-bg: #F7EBD4;
+    --warn-fg: #6E4714;
+    --focus-ring: rgba(156, 107, 34, 0.35);
+    --toast-bg: #24352B;
+    --toast-fg: #F1EEE2;
+    --shadow: 0 1px 0 rgba(29, 43, 34, 0.06);
+    --radius: 14px;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171712;
+      --paper-raised: #201F19;
+      --ink: #EDE8D8;
+      --ink-soft: #A9A28E;
+      --line: #3A3830;
+      --line-input: #767060;
+      --accent: #D6A34F;
+      --accent-strong: #E8B968;
+      --wine: #D08787;
+      --green: #7FA98F;
+      --chip-bg: #2A2921;
+      --chip-active-bg: #7FA98F;
+      --chip-active-fg: #171712;
+      --flag-bg: #2E2A1E;
+      --flag-fg: #D6A34F;
+      --danger: #D08787;
+      --danger-bg: #332020;
+      --warn-bg: #2E2A1E;
+      --warn-fg: #E2C48A;
+      --focus-ring: rgba(214, 163, 79, 0.45);
+      --toast-bg: #E7E1CD;
+      --toast-fg: #1D2B22;
+      --shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #171712;
+    --paper-raised: #201F19;
+    --ink: #EDE8D8;
+    --ink-soft: #A9A28E;
+    --line: #3A3830;
+    --line-input: #767060;
+    --accent: #D6A34F;
+    --accent-strong: #E8B968;
+    --wine: #D08787;
+    --green: #7FA98F;
+    --chip-bg: #2A2921;
+    --chip-active-bg: #7FA98F;
+    --chip-active-fg: #171712;
+    --flag-bg: #2E2A1E;
+    --flag-fg: #D6A34F;
+    --danger: #D08787;
+    --danger-bg: #332020;
+    --warn-bg: #2E2A1E;
+    --warn-fg: #E2C48A;
+    --focus-ring: rgba(214, 163, 79, 0.45);
+    --toast-bg: #E7E1CD;
+    --toast-fg: #1D2B22;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Work Sans', system-ui, -apple-system, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  button, input, select, textarea { font-family: inherit; }
+  button { touch-action: manipulation; }
+
+  /* Foco visible y coherente en todo lo interactivo */
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 20px 48px; }
+
+  header.page {
+    margin-bottom: 22px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .kicker { font-size: 13px; color: var(--accent-strong); letter-spacing: 0.02em; margin: 0 0 6px; }
+
+  h1 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.08;
+    margin: 0 0 10px;
+    letter-spacing: -0.01em;
+  }
+  h1 em { font-style: italic; color: var(--wine); }
+
+  .sub { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin: 0; max-width: 46ch; }
+  .count { font-family: 'Newsreader', serif; color: var(--ink); font-weight: 500; }
+
+  .header-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
+
+  .add-btn {
+    font-weight: 600;
+    font-size: 15px;
+    background: var(--green);
+    color: var(--paper);
+    border: none;
+    border-radius: 999px;
+    padding: 0 18px;
+    min-height: 44px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .add-btn:active { opacity: 0.85; }
+
+  .theme-btn {
+    background: transparent;
+    border: 1px solid var(--line-input);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Aviso de almacenamiento no disponible */
+  .banner {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  /* ---- Panel de alta / edición ---- */
+  .panel {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .panel h2 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 19px; margin: 0 0 12px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .field label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .field .hint { font-size: 12px; color: var(--ink-soft); font-weight: 400; }
+
+  /* 16px mínimo: por debajo, Safari en iOS hace zoom al enfocar el campo */
+  .field input,
+  .field select,
+  input.search,
+  select#sort,
+  textarea {
+    font-size: 16px;
+    padding: 11px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--line-input);
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    width: 100%;
+    min-height: 44px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .field select, select#sort {
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 14px center, right 9px center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 30px;
+  }
+  .field input:focus, .field select:focus, input.search:focus, select#sort:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+  .field input[aria-invalid="true"] { border-color: var(--danger); }
+
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; min-width: 0; }
+  .field-row .field.precio { flex: 0 0 116px; }
+
+  .panel-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+  .btn {
+    font-weight: 600;
+    font-size: 15px;
+    border-radius: 9px;
+    padding: 0 16px;
+    min-height: 46px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--green); color: var(--paper); border: none; flex: 1; }
+  .btn-primary:active { opacity: 0.85; }
+  .btn-secondary { background: transparent; color: var(--ink-soft); border: 1px solid var(--line-input); }
+
+  .msg { font-size: 12.5px; line-height: 1.45; margin: -4px 0 12px; }
+  .msg-error { color: var(--danger); }
+  .msg-warn { background: var(--warn-bg); color: var(--warn-fg); padding: 9px 11px; border-radius: 8px; margin-top: 0; }
+
+  /* ---- Controles ---- */
+  .controls { margin-top: 4px; display: flex; flex-direction: column; gap: 14px; }
+
+  input.search { background-color: var(--paper-raised); }
+  input.search::placeholder { color: var(--ink-soft); }
+  input.search::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+  .filter-block { display: flex; flex-direction: column; gap: 8px; }
+  .filter-label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+
+  .chip-row {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 14px;
+    padding: 0 15px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--ink);
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .chip[aria-pressed="true"] { background: var(--chip-active-bg); color: var(--chip-active-fg); }
+
+  .sort-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+  .sort-row label { font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+  select#sort { width: auto; flex: 1 1 130px; background-color: var(--paper-raised); }
+
+  .dado-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line-input);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dado-btn:active { background: var(--chip-bg); }
+
+  .result-line {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 24px;
+  }
+  .clear-filters {
+    background: none;
+    border: none;
+    color: var(--accent-strong);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 10px 0;
+    white-space: nowrap;
+  }
+
+  /* ---- Tarjetas ---- */
+  ul.list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  li.card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* Tarjeta elegida por el botón del azar */
+  li.card.destacada {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+  li.card:focus { outline: none; }
+
+  .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .card-name {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    font-size: 19px;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .card-price { font-size: 13.5px; color: var(--accent-strong); font-weight: 600; white-space: nowrap; }
+
+  .card-meta {
+    margin: 5px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 9px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+  }
+  .dot { color: var(--line); }
+
+  .flag {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    background: var(--flag-bg);
+    color: var(--flag-fg);
+    padding: 5px 9px;
+    border-radius: 8px;
+    display: inline-block;
+  }
+
+  .card-links { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .card-actions { margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
+  .card-actions button {
+    background: none;
+    border: none;
+    padding: 11px 0;
+    min-height: 44px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .card-actions button.danger { color: var(--danger); }
+
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-input);
+    background: transparent;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .card-link:active { background: var(--chip-bg); }
+  .card-link svg { width: 15px; height: 15px; flex: 0 0 auto; color: var(--accent-strong); }
+
+  .confirm-row {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    background: var(--danger-bg);
+    border-radius: 9px;
+    padding: 10px;
+  }
+  .confirm-row p { font-size: 13px; color: var(--ink); flex: 1 1 100%; margin: 0; }
+  .confirm-row button {
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 7px;
+    padding: 0 14px;
+    min-height: 42px;
+    border: none;
+    cursor: pointer;
+  }
+  .confirm-yes { background: var(--danger); color: var(--paper-raised); }
+  .confirm-no { background: transparent; color: var(--ink); border: 1px solid var(--line-input); }
+
+  .empty { text-align: center; color: var(--ink-soft); padding: 36px 10px; font-size: 14.5px; line-height: 1.6; }
+  .empty button {
+    display: inline-block;
+    margin-top: 12px;
+    background: none;
+    border: none;
+    color: var(--accent-strong);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 10px;
+  }
+
+  /* ---- Pie y copia de seguridad ---- */
+  footer.note {
+    margin-top: 30px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  footer.note p { margin: 0 0 12px; }
+
+  details.tools summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 10px 0;
+    list-style: none;
+  }
+  details.tools summary::-webkit-details-marker { display: none; }
+  details.tools summary::before { content: "▸ "; color: var(--ink-soft); }
+  details.tools[open] summary::before { content: "▾ "; }
+  .tools-body { padding: 4px 0 8px; display: flex; flex-direction: column; gap: 10px; }
+  .tools-body textarea {
+    min-height: 110px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    background-color: var(--paper-raised);
+  }
+  .tools-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tools-row .btn { flex: 1 1 auto; min-height: 44px; font-size: 14px; }
+
+  /* ---- Aviso flotante ---- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    z-index: 50;
+    max-width: min(560px, calc(100vw - 32px));
+    background: var(--toast-bg);
+    color: var(--toast-fg);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .toast button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 8px 2px;
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+
+  @media print {
+    .controls, .panel, .add-btn, .theme-btn, .card-actions, .confirm-row, .toast, details.tools { display: none !important; }
+    li.card { break-inside: avoid; border-color: #999; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div>
+      <p class="kicker">Adrián · Madrid</p>
+      <h1>Dónde <em>comer</em></h1>
+      <p class="sub">Tu lista, ordenable por zona, tipo de cocina y precio.</p>
+    </div>
+    <div class="header-actions">
+      <button class="add-btn" id="open-add" type="button" aria-expanded="false" aria-controls="panel">＋ Añadir</button>
+      <button class="theme-btn" id="theme-btn" type="button">Tema: automático</button>
+    </div>
+  </header>
+
+  <div class="banner" id="storage-banner" hidden></div>
+
+  <form class="panel" id="panel" novalidate aria-labelledby="panel-title" hidden>
+    <h2 id="panel-title">Añadir restaurante</h2>
+
+    <div class="field">
+      <label for="f-nombre">Nombre</label>
+      <input type="text" id="f-nombre" placeholder="Ej. Casa Dani"
+             autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="80" required
+             aria-describedby="f-nombre-error">
+    </div>
+    <p class="msg msg-error" id="f-nombre-error" hidden>Escribe un nombre para poder guardarlo.</p>
+    <p class="msg msg-warn" id="f-dup-warn" hidden></p>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="f-tipo">Tipo de cocina</label>
+        <input type="text" id="f-tipo" placeholder="Ej. Asturiana"
+               autocapitalize="sentences" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="60" list="tipos-sugeridos">
+      </div>
+      <div class="field precio">
+        <label for="f-precio">Precio</label>
+        <select id="f-precio">
+          <option value="1">€</option>
+          <option value="2" selected>€€</option>
+          <option value="3">€€€</option>
+        </select>
+      </div>
+    </div>
+    <datalist id="tipos-sugeridos"></datalist>
+
+    <div class="field">
+      <label for="f-zona">Zona</label>
+      <input type="text" id="f-zona" placeholder="Ej. Chamberí"
+             autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="80" list="zonas-sugeridas">
+    </div>
+    <datalist id="zonas-sugeridas"></datalist>
+
+    <div class="field">
+      <label for="f-carta">Carta o menú online <span class="hint">— opcional</span></label>
+      <input type="url" id="f-carta" placeholder="Ej. casadani.com/carta"
+             inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="500"
+             aria-describedby="f-carta-warn">
+    </div>
+    <p class="msg msg-warn" id="f-carta-warn" hidden></p>
+
+    <div class="field">
+      <label for="f-reserva">Reservar <span class="hint">— opcional: web o teléfono</span></label>
+      <input type="text" id="f-reserva" placeholder="Ej. 915 63 89 77 o casadani.com/reservas"
+             autocapitalize="none" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="500"
+             aria-describedby="f-reserva-warn">
+    </div>
+    <p class="msg msg-warn" id="f-reserva-warn" hidden></p>
+
+    <div class="field">
+      <label for="f-direccion">Dirección <span class="hint">— opcional, afina «Cómo llegar»</span></label>
+      <input type="text" id="f-direccion" placeholder="Ej. C/ Gaztambide, 56"
+             autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="160">
+    </div>
+
+    <div class="field">
+      <label for="f-nota">Nota <span class="hint">— opcional</span></label>
+      <input type="text" id="f-nota" placeholder="Ej. reservar con antelación"
+             autocapitalize="sentences" enterkeyhint="done" maxlength="120">
+    </div>
+
+    <div class="panel-actions">
+      <button class="btn btn-primary" id="save-btn" type="submit">Guardar</button>
+      <button class="btn btn-secondary" id="cancel-btn" type="button">Cancelar</button>
+    </div>
+  </form>
+
+  <div class="controls">
+    <div class="search-row">
+      <label class="sr-only" for="search">Buscar restaurante</label>
+      <input type="search" class="search" id="search"
+             placeholder="Buscar nombre, cocina o zona…"
+             autocapitalize="none" autocorrect="off" spellcheck="false"
+             enterkeyhint="search" maxlength="60">
+    </div>
+
+    <div class="filter-block">
+      <span class="filter-label" id="lbl-zona">Zona</span>
+      <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
+    </div>
+
+    <div class="filter-block">
+      <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
+      <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
+    </div>
+
+    <div class="filter-block">
+      <span class="filter-label" id="lbl-precio">Precio</span>
+      <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
+    </div>
+
+    <div class="sort-row">
+      <label for="sort">Ordenar por</label>
+      <select id="sort">
+        <option value="nombre">Nombre (A–Z)</option>
+        <option value="zona">Zona</option>
+        <option value="tipo">Tipo de cocina</option>
+        <option value="precio">Precio (menor a mayor)</option>
+        <option value="recientes">Añadidos recientemente</option>
+      </select>
+      <button class="dado-btn" id="random-btn" type="button">Sorpréndeme</button>
+    </div>
+  </div>
+
+  <div class="result-line">
+    <p id="result-count" aria-live="polite" style="margin:0;"></p>
+    <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
+  </div>
+
+  <ul class="list" id="list"></ul>
+  <div class="empty" id="empty" hidden></div>
+
+  <footer class="note">
+    <p>Los cambios se guardan solo en este dispositivo: no se sincronizan con otros. Si borras los datos de Safari para este sitio, se pierden. Haz una copia de vez en cuando.</p>
+
+    <details class="tools">
+      <summary>Copia de seguridad</summary>
+      <div class="tools-body">
+        <label class="sr-only" for="backup-box">Datos de la lista en formato JSON</label>
+        <textarea id="backup-box" spellcheck="false" autocapitalize="none" autocorrect="off"
+                  placeholder="Pulsa «Crear copia» para volcar aquí tu lista, o pega una copia anterior y pulsa «Restaurar»."></textarea>
+        <div class="tools-row">
+          <button class="btn btn-secondary" id="export-btn" type="button">Crear copia</button>
+          <button class="btn btn-secondary" id="copy-btn" type="button">Copiar</button>
+          <button class="btn btn-secondary" id="import-btn" type="button">Restaurar</button>
+        </div>
+        <p id="tools-msg" class="msg" aria-live="polite" style="margin:0;"></p>
+      </div>
+    </details>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-text"></span>
+  <button type="button" id="toast-action" hidden></button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     1. Almacenamiento: claves, disponibilidad y lectura segura
+     ============================================================ */
+
+  var CLAVE_V1 = "gorditos-restaurantes-v1";   // formato antiguo: array plano
+  var CLAVE_V2 = "gorditos-restaurantes-v2";   // formato actual: { v: 2, items: [...] }
+  var CLAVE_FILTROS = "gorditos-filtros-v1";
+  var CLAVE_TEMA = "gorditos-tema-v1";
+
+  // ¿Se puede escribir en localStorage? (modo privado de Safari, cuota, etc.)
+  var almacenOk = (function () {
+    try {
+      var t = "__gorditos_test__";
+      localStorage.setItem(t, "1");
+      localStorage.removeItem(t);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  function leerCrudo(clave) {
+    try {
+      return localStorage.getItem(clave);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function escribirCrudo(clave, valor) {
+    try {
+      localStorage.setItem(clave, valor);
+      return { ok: true };
+    } catch (e) {
+      var lleno = e && (e.name === "QuotaExceededError" ||
+                        e.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+                        e.code === 22 || e.code === 1014);
+      return { ok: false, lleno: !!lleno, error: e };
+    }
+  }
+
+  /* ============================================================
+     2. Datos iniciales (solo si el dispositivo no tiene nada)
+     ============================================================ */
+
+  var seedData = [
+    { nombre: "La Bientirada", tipo: "Mediterránea", zona: "Varias zonas (Quevedo, Santa Engracia…)", precio: 2 },
+    { nombre: "La Ancha", tipo: "Española / Asador", zona: "Varias zonas (Alcalá, Zorrilla…)", precio: 3, carta: "https://www.laancha.com/" },
+    { nombre: "Lamucca", tipo: "Mediterránea / Internacional", zona: "Varias zonas (Prado, Serrano, Almagro…)", precio: 2, carta: "https://www.lamuccacompany.com/" },
+    { nombre: "El Urogallo", tipo: "Asturiana", zona: "Chamberí", precio: 2, carta: "https://carta.elurogallo.es/", reserva: "+34 919 55 09 09" },
+    { nombre: "Hundred", tipo: "Hamburguesas", zona: "Salamanca", precio: 2, carta: "https://hundredburgers.com/carta/", reserva: "https://hundredburgers.com/pide" },
+    { nombre: "Numa Pompilio", tipo: "Italiana", zona: "Salamanca", precio: 3, carta: "http://restaurantenuma.com/", reserva: "+34 916 85 97 19" },
+    { nombre: "Bazaar", tipo: "Internacional / Fusión", zona: "Chueca", precio: 2, carta: "https://andilana.com/restaurantes/bazaar/", reserva: "https://andilana.com/restaurantes/bazaar/#reservar" },
+    { nombre: "La finca de Susana", tipo: "Mediterránea", zona: "Centro (Sevilla)", precio: 2, carta: "https://andilana.com/restaurantes/la-finca-de-susana/", reserva: "https://andilana.com/restaurantes/la-finca-de-susana/#reservar" },
+    { nombre: "Santa Canela", tipo: "Cafetería / Brunch", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar en Madrid" },
+    { nombre: "Alcaravea", tipo: "Española tradicional renovada", zona: "Chamberí (Gaztambide)", precio: 3, reserva: "+34 912 83 80 05" },
+    { nombre: "Pez tortilla", tipo: "Tortilla española", zona: "Malasaña", precio: 1 },
+    { nombre: "Camino", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
+    { nombre: "Beata Pasta", tipo: "Italiana (pasta)", zona: "Malasaña", precio: 1 },
+    { nombre: "Ornella", tipo: "Italiana", zona: "Chamberí", precio: 2 },
+    { nombre: "Baldoria", tipo: "Italiana", zona: "Malasaña / Chueca", precio: 2 },
+    { nombre: "Casa Luna", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
+    { nombre: "Massart Pizza", tipo: "Pizza", zona: "Chamberí", precio: 1, carta: "https://www.massartpizza.com/" },
+    { nombre: "Riaño", tipo: "Asturiana", zona: "Chamberí", precio: 2 },
+    { nombre: "Jose Luis", tipo: "Tapas clásicas", zona: "Varias zonas (Salamanca, Serrano…)", precio: 3 },
+    { nombre: "Botania", tipo: "Mediterránea", zona: "Plaza de España / Universidad", precio: 3 },
+    { nombre: "SottoSopra", tipo: "Italiana", zona: "Chamberí", precio: 2 },
+    { nombre: "La Taberna de Peñalver", tipo: "Española tradicional", zona: "Chueca", precio: 2 },
+    { nombre: "Café de París", tipo: "Clásica española/francesa", zona: "Centro", precio: 2 },
+    { nombre: "El Ñeru", tipo: "Asturiana", zona: "Malasaña", precio: 2 },
+    { nombre: "El pimiento verde", tipo: "Tapas españolas", zona: "Varias zonas (Salamanca, Recoletos…)", precio: 2 },
+    { nombre: "Villa Capri", tipo: "Italiana", zona: "Chamberí (aprox.)", precio: 2, flag: "zona aproximada" },
+    { nombre: "Fass", tipo: "Cervecería alemana", zona: "Retiro (Menéndez Pelayo)", precio: 2 },
+    { nombre: "Lateral", tipo: "Tapas moderna", zona: "Varias zonas (cadena)", precio: 2, carta: "https://www.lateral.com/carta" },
+    { nombre: "Ópera Victoria", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/opera-victoria/", reserva: "https://andilana.com/restaurantes/opera-victoria/#reservar" },
+    { nombre: "Ginger", tipo: "Tapas y cócteles", zona: "Centro (Plaza del Ángel)", precio: 2, carta: "https://andilana.com/restaurantes/ginger/", reserva: "https://andilana.com/restaurantes/ginger/#reservar" },
+    { nombre: "La gloria de montera", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/la-gloria-de-montera/", reserva: "https://andilana.com/restaurantes/la-gloria-de-montera/#reservar" },
+    { nombre: "Perrachica", tipo: "Vermutería / Española moderna", zona: "Chamberí", precio: 2, carta: "https://glhrestaurants.com/l/restaurantes/perrachica/" },
+    { nombre: "PerretxiCo", tipo: "Pinchos vascos", zona: "Malasaña", precio: 2, carta: "https://perretxico.es/" },
+    { nombre: "Los bocadillos", tipo: "Bocadillos", zona: "Sin confirmar", precio: 1, flag: "dato sin confirmar" },
+    { nombre: "Reginella", tipo: "Pizza italiana", zona: "Chamberí / Salamanca", precio: 2 },
+    { nombre: "Raimunda", tipo: "Fusión mediterránea-iberoamericana", zona: "Recoletos / Salamanca", precio: 3 }
+  ];
+
+  /* ============================================================
+     3. Utilidades
+     ============================================================ */
+
+
+  /* ------------------------------------------------------------
+     Catálogo de cartas verificadas (septiembre 2026).
+     Se aplica una sola vez a los restaurantes que aún no tengan
+     enlace, para que los datos que ya están en el móvil también
+     lo reciban. Al subir CATALOGO_CARTAS_VERSION se vuelve a pasar
+     sobre los que sigan vacíos, sin tocar los que ya tienen uno.
+     ------------------------------------------------------------ */
+  var CLAVE_CATALOGO = "gorditos-cartas-aplicadas";
+  var CATALOGO_CARTAS_VERSION = 2;
+
+  var CATALOGO_CARTAS = {
+    "bazaar":               { carta: "https://andilana.com/restaurantes/bazaar/",
+                              reserva: "https://andilana.com/restaurantes/bazaar/#reservar" },
+    "la finca de susana":   { carta: "https://andilana.com/restaurantes/la-finca-de-susana/",
+                              reserva: "https://andilana.com/restaurantes/la-finca-de-susana/#reservar" },
+    "ginger":               { carta: "https://andilana.com/restaurantes/ginger/",
+                              reserva: "https://andilana.com/restaurantes/ginger/#reservar" },
+    "la gloria de montera": { carta: "https://andilana.com/restaurantes/la-gloria-de-montera/",
+                              reserva: "https://andilana.com/restaurantes/la-gloria-de-montera/#reservar" },
+    "opera victoria":       { carta: "https://andilana.com/restaurantes/opera-victoria/",
+                              reserva: "https://andilana.com/restaurantes/opera-victoria/#reservar" },
+    "hundred":              { carta: "https://hundredburgers.com/carta/",
+                              reserva: "https://hundredburgers.com/pide" },
+    "el urogallo":          { carta: "https://carta.elurogallo.es/",
+                              reserva: "+34 919 55 09 09" },
+    "numa pompilio":        { carta: "http://restaurantenuma.com/",
+                              reserva: "+34 916 85 97 19" },
+    "alcaravea":            { reserva: "+34 912 83 80 05" },
+    "la ancha":             { carta: "https://www.laancha.com/" },
+    "lamucca":              { carta: "https://www.lamuccacompany.com/" },
+    "perrachica":           { carta: "https://glhrestaurants.com/l/restaurantes/perrachica/" },
+    "perretxico":           { carta: "https://perretxico.es/" },
+    "massart pizza":        { carta: "https://www.massartpizza.com/" },
+    "lateral":              { carta: "https://www.lateral.com/carta" }
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  /**
+   * Desplaza un elemento a la vista sin que un fallo aquí tumbe el resto
+   * del manejador: es cosmético, nunca debe impedir que se guarde algo o
+   * que se muestre un aviso.
+   */
+  function desplazarA(el, opciones) {
+    if (!el || typeof el.scrollIntoView !== "function") return;
+    try { el.scrollIntoView(opciones); } catch (e) { /* cosmético */ }
+  }
+
+  var contadorId = 0;
+  function makeId() {
+    contadorId += 1;
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return "r_" + window.crypto.randomUUID();
+    }
+    return "r_" + Date.now().toString(36) + "_" + contadorId.toString(36) +
+           "_" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function texto(v) {
+    if (typeof v === "string") return v.trim();
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number" || typeof v === "boolean") return String(v).trim();
+    return "";
+  }
+
+  // Comparación insensible a mayúsculas y acentos: "Peñalver" ≈ "penalver"
+  function plano(s) {
+    return texto(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
+  function comparar(a, b) {
+    return texto(a).localeCompare(texto(b), "es", { sensitivity: "base" });
+  }
+
+  /**
+   * Acepta lo que el usuario escriba y decide si sirve como enlace.
+   * Nunca bloquea el guardado: si no es válida, se conserva el texto tal cual
+   * y simplemente no se pinta el botón de la carta.
+   */
+  function analizarUrl(valor) {
+    var v = texto(valor);
+    if (!v) return { href: "", valida: true, vacia: true };
+
+    var candidata = v;
+    if (!/^[a-z][a-z0-9+.\-]*:/i.test(candidata)) candidata = "https://" + candidata;
+
+    try {
+      var u = new URL(candidata);
+      if (u.protocol !== "http:" && u.protocol !== "https:") return { href: v, valida: false };
+      if (u.hostname.indexOf(".") === -1 || /\s/.test(u.hostname)) return { href: v, valida: false };
+      return { href: u.href, valida: true, vacia: false };
+    } catch (e) {
+      return { href: v, valida: false };
+    }
+  }
+
+  /**
+   * El campo "Reservar" admite las dos cosas que sirven de verdad en un
+   * móvil: una web de reservas o un teléfono. Se decide cuál es por la
+   * forma del texto, sin obligar al usuario a elegir.
+   */
+  function analizarReserva(valor) {
+    var v = texto(valor);
+    if (!v) return { vacia: true, valida: true, tipo: "", href: "" };
+
+    var digitos = v.replace(/\D/g, "");
+    if (/^[+()\d\s.\-]+$/.test(v) && digitos.length >= 7 && digitos.length <= 15) {
+      return { vacia: false, valida: true, tipo: "tel", href: "tel:" + v.replace(/[^\d+]/g, "") };
+    }
+
+    var an = analizarUrl(v);
+    return { vacia: false, valida: an.valida, tipo: "url", href: an.href };
+  }
+
+  function esApple() {
+    var ua = navigator.userAgent || "";
+    var plat = navigator.platform || "";
+    return /iPad|iPhone|iPod|Macintosh|Mac OS X/.test(plat + " " + ua);
+  }
+
+  /**
+   * Consulta para Mapas. Si no hay dirección, se compone con el nombre y
+   * la zona, quitando antes las coletillas que solo confundirían al
+   * buscador: "Varias zonas", "Sin confirmar" y los paréntesis.
+   */
+  function consultaMapa(d) {
+    if (d.direccion) return d.direccion + ", Madrid";
+
+    var z = texto(d.zona);
+    if (/^Varias zonas/i.test(z) || /^Sin (confirmar|especificar)/i.test(z)) z = "";
+    z = z.replace(/\([^)]*\)/g, " ").split("/")[0].replace(/\s+/g, " ").trim();
+
+    return (z ? d.nombre + " " + z : d.nombre) + " Madrid";
+  }
+
+  function urlMapa(d) {
+    var q = encodeURIComponent(consultaMapa(d));
+    return esApple()
+      ? "https://maps.apple.com/?q=" + q
+      : "https://www.google.com/maps/search/?api=1&query=" + q;
+  }
+
+  /* ============================================================
+     4. Normalización y migración de datos
+     ============================================================ */
+
+  /**
+   * Convierte cualquier registro (del formato antiguo, de una copia
+   * de seguridad o incluso corrupto) al formato actual, sin tirar nada.
+   */
+  function normalizarRegistro(bruto, orden) {
+    var o = (bruto && typeof bruto === "object") ? bruto : {};
+
+    var precio = parseInt(o.precio, 10);
+    if (!(precio >= 1 && precio <= 3)) precio = 2;
+
+    // Nombres de campo tolerantes: versiones antiguas o copias hechas a mano
+    var carta = texto(o.carta || o.url || o.web || o.menu || o.enlace);
+    var an = analizarUrl(carta);
+
+    var res = analizarReserva(o.reserva || o.reservas || o.telefono);
+
+    var creado = Number(o.creado);
+    if (!isFinite(creado) || creado < 0) creado = orden || 0;
+
+    return {
+      id: texto(o.id) || makeId(),
+      nombre: texto(o.nombre || o.name) || "Sin nombre",
+      tipo: texto(o.tipo) || "Sin especificar",
+      zona: texto(o.zona) || "Sin especificar",
+      precio: precio,
+      flag: texto(o.flag || o.nota),
+      carta: an.vacia ? "" : an.href,
+      cartaValida: !an.vacia && an.valida,
+      reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva || o.reservas || o.telefono)),
+      direccion: texto(o.direccion),
+      creado: creado
+    };
+  }
+
+  function normalizarLista(arr) {
+    if (!Array.isArray(arr)) return [];
+    var vistos = Object.create(null);
+    var salida = [];
+    for (var i = 0; i < arr.length; i++) {
+      var r = normalizarRegistro(arr[i], i + 1);
+      if (vistos[r.id]) r.id = makeId();   // ids duplicados en datos heredados
+      vistos[r.id] = true;
+      salida.push(r);
+    }
+    return salida;
+  }
+
+  function parsearJson(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+
+  /**
+   * Orden de preferencia al arrancar:
+   *   1) v2 (formato actual)
+   *   2) v1 (formato antiguo) → se migra a v2 y v1 se deja INTACTO como respaldo
+   *   3) lista inicial
+   * Si algo está corrupto, se guarda una copia con sufijo -corrupto antes de
+   * continuar, para no perder nada de forma irreversible.
+   */
+  function cargarDatos() {
+    var rawV2 = leerCrudo(CLAVE_V2);
+    if (rawV2) {
+      var v2 = parsearJson(rawV2);
+      var items2 = Array.isArray(v2) ? v2 : (v2 && Array.isArray(v2.items) ? v2.items : null);
+      if (items2) return { items: normalizarLista(items2), origen: "v2" };
+      escribirCrudo(CLAVE_V2 + "-corrupto-" + Date.now(), rawV2);
+    }
+
+    var rawV1 = leerCrudo(CLAVE_V1);
+    if (rawV1) {
+      var v1 = parsearJson(rawV1);
+      if (Array.isArray(v1)) {
+        var migrados = normalizarLista(v1);
+        guardarDatos(migrados);            // se escribe en v2; v1 se conserva tal cual
+        return { items: migrados, origen: "migrado" };
+      }
+      escribirCrudo(CLAVE_V1 + "-corrupto-" + Date.now(), rawV1);
+    }
+
+    var inicial = normalizarLista(seedData);
+    guardarDatos(inicial);
+    return { items: inicial, origen: "inicial" };
+  }
+
+  function guardarDatos(items) {
+    var carga = JSON.stringify({
+      v: 2,
+      guardado: Date.now(),
+      items: items.map(function (d) {
+        var salida = { id: d.id, nombre: d.nombre, tipo: d.tipo, zona: d.zona, precio: d.precio, creado: d.creado };
+        if (d.flag) salida.flag = d.flag;
+        if (d.carta) salida.carta = d.carta;
+        if (d.reserva) salida.reserva = d.reserva;
+        if (d.direccion) salida.direccion = d.direccion;
+        return salida;
+      })
+    });
+    var res = escribirCrudo(CLAVE_V2, carga);
+    if (!res.ok) {
+      avisar(res.lleno
+        ? "No se pudo guardar: el almacenamiento está lleno. Haz una copia desde el pie de página."
+        : "No se pudo guardar el cambio en este dispositivo.");
+    }
+    return res.ok;
+  }
+
+
+  /**
+   * Rellena "carta" y "reserva" de los restaurantes que aún no los tengan,
+   * usando el catálogo de arriba. Cada campo va por su cuenta: no se pisa
+   * nunca un dato existente, y si borras uno a mano no vuelve a aparecer
+   * (la versión del catálogo ya queda marcada como aplicada).
+   */
+  function aplicarCatalogoCartas(items) {
+    var aplicada = parseInt(leerCrudo(CLAVE_CATALOGO), 10);
+    if (aplicada >= CATALOGO_CARTAS_VERSION) return 0;
+
+    var puestas = 0;
+    items.forEach(function (d) {
+      var ficha = CATALOGO_CARTAS[plano(d.nombre)];
+      if (!ficha) return;
+      if (ficha.carta && !d.carta) {
+        d.carta = ficha.carta;
+        d.cartaValida = true;
+        puestas += 1;
+      }
+      if (ficha.reserva && !d.reserva) {
+        d.reserva = ficha.reserva;
+        puestas += 1;
+      }
+    });
+
+    escribirCrudo(CLAVE_CATALOGO, String(CATALOGO_CARTAS_VERSION));
+    if (puestas) guardarDatos(items);
+    return puestas;
+  }
+
+  var carga = cargarDatos();
+  var data = carga.items;
+  var cartasNuevas = aplicarCatalogoCartas(data);
+
+  /* ============================================================
+     5. Estado de la vista (filtros persistentes)
+     ============================================================ */
+
+  var etiquetaPrecio = { 1: "€", 2: "€€", 3: "€€€" };
+  var nombrePrecio = { 1: "económico", 2: "precio medio", 3: "caro" };
+
+  var state = { search: "", zona: "Todas", tipo: "Todos", precio: "Todos", sort: "nombre" };
+
+  (function restaurarFiltros() {
+    var g = parsearJson(leerCrudo(CLAVE_FILTROS));
+    if (!g || typeof g !== "object") return;
+    if (typeof g.zona === "string") state.zona = g.zona;
+    if (typeof g.tipo === "string") state.tipo = g.tipo;
+    if (typeof g.precio === "string") state.precio = g.precio;
+    if (typeof g.sort === "string") state.sort = g.sort;
+    // La búsqueda no se restaura a propósito: reabrir la app con un filtro
+    // de texto puesto hace pensar que se han perdido restaurantes.
+  })();
+
+  function guardarFiltros() {
+    escribirCrudo(CLAVE_FILTROS, JSON.stringify({
+      zona: state.zona, tipo: state.tipo, precio: state.precio, sort: state.sort
+    }));
+  }
+
+  var editandoId = null;
+  var pendienteConfirmarDuplicado = false;
+  var idsExpandidosBorrado = Object.create(null);
+
+  /* ============================================================
+     6. Referencias del DOM
+     ============================================================ */
+
+  var panel = $("panel");
+  var panelTitle = $("panel-title");
+  var btnAbrir = $("open-add");
+  var fNombre = $("f-nombre");
+  var fTipo = $("f-tipo");
+  var fZona = $("f-zona");
+  var fPrecio = $("f-precio");
+  var fCarta = $("f-carta");
+  var fReserva = $("f-reserva");
+  var fDireccion = $("f-direccion");
+  var fNota = $("f-nota");
+  var errNombre = $("f-nombre-error");
+  var avisoDup = $("f-dup-warn");
+  var avisoCarta = $("f-carta-warn");
+  var avisoReserva = $("f-reserva-warn");
+  var btnGuardar = $("save-btn");
+  var lista = $("list");
+  var vacio = $("empty");
+  var contador = $("result-count");
+  var btnLimpiar = $("clear-filters");
+
+  /* ============================================================
+     7. Aviso flotante (con acción opcional, p. ej. deshacer)
+     ============================================================ */
+
+  var temporizadorToast = null;
+
+  // Se resuelven en el momento de usarlos: avisar() puede llamarse durante la
+  // carga de datos, antes de que se hayan asignado las referencias de arriba.
+  var toast, toastText, toastAction;
+  function refsToast() {
+    if (!toast) { toast = $("toast"); toastText = $("toast-text"); toastAction = $("toast-action"); }
+    return !!(toast && toastText && toastAction);
+  }
+
+  function avisar(mensaje, accion) {
+    if (!refsToast()) return;
+    clearTimeout(temporizadorToast);
+    toastText.textContent = mensaje;
+    if (accion) {
+      toastAction.textContent = accion.etiqueta;
+      toastAction.hidden = false;
+      toastAction.onclick = function () { ocultarToast(); accion.alPulsar(); };
+    } else {
+      toastAction.hidden = true;
+      toastAction.onclick = null;
+    }
+    toast.hidden = false;
+    temporizadorToast = setTimeout(ocultarToast, accion ? 7000 : 3200);
+  }
+
+  function ocultarToast() {
+    clearTimeout(temporizadorToast);
+    if (!refsToast()) return;
+    toast.hidden = true;
+    toastAction.onclick = null;
+  }
+
+  /* ============================================================
+     8. Tema claro / oscuro / automático
+     ============================================================ */
+
+  (function tema() {
+    var btn = $("theme-btn");
+    var metaLight = document.querySelector('meta[data-scheme="light"]');
+    var metaDark = document.querySelector('meta[data-scheme="dark"]');
+    var metaManual = document.querySelector('meta[data-scheme="manual"]');
+    var ciclo = ["auto", "light", "dark"];
+    var nombres = { auto: "automático", light: "claro", dark: "oscuro" };
+
+    var actual = leerCrudo(CLAVE_TEMA);
+    if (ciclo.indexOf(actual) === -1) actual = "auto";
+
+    function aplicar(t) {
+      actual = t;
+      if (t === "auto") {
+        document.documentElement.removeAttribute("data-theme");
+        metaLight.media = "(prefers-color-scheme: light)";
+        metaDark.media = "(prefers-color-scheme: dark)";
+        metaManual.media = "not all";
+      } else {
+        document.documentElement.setAttribute("data-theme", t);
+        metaLight.media = "not all";
+        metaDark.media = "not all";
+        metaManual.media = "all";
+        metaManual.content = (t === "dark") ? "#171712" : "#F1EEE2";
+      }
+      btn.textContent = "Tema: " + nombres[t];
+      btn.setAttribute("aria-label", "Cambiar tema. Ahora: " + nombres[t]);
+      escribirCrudo(CLAVE_TEMA, t);
+    }
+
+    btn.addEventListener("click", function () {
+      aplicar(ciclo[(ciclo.indexOf(actual) + 1) % ciclo.length]);
+    });
+
+    aplicar(actual);
+  })();
+
+  /* ============================================================
+     9. Filtros por chips
+     ============================================================ */
+
+  function grupoZona(z) {
+    var v = texto(z);
+    if (!v) return "Sin especificar";
+    if (v.indexOf("Varias zonas") === 0) return "Varias zonas";
+    if (v === "Sin confirmar") return "Sin confirmar";
+    return v.split(/[(\/]/)[0].trim() || "Sin especificar";
+  }
+
+  // Se recuerda la firma de cada grupo de chips para no reconstruirlos
+  // (y perder el scroll horizontal) cuando el contenido no ha cambiado.
+  var firmasChips = {};
+
+  function construirChips(contenedorId, valores, clave) {
+    var contenedor = $(contenedorId);
+    var firma = valores.join("\u0000") + "|" + state[clave];
+
+    if (valores.indexOf(state[clave]) === -1) {
+      state[clave] = valores[0];
+      firma = valores.join("\u0000") + "|" + state[clave];
+    }
+    if (firmasChips[contenedorId] === firma) return;
+    firmasChips[contenedorId] = firma;
+
+    var scroll = contenedor.scrollLeft;
+    var frag = document.createDocumentFragment();
+
+    valores.forEach(function (v) {
+      var chip = document.createElement("button");
+      chip.className = "chip";
+      chip.type = "button";
+      chip.textContent = v;
+      chip.setAttribute("aria-pressed", state[clave] === v ? "true" : "false");
+      chip.addEventListener("click", function () {
+        state[clave] = v;
+        var hermanos = contenedor.children;
+        for (var i = 0; i < hermanos.length; i++) hermanos[i].setAttribute("aria-pressed", "false");
+        chip.setAttribute("aria-pressed", "true");
+        firmasChips[contenedorId] = valores.join("\u0000") + "|" + v;
+        guardarFiltros();
+        render();
+      });
+      frag.appendChild(chip);
+    });
+
+    contenedor.replaceChildren(frag);
+    contenedor.scrollLeft = scroll;
+  }
+
+  function refrescarFuentesChips() {
+    var zonas = ["Todas"], tipos = ["Todos"];
+    var vistasZ = Object.create(null), vistosT = Object.create(null);
+
+    data.forEach(function (d) {
+      var z = grupoZona(d.zona);
+      if (!vistasZ[z]) { vistasZ[z] = true; zonas.push(z); }
+      var t = d.tipo || "Sin especificar";
+      if (!vistosT[t]) { vistosT[t] = true; tipos.push(t); }
+    });
+
+    zonas = [zonas[0]].concat(zonas.slice(1).sort(comparar));
+    tipos = [tipos[0]].concat(tipos.slice(1).sort(comparar));
+
+    construirChips("zona-chips", zonas, "zona");
+    construirChips("tipo-chips", tipos, "tipo");
+    construirChips("precio-chips", ["Todos", "€", "€€", "€€€"], "precio");
+
+    // Sugerencias del formulario a partir de lo que ya existe
+    rellenarDatalist("zonas-sugeridas", zonas.slice(1));
+    rellenarDatalist("tipos-sugeridos", tipos.slice(1));
+  }
+
+  function rellenarDatalist(id, valores) {
+    var dl = $(id);
+    if (!dl) return;
+    var frag = document.createDocumentFragment();
+    valores.forEach(function (v) {
+      if (!v || v === "Sin especificar") return;
+      var op = document.createElement("option");
+      op.value = v;
+      frag.appendChild(op);
+    });
+    dl.replaceChildren(frag);
+  }
+
+  function hayFiltros() {
+    return state.zona !== "Todas" || state.tipo !== "Todos" ||
+           state.precio !== "Todos" || state.search !== "";
+  }
+
+  btnLimpiar.addEventListener("click", function () {
+    state.zona = "Todas"; state.tipo = "Todos"; state.precio = "Todos"; state.search = "";
+    $("search").value = "";
+    firmasChips = {};
+    guardarFiltros();
+    refrescarFuentesChips();
+    render();
+    $("search").focus();
+  });
+
+  /* ============================================================
+     10. Búsqueda y orden
+     ============================================================ */
+
+  var debounceBusqueda = null;
+  $("search").addEventListener("input", function (e) {
+    var v = e.target.value;
+    clearTimeout(debounceBusqueda);
+    debounceBusqueda = setTimeout(function () {
+      state.search = plano(v);
+      render();
+    }, 110);
+  });
+
+  // En iOS el teclado no se cierra solo: «Buscar» debe bajarlo.
+  $("search").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+  });
+
+  var selectOrden = $("sort");
+  selectOrden.value = state.sort;
+  if (selectOrden.value !== state.sort) { state.sort = "nombre"; selectOrden.value = "nombre"; }
+  selectOrden.addEventListener("change", function (e) {
+    state.sort = e.target.value;
+    guardarFiltros();
+    render();
+  });
+
+  /* ============================================================
+     11. Panel de alta y edición
+     ============================================================ */
+
+  function limpiarAvisosFormulario() {
+    errNombre.hidden = true;
+    avisoDup.hidden = true;
+    avisoCarta.hidden = true;
+    avisoReserva.hidden = true;
+    fNombre.removeAttribute("aria-invalid");
+    btnGuardar.textContent = "Guardar";
+    pendienteConfirmarDuplicado = false;
+  }
+
+  function abrirPanel(item) {
+    if (item) {
+      editandoId = item.id;
+      panelTitle.textContent = "Editar restaurante";
+      fNombre.value = item.nombre;
+      fTipo.value = item.tipo === "Sin especificar" ? "" : item.tipo;
+      fZona.value = item.zona === "Sin especificar" ? "" : item.zona;
+      fPrecio.value = String(item.precio);
+      fCarta.value = item.carta || "";
+      fReserva.value = item.reserva || "";
+      fDireccion.value = item.direccion || "";
+      fNota.value = item.flag || "";
+      btnGuardar.textContent = "Guardar cambios";
+    } else {
+      editandoId = null;
+      panelTitle.textContent = "Añadir restaurante";
+      panel.reset();
+      fPrecio.value = "2";
+      btnGuardar.textContent = "Guardar";
+    }
+    limpiarAvisosFormulario();
+    if (item) btnGuardar.textContent = "Guardar cambios";
+
+    panel.hidden = false;
+    btnAbrir.setAttribute("aria-expanded", "true");
+    cerrarTodasLasConfirmaciones();
+
+    // Primero se coloca el panel a la vista y después se enfoca sin que el
+    // navegador vuelva a desplazar: en iOS los dos scrolls a la vez pelean.
+    desplazarA(panel, { behavior: "smooth", block: "start" });
+    setTimeout(function () {
+      try { fNombre.focus({ preventScroll: true }); } catch (e) { fNombre.focus(); }
+    }, 220);
+  }
+
+  function cerrarPanel(devolverFoco) {
+    panel.hidden = true;
+    editandoId = null;
+    limpiarAvisosFormulario();
+    btnAbrir.setAttribute("aria-expanded", "false");
+    if (devolverFoco) btnAbrir.focus();
+  }
+
+  btnAbrir.addEventListener("click", function () {
+    if (panel.hidden) abrirPanel(null); else cerrarPanel(true);
+  });
+  $("cancel-btn").addEventListener("click", function () { cerrarPanel(true); });
+
+  // Esc cierra el panel o la confirmación de borrado abierta
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (!panel.hidden) { cerrarPanel(true); return; }
+    if (Object.keys(idsExpandidosBorrado).length) { cerrarTodasLasConfirmaciones(); render(); }
+  });
+
+  // Avisos no bloqueantes: informan al salir del campo, nunca impiden guardar.
+  fCarta.addEventListener("blur", function () {
+    var an = analizarUrl(fCarta.value);
+    if (!an.vacia && !an.valida) {
+      avisoCarta.textContent = "Eso no parece una dirección web. Se guardará igualmente, pero no aparecerá el botón de la carta hasta que lo corrijas.";
+      avisoCarta.hidden = false;
+    } else {
+      avisoCarta.hidden = true;
+    }
+  });
+
+  fReserva.addEventListener("blur", function () {
+    var res = analizarReserva(fReserva.value);
+    if (!res.vacia && !res.valida) {
+      avisoReserva.textContent = "Eso no parece ni una web ni un teléfono. Se guardará igualmente, pero no aparecerá el botón de reservar hasta que lo corrijas.";
+      avisoReserva.hidden = false;
+    } else {
+      avisoReserva.hidden = true;
+    }
+  });
+
+  // En iOS el teclado tapa el campo enfocado: se recoloca cuando aparece.
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", function () {
+      var activo = document.activeElement;
+      if (!activo || panel.hidden) return;
+      if (!panel.contains(activo)) return;
+      setTimeout(function () {
+        desplazarA(activo, { block: "center", behavior: "smooth" });
+      }, 60);
+    });
+  }
+
+  function buscarDuplicado(nombre, excluirId) {
+    var clave = plano(nombre);
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].id === excluirId) continue;
+      if (plano(data[i].nombre) === clave) return data[i];
+    }
+    return null;
+  }
+
+  panel.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    var nombre = fNombre.value.trim();
+    if (!nombre) {
+      errNombre.hidden = false;
+      fNombre.setAttribute("aria-invalid", "true");
+      fNombre.focus();
+      return;
+    }
+    errNombre.hidden = true;
+    fNombre.removeAttribute("aria-invalid");
+
+    // Duplicados: no se bloquea, se pide una segunda confirmación.
+    var dup = buscarDuplicado(nombre, editandoId);
+    if (dup && !pendienteConfirmarDuplicado) {
+      avisoDup.textContent = "Ya tienes «" + dup.nombre + "» en " + dup.zona +
+        ". Pulsa otra vez si de verdad quieres añadirlo por duplicado.";
+      avisoDup.hidden = false;
+      pendienteConfirmarDuplicado = true;
+      btnGuardar.textContent = "Añadir de todos modos";
+      desplazarA(avisoDup, { block: "nearest", behavior: "smooth" });
+      return;
+    }
+
+    var an = analizarUrl(fCarta.value);
+    var res = analizarReserva(fReserva.value);
+    var registro = {
+      nombre: nombre,
+      tipo: fTipo.value.trim() || "Sin especificar",
+      zona: fZona.value.trim() || "Sin especificar",
+      precio: Number(fPrecio.value) || 2,
+      flag: fNota.value.trim(),
+      carta: an.vacia ? "" : an.href,
+      cartaValida: !an.vacia && an.valida,
+      reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : fReserva.value.trim()),
+      direccion: fDireccion.value.trim()
+    };
+
+    var eraEdicion = !!editandoId;
+    if (editandoId) {
+      var idx = -1;
+      for (var i = 0; i < data.length; i++) if (data[i].id === editandoId) { idx = i; break; }
+      if (idx !== -1) {
+        registro.id = editandoId;
+        registro.creado = data[idx].creado;
+        data[idx] = registro;
+      } else {
+        // Se borró desde otra pestaña mientras se editaba: se vuelve a crear.
+        registro.id = makeId();
+        registro.creado = Date.now();
+        data.push(registro);
+      }
+    } else {
+      registro.id = makeId();
+      registro.creado = Date.now();
+      data.push(registro);
+    }
+
+    var guardado = guardarDatos(data);
+    cerrarPanel(true);
+    refrescarFuentesChips();
+    render();
+
+    if (guardado) {
+      avisar(eraEdicion ? "Cambios guardados." : "«" + registro.nombre + "» añadido.");
+      if ((!an.vacia && !an.valida) || (!res.vacia && !res.valida)) {
+        setTimeout(function () {
+          avisar("Algún enlace no es válido, así que ese botón no se muestra en la tarjeta.");
+        }, 1800);
+      }
+    }
+  });
+
+  /* ============================================================
+     12. Borrado con confirmación y deshacer
+     ============================================================ */
+
+  function cerrarTodasLasConfirmaciones() {
+    idsExpandidosBorrado = Object.create(null);
+  }
+
+  function eliminar(item) {
+    var indice = data.findIndex(function (x) { return x.id === item.id; });
+    if (indice === -1) return;
+    var copia = data[indice];
+
+    data.splice(indice, 1);
+    cerrarTodasLasConfirmaciones();
+    guardarDatos(data);
+    refrescarFuentesChips();
+    render();
+
+    avisar("«" + copia.nombre + "» eliminado.", {
+      etiqueta: "Deshacer",
+      alPulsar: function () {
+        data.splice(Math.min(indice, data.length), 0, copia);
+        guardarDatos(data);
+        refrescarFuentesChips();
+        render();
+        avisar("Restaurado.");
+      }
+    });
+  }
+
+  /* ============================================================
+     13. Pintado de la lista
+     ============================================================ */
+
+  var svgBase = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+
+  var ICONOS = {
+    carta:   svgBase + '<path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>',
+    reserva: svgBase + '<path d="M4 6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"></path><path d="M8 3v4M16 3v4M4 10h16"></path><path d="m9.5 15 1.8 1.8 3.4-3.4"></path></svg>',
+    tel:     svgBase + '<path d="M16.5 21A13.5 13.5 0 0 1 3 7.5 2.5 2.5 0 0 1 5.5 5h1.8a1 1 0 0 1 1 .78l.7 3.1a1 1 0 0 1-.42 1.05l-1.4.95a11 11 0 0 0 4.94 4.94l.95-1.4a1 1 0 0 1 1.05-.42l3.1.7a1 1 0 0 1 .78 1v1.8A2.5 2.5 0 0 1 16.5 21Z"></path></svg>',
+    mapa:    svgBase + '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>'
+  };
+
+  /**
+   * Botón-píldora de la tarjeta. Los que salen de la app llevan
+   * target="_blank": en modo standalone (añadida a pantalla de inicio)
+   * iOS abriría el enlace dentro de la propia app, sin barra de
+   * direcciones ni botón de atrás, y te dejaría atrapado. Así lo pasa a
+   * Safari o a la app nativa (Mapas), y se vuelve con el botón de arriba.
+   * Los "tel:" no lo llevan: no navegan, solo abren el marcador.
+   */
+  function crearPildora(etiqueta, href, icono, descripcion, externo) {
+    var a = document.createElement("a");
+    a.className = "card-link";
+    a.href = href;
+    if (externo) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
+    a.innerHTML = icono;                              // SVG propio, no datos del usuario
+    var txt = document.createElement("span");
+    txt.textContent = etiqueta;
+    a.appendChild(txt);
+    a.setAttribute("aria-label", descripcion);
+    return a;
+  }
+
+  function coincide(d) {
+    if (state.search) {
+      var heno = plano(d.nombre) + " " + plano(d.tipo) + " " + plano(d.zona);
+      if (heno.indexOf(state.search) === -1) return false;
+    }
+    if (state.zona !== "Todas" && grupoZona(d.zona) !== state.zona) return false;
+    if (state.tipo !== "Todos" && (d.tipo || "Sin especificar") !== state.tipo) return false;
+    if (state.precio !== "Todos" && etiquetaPrecio[d.precio] !== state.precio) return false;
+    return true;
+  }
+
+  function ordenar(items) {
+    var s = state.sort;
+    return items.sort(function (a, b) {
+      if (s === "zona") return comparar(a.zona, b.zona) || comparar(a.nombre, b.nombre);
+      if (s === "tipo") return comparar(a.tipo, b.tipo) || comparar(a.nombre, b.nombre);
+      if (s === "precio") return (a.precio - b.precio) || comparar(a.nombre, b.nombre);
+      if (s === "recientes") return (b.creado - a.creado) || comparar(a.nombre, b.nombre);
+      return comparar(a.nombre, b.nombre);
+    });
+  }
+
+  function crearTarjeta(d) {
+    var li = document.createElement("li");
+    li.className = "card";
+    li.dataset.id = d.id;
+
+    var top = document.createElement("div");
+    top.className = "card-top";
+
+    var nombre = document.createElement("h3");
+    nombre.className = "card-name";
+    nombre.textContent = d.nombre;                    // textContent: nada de HTML inyectado
+
+    var precio = document.createElement("span");
+    precio.className = "card-price";
+    precio.textContent = etiquetaPrecio[d.precio] || "€€";
+    precio.setAttribute("aria-hidden", "true");
+
+    var precioSr = document.createElement("span");
+    precioSr.className = "sr-only";
+    precioSr.textContent = nombrePrecio[d.precio] || "precio medio";
+
+    top.appendChild(nombre);
+    top.appendChild(precio);
+    top.appendChild(precioSr);
+    li.appendChild(top);
+
+    var meta = document.createElement("p");
+    meta.className = "card-meta";
+    var tipoEl = document.createElement("span");
+    tipoEl.textContent = d.tipo || "Sin especificar";
+    var sep = document.createElement("span");
+    sep.className = "dot";
+    sep.setAttribute("aria-hidden", "true");
+    sep.textContent = "·";
+    var zonaEl = document.createElement("span");
+    zonaEl.textContent = d.zona || "Sin especificar";
+    meta.appendChild(tipoEl);
+    meta.appendChild(sep);
+    meta.appendChild(zonaEl);
+    li.appendChild(meta);
+
+    if (d.flag) {
+      var nota = document.createElement("p");
+      nota.className = "flag";
+      nota.textContent = d.flag;
+      li.appendChild(nota);
+    }
+
+    var enlaces = document.createElement("div");
+    enlaces.className = "card-links";
+
+    if (d.carta && d.cartaValida) {
+      enlaces.appendChild(crearPildora(
+        "Carta", d.carta, ICONOS.carta,
+        "Ver la carta de " + d.nombre + " (se abre en Safari)", true));
+    }
+
+    var reserva = analizarReserva(d.reserva);
+    if (!reserva.vacia && reserva.valida) {
+      if (reserva.tipo === "tel") {
+        enlaces.appendChild(crearPildora(
+          "Llamar", reserva.href, ICONOS.tel,
+          "Llamar a " + d.nombre + " para reservar", false));
+      } else {
+        enlaces.appendChild(crearPildora(
+          "Reservar", reserva.href, ICONOS.reserva,
+          "Reservar en " + d.nombre + " (se abre en Safari)", true));
+      }
+    }
+
+    // Cómo llegar no necesita datos: si falta la dirección se busca por
+    // nombre y zona, así que este botón está siempre disponible.
+    enlaces.appendChild(crearPildora(
+      "Cómo llegar", urlMapa(d), ICONOS.mapa,
+      "Cómo llegar a " + d.nombre + " (abre la app de mapas)", true));
+
+    li.appendChild(enlaces);
+
+    var acciones = document.createElement("div");
+    acciones.className = "card-actions";
+
+    var btnEditar = document.createElement("button");
+    btnEditar.type = "button";
+    btnEditar.textContent = "Editar";
+    btnEditar.setAttribute("aria-label", "Editar " + d.nombre);
+    btnEditar.addEventListener("click", function () { abrirPanel(d); });
+
+    var btnBorrar = document.createElement("button");
+    btnBorrar.type = "button";
+    btnBorrar.className = "danger";
+    btnBorrar.textContent = "Eliminar";
+    btnBorrar.setAttribute("aria-label", "Eliminar " + d.nombre);
+    btnBorrar.setAttribute("aria-expanded", idsExpandidosBorrado[d.id] ? "true" : "false");
+
+    acciones.appendChild(btnEditar);
+    acciones.appendChild(btnBorrar);
+    li.appendChild(acciones);
+
+    var confirmacion = document.createElement("div");
+    confirmacion.className = "confirm-row";
+    confirmacion.setAttribute("role", "group");
+    confirmacion.setAttribute("aria-label", "Confirmar borrado de " + d.nombre);
+    confirmacion.hidden = !idsExpandidosBorrado[d.id];
+
+    var pregunta = document.createElement("p");
+    pregunta.textContent = "¿Eliminar «" + d.nombre + "» de la lista?";
+    var si = document.createElement("button");
+    si.type = "button";
+    si.className = "confirm-yes";
+    si.textContent = "Sí, eliminar";
+    var no = document.createElement("button");
+    no.type = "button";
+    no.className = "confirm-no";
+    no.textContent = "Cancelar";
+
+    confirmacion.appendChild(pregunta);
+    confirmacion.appendChild(si);
+    confirmacion.appendChild(no);
+    li.appendChild(confirmacion);
+
+    btnBorrar.addEventListener("click", function () {
+      var abierto = !!idsExpandidosBorrado[d.id];
+      cerrarTodasLasConfirmaciones();                 // solo una confirmación a la vez
+      if (!abierto) {
+        idsExpandidosBorrado[d.id] = true;
+        confirmacion.hidden = false;
+        btnBorrar.setAttribute("aria-expanded", "true");
+        si.focus();
+      } else {
+        confirmacion.hidden = true;
+        btnBorrar.setAttribute("aria-expanded", "false");
+      }
+      // Cierra las demás que pudieran estar abiertas en el DOM
+      var otras = lista.querySelectorAll(".confirm-row");
+      for (var i = 0; i < otras.length; i++) {
+        if (otras[i] !== confirmacion) otras[i].hidden = true;
+      }
+    });
+
+    no.addEventListener("click", function () {
+      delete idsExpandidosBorrado[d.id];
+      confirmacion.hidden = true;
+      btnBorrar.setAttribute("aria-expanded", "false");
+      btnBorrar.focus();
+    });
+
+    si.addEventListener("click", function () { eliminar(d); });
+
+    return li;
+  }
+
+  function render() {
+    var items = ordenar(data.filter(coincide));
+
+    contador.replaceChildren();
+    var fuerte = document.createElement("span");
+    fuerte.className = "count";
+    fuerte.textContent = String(items.length);
+    contador.appendChild(fuerte);
+    contador.appendChild(document.createTextNode(
+      " de " + data.length + (data.length === 1 ? " restaurante" : " restaurantes")
+    ));
+
+    btnLimpiar.hidden = !hayFiltros();
+
+    if (items.length === 0) {
+      lista.replaceChildren();
+      vacio.hidden = false;
+      vacio.replaceChildren();
+      var p = document.createElement("p");
+      p.style.margin = "0";
+      if (data.length === 0) {
+        p.textContent = "La lista está vacía. Añade el primer sitio al que quieras volver.";
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = "Añadir un restaurante";
+        b.addEventListener("click", function () { abrirPanel(null); });
+        vacio.appendChild(p);
+        vacio.appendChild(b);
+      } else {
+        p.textContent = "Ningún restaurante coincide con esos filtros.";
+        vacio.appendChild(p);
+      }
+      return;
+    }
+
+    vacio.hidden = true;
+    var frag = document.createDocumentFragment();
+    items.forEach(function (d) { frag.appendChild(crearTarjeta(d)); });
+    lista.replaceChildren(frag);
+  }
+
+  /* ============================================================
+     13 bis. «Sorpréndeme»: elige uno entre los que se están viendo
+     ============================================================ */
+
+  var ultimoAzar = null;
+  var tempDestacada = null;
+
+  function destacar(d) {
+    var hijos = lista.children;
+    var li = null;
+    for (var i = 0; i < hijos.length; i++) {
+      hijos[i].classList.remove("destacada");
+      if (hijos[i].dataset.id === d.id) li = hijos[i];
+    }
+    if (!li) return;
+
+    li.classList.add("destacada");
+    li.setAttribute("tabindex", "-1");
+    desplazarA(li, { behavior: "smooth", block: "center" });
+    // El foco va a la tarjeta para que VoiceOver lea la elegida,
+    // sin volver a desplazar la página por su cuenta.
+    setTimeout(function () {
+      try { li.focus({ preventScroll: true }); } catch (e) { li.focus(); }
+    }, 320);
+
+    clearTimeout(tempDestacada);
+    tempDestacada = setTimeout(function () { li.classList.remove("destacada"); }, 4500);
+  }
+
+  $("random-btn").addEventListener("click", function () {
+    var visibles = ordenar(data.filter(coincide));
+
+    if (!visibles.length) {
+      avisar(data.length
+        ? "Ningún restaurante coincide con esos filtros."
+        : "La lista está vacía: añade alguno primero.");
+      return;
+    }
+
+    var elegido;
+    if (visibles.length === 1) {
+      elegido = visibles[0];
+    } else {
+      // No repetir la elección anterior: si sale la misma dos veces
+      // seguidas el botón parece roto.
+      var candidatos = visibles.filter(function (d) { return d.id !== ultimoAzar; });
+      elegido = candidatos[Math.floor(Math.random() * candidatos.length)];
+    }
+
+    ultimoAzar = elegido.id;
+    cerrarTodasLasConfirmaciones();
+    destacar(elegido);
+    avisar("Te toca: " + elegido.nombre + ".");
+  });
+
+  /* ============================================================
+     14. Copia de seguridad: exportar / restaurar
+     ============================================================ */
+
+  (function copias() {
+    var caja = $("backup-box");
+    var msg = $("tools-msg");
+
+    function decir(t, error) {
+      msg.textContent = t;
+      msg.className = "msg" + (error ? " msg-error" : "");
+    }
+
+    $("export-btn").addEventListener("click", function () {
+      caja.value = JSON.stringify({ v: 2, guardado: Date.now(), items: data }, null, 2);
+      decir("Copia creada abajo. Cópiala y guárdala en Notas, en un correo o donde prefieras.");
+    });
+
+    $("copy-btn").addEventListener("click", function () {
+      if (!caja.value) { decir("Primero pulsa «Crear copia».", true); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(caja.value).then(function () {
+          decir("Copiado al portapapeles.");
+        }, function () {
+          caja.select();
+          decir("No se pudo copiar solo: el texto está seleccionado, cópialo a mano.", true);
+        });
+      } else {
+        caja.select();
+        decir("El texto está seleccionado, cópialo a mano.");
+      }
+    });
+
+    $("import-btn").addEventListener("click", function () {
+      var entrada = parsearJson(caja.value.trim());
+      var brutos = Array.isArray(entrada) ? entrada
+                 : (entrada && Array.isArray(entrada.items) ? entrada.items : null);
+      if (!brutos) { decir("Eso no parece una copia válida. Pega el texto completo que generó «Crear copia».", true); return; }
+
+      var entrantes = normalizarLista(brutos);
+      var porId = Object.create(null), porNombre = Object.create(null);
+      data.forEach(function (d) { porId[d.id] = d; porNombre[plano(d.nombre) + "|" + plano(d.zona)] = d; });
+
+      var nuevos = 0, actualizados = 0, omitidos = 0;
+      entrantes.forEach(function (e) {
+        var existente = porId[e.id] || porNombre[plano(e.nombre) + "|" + plano(e.zona)];
+        if (existente) {
+          if (JSON.stringify(existente) === JSON.stringify(e)) { omitidos++; return; }
+          e.id = existente.id;
+          e.creado = existente.creado || e.creado;
+          var i = data.indexOf(existente);
+          data[i] = e;
+          porId[e.id] = e;
+          actualizados++;
+        } else {
+          data.push(e);
+          porId[e.id] = e;
+          porNombre[plano(e.nombre) + "|" + plano(e.zona)] = e;
+          nuevos++;
+        }
+      });
+
+      guardarDatos(data);
+      refrescarFuentesChips();
+      render();
+      decir("Restaurado: " + nuevos + " nuevos, " + actualizados + " actualizados, " + omitidos + " sin cambios.");
+      avisar("Copia restaurada.");
+    });
+  })();
+
+  /* ============================================================
+     15. Sincronización entre pestañas y al volver a la app
+     ============================================================ */
+
+  function recargarDesdeAlmacenamiento() {
+    if (!panel.hidden) return;                     // no pisar una edición en curso
+    var rawV2 = leerCrudo(CLAVE_V2);
+    if (!rawV2) return;
+    var v2 = parsearJson(rawV2);
+    var items = Array.isArray(v2) ? v2 : (v2 && Array.isArray(v2.items) ? v2.items : null);
+    if (!items) return;
+    var nuevos = normalizarLista(items);
+    if (JSON.stringify(nuevos) === JSON.stringify(data)) return;
+    data = nuevos;
+    refrescarFuentesChips();
+    render();
+  }
+
+  window.addEventListener("storage", function (e) {
+    if (e.key === CLAVE_V2) recargarDesdeAlmacenamiento();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) recargarDesdeAlmacenamiento();
+  });
+
+  /* ============================================================
+     16. Arranque
+     ============================================================ */
+
+  if (!almacenOk) {
+    var banner = $("storage-banner");
+    banner.textContent = "Este navegador no deja guardar datos (¿navegación privada?). Puedes usar la lista, pero los cambios se perderán al cerrar.";
+    banner.hidden = false;
+  }
+
+  /* Service worker: hace que la app arranque sin conexión.
+     Necesita https:// (o localhost). En file:// o http:// el navegador
+     lo rechaza y la app sigue funcionando igual, solo que online. */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {
+        /* sin https, sin service worker: no es un error que deba ver el usuario */
+      });
+    });
+
+    navigator.serviceWorker.addEventListener("message", function (e) {
+      if (!e.data || e.data.tipo !== "actualizacion") return;
+      avisar("Hay una versión nueva de la app.", {
+        etiqueta: "Actualizar",
+        alPulsar: function () { location.reload(); }
+      });
+    });
+  }
+
+  refrescarFuentesChips();
+  render();
+
+  if (carga.origen === "migrado") {
+    avisar("Lista actualizada al nuevo formato. Tus " + data.length + " restaurantes siguen aquí.");
+  } else if (cartasNuevas > 0) {
+    avisar(cartasNuevas === 1
+      ? "Añadido 1 enlace nuevo a tus restaurantes."
+      : "Añadidos " + cartasNuevas + " enlaces (cartas y reservas).");
+  }
+})();
+</script>
+</body>
+</html>

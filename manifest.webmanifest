@@ -1,0 +1,21 @@
+{
+  "name": "Gorditos · Dónde comer en Madrid",
+  "short_name": "Gorditos",
+  "description": "Guía personal de restaurantes en Madrid: filtra por zona, tipo de cocina y precio.",
+  "lang": "es",
+  "dir": "ltr",
+  "start_url": "./restaurantes-madrid.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1EEE2",
+  "theme_color": "#F1EEE2",
+  "icons": [
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
