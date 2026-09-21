@@ -1,92 +1,61 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Gorditos · Dónde comer en Madrid</title>
-  <meta name="description" content="Guía personal de restaurantes en Madrid: filtra por zona, tipo de cocina y precio.">
-  <meta name="color-scheme" content="light dark">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gorditos · Dónde comer en Madrid</title>
+<meta name="description" content="Guía personal de restaurantes en Madrid: filtra por zona, tipo de cocina y precio.">
+<meta name="color-scheme" content="light dark">
 
-  <!-- Web app en iOS (Añadir a pantalla de inicio) -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Gorditos">
-  <meta name="mobile-web-app-capable" content="yes">
+<!-- Web app en iOS (Añadir a pantalla de inicio) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Gorditos">
+<meta name="mobile-web-app-capable" content="yes">
 
-  <!-- Color de la barra de estado / UI del navegador, uno por esquema -->
-  <meta name="theme-color" content="#F1EEE2" media="(prefers-color-scheme: light)" data-scheme="light">
-  <meta name="theme-color" content="#171712" media="(prefers-color-scheme: dark)" data-scheme="dark">
-  <meta name="theme-color" content="#F1EEE2" media="not all" data-scheme="manual">
+<!-- Color de la barra de estado / UI del navegador, uno por esquema -->
+<meta name="theme-color" content="#F1EEE2" media="(prefers-color-scheme: light)" data-scheme="light">
+<meta name="theme-color" content="#171712" media="(prefers-color-scheme: dark)" data-scheme="dark">
+<meta name="theme-color" content="#F1EEE2" media="not all" data-scheme="manual">
 
-  <link rel="apple-touch-icon" href="./icon-512.png">
-  <link rel="icon" href="./icon-512.png" sizes="512x512" type="image/png">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Work+Sans:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --paper: #F1EEE2;
-      --paper-raised: #FAF8F1;
-      --ink: #1D2B22;
-      --ink-soft: #5B6459;
-      --line: #D8D2BE;
-      --line-input: #8F8874;
-      --accent: #9C6B22;
-      --accent-strong: #7A5119;
-      --wine: #7B3131;
-      --green: #2B4A3A;
-      --chip-bg: #E7E1CD;
-      --chip-active-bg: #2B4A3A;
-      --chip-active-fg: #F1EEE2;
-      --flag-bg: #F3E3C9;
-      --flag-fg: #7A5119;
-      --danger: #7B3131;
-      --danger-bg: #F1DEDE;
-      --warn-bg: #F7EBD4;
-      --warn-fg: #6E4714;
-      --focus-ring: rgba(156, 107, 34, 0.35);
-      --toast-bg: #24352B;
-      --toast-fg: #F1EEE2;
-      --shadow: 0 1px 0 rgba(29, 43, 34, 0.06);
-      --radius: 14px;
-      color-scheme: light;
-    }
+<link rel="apple-touch-icon" href="./icon-512.png">
+<link rel="icon" href="./icon-512.png" sizes="512x512" type="image/png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --paper: #F1EEE2;
+    --paper-raised: #FAF8F1;
+    --ink: #1D2B22;
+    --ink-soft: #5B6459;
+    --line: #D8D2BE;
+    --line-input: #8F8874;
+    --accent: #9C6B22;
+    --accent-strong: #7A5119;
+    --wine: #7B3131;
+    --green: #2B4A3A;
+    --chip-bg: #E7E1CD;
+    --chip-active-bg: #2B4A3A;
+    --chip-active-fg: #F1EEE2;
+    --flag-bg: #F3E3C9;
+    --flag-fg: #7A5119;
+    --danger: #7B3131;
+    --danger-bg: #F1DEDE;
+    --warn-bg: #F7EBD4;
+    --warn-fg: #6E4714;
+    --focus-ring: rgba(156, 107, 34, 0.35);
+    --toast-bg: #24352B;
+    --toast-fg: #F1EEE2;
+    --shadow: 0 1px 0 rgba(29, 43, 34, 0.06);
+    --radius: 14px;
+    color-scheme: light;
+  }
 
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --paper: #171712;
-        --paper-raised: #201F19;
-        --ink: #EDE8D8;
-        --ink-soft: #A9A28E;
-        --line: #3A3830;
-        --line-input: #767060;
-        --accent: #D6A34F;
-        --accent-strong: #E8B968;
-        --wine: #D08787;
-        --green: #7FA98F;
-        --chip-bg: #2A2921;
-        --chip-active-bg: #7FA98F;
-        --chip-active-fg: #171712;
-        --flag-bg: #2E2A1E;
-        --flag-fg: #D6A34F;
-        --danger: #D08787;
-        --danger-bg: #332020;
-        --warn-bg: #2E2A1E;
-        --warn-fg: #E2C48A;
-        --focus-ring: rgba(214, 163, 79, 0.45);
-        --toast-bg: #E7E1CD;
-        --toast-fg: #1D2B22;
-        --shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
-        color-scheme: dark;
-      }
-    }
-
-    :root[data-theme="dark"] {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
       --paper: #171712;
       --paper-raised: #201F19;
       --ink: #EDE8D8;
@@ -112,2092 +81,2040 @@
       --shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
       color-scheme: dark;
     }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    [hidden] {
-      display: none !important;
-    }
-
-    html {
-      scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
-    }
-
-    body {
-      margin: 0;
-      min-height: 100%;
-      background: var(--paper);
-      color: var(--ink);
-      font-family: 'Work Sans', system-ui, -apple-system, sans-serif;
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      padding-left: env(safe-area-inset-left, 0px);
-      padding-right: env(safe-area-inset-right, 0px);
-      -webkit-font-smoothing: antialiased;
-      -webkit-tap-highlight-color: transparent;
-      overscroll-behavior-y: contain;
-    }
-
-    button,
-    input,
-    select,
-    textarea {
-      font-family: inherit;
-    }
-
-    button {
-      touch-action: manipulation;
-    }
-
-    /* Foco visible y coherente en todo lo interactivo */
-    :where(a, button, input, select, textarea, summary):focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-      border-radius: 6px;
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-      clip-path: inset(50%);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    .wrap {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 28px 20px 48px;
-    }
-
-    header.page {
-      margin-bottom: 22px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 14px;
-    }
-
-    .kicker {
-      font-size: 13px;
-      color: var(--accent-strong);
-      letter-spacing: 0.02em;
-      margin: 0 0 6px;
-    }
-
-    h1 {
-      font-family: 'Newsreader', Georgia, serif;
-      font-weight: 500;
-      font-size: 34px;
-      line-height: 1.08;
-      margin: 0 0 10px;
-      letter-spacing: -0.01em;
-    }
-
-    h1 em {
-      font-style: italic;
-      color: var(--wine);
-    }
-
-    .sub {
-      color: var(--ink-soft);
-      font-size: 14.5px;
-      line-height: 1.5;
-      margin: 0;
-      max-width: 46ch;
-    }
-
-    .count {
-      font-family: 'Newsreader', serif;
-      color: var(--ink);
-      font-weight: 500;
-    }
-
-    .header-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-
-    .add-btn {
-      font-weight: 600;
-      font-size: 15px;
-      background: var(--green);
-      color: var(--paper);
-      border: none;
-      border-radius: 999px;
-      padding: 0 18px;
-      min-height: 44px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .add-btn:active {
-      opacity: 0.85;
-    }
-
-    .theme-btn {
-      background: transparent;
-      border: 1px solid var(--line-input);
-      color: var(--ink-soft);
-      border-radius: 999px;
-      min-height: 34px;
-      padding: 0 12px;
-      font-size: 12.5px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* Aviso de almacenamiento no disponible */
-    .banner {
-      background: var(--warn-bg);
-      color: var(--warn-fg);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      font-size: 13.5px;
-      line-height: 1.5;
-      margin-bottom: 18px;
-    }
-
-    /* ---- Panel de alta / edición ---- */
-    .login-screen {
-      max-width: 340px;
-      margin: 15vh auto 0;
-      padding: 0 4px;
-    }
-
-    .login-screen h1 {
-      font-family: 'Newsreader', serif;
-      font-weight: 500;
-      font-size: 28px;
-      margin: 0;
-    }
-
-    .panel {
-      background: var(--paper-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    .panel h2 {
-      font-family: 'Newsreader', serif;
-      font-weight: 500;
-      font-size: 19px;
-      margin: 0 0 12px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      margin-bottom: 12px;
-    }
-
-    .field label {
-      font-size: 12.5px;
-      color: var(--ink-soft);
-      font-weight: 600;
-    }
-
-    .field .hint {
-      font-size: 12px;
-      color: var(--ink-soft);
-      font-weight: 400;
-    }
-
-    /* 16px mínimo: por debajo, Safari en iOS hace zoom al enfocar el campo */
-    .field input,
-    .field select,
-    input.search,
-    select#sort,
-    textarea {
-      font-size: 16px;
-      padding: 11px 12px;
-      border-radius: 9px;
-      border: 1px solid var(--line-input);
-      background: var(--paper);
-      color: var(--ink);
-      outline: none;
-      width: 100%;
-      min-height: 44px;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-
-    .field select,
-    select#sort {
-      background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
-      background-position: right 14px center, right 9px center;
-      background-size: 5px 5px, 5px 5px;
-      background-repeat: no-repeat;
-      padding-right: 30px;
-    }
-
-    .field input:focus,
-    .field select:focus,
-    input.search:focus,
-    select#sort:focus,
-    textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-
-    .field input[aria-invalid="true"] {
-      border-color: var(--danger);
-    }
-
-    .field-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .field-row .field {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .field-row .field.precio {
-      flex: 0 0 116px;
-    }
-
-    .panel-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 16px;
-    }
-
-    .btn {
-      font-weight: 600;
-      font-size: 15px;
-      border-radius: 9px;
-      padding: 0 16px;
-      min-height: 46px;
-      cursor: pointer;
-      border: 1px solid transparent;
-    }
-
-    .btn-primary {
-      background: var(--green);
-      color: var(--paper);
-      border: none;
-      flex: 1;
-    }
-
-    .btn-primary:active {
-      opacity: 0.85;
-    }
-
-    .btn-secondary {
-      background: transparent;
-      color: var(--ink-soft);
-      border: 1px solid var(--line-input);
-    }
-
-    .msg {
-      font-size: 12.5px;
-      line-height: 1.45;
-      margin: -4px 0 12px;
-    }
-
-    .msg-error {
-      color: var(--danger);
-    }
-
-    .msg-warn {
-      background: var(--warn-bg);
-      color: var(--warn-fg);
-      padding: 9px 11px;
-      border-radius: 8px;
-      margin-top: 0;
-    }
-
-    /* ---- Controles ---- */
-    .controls {
-      margin-top: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    input.search {
-      background-color: var(--paper-raised);
-    }
-
-    input.search::placeholder {
-      color: var(--ink-soft);
-    }
-
-    input.search::-webkit-search-cancel-button {
-      -webkit-appearance: none;
-    }
-
-    .filter-block {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .filter-label {
-      font-size: 12.5px;
-      color: var(--ink-soft);
-      font-weight: 600;
-    }
-
-    .chip-row {
-      display: flex;
-      gap: 7px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      scroll-snap-type: x proximity;
-    }
-
-    .chip-row::-webkit-scrollbar {
-      display: none;
-    }
-
-    .chip {
-      flex: 0 0 auto;
-      display: inline-flex;
-      align-items: center;
-      min-height: 44px;
-      font-size: 14px;
-      padding: 0 15px;
-      border-radius: 999px;
-      background: var(--chip-bg);
-      color: var(--ink);
-      border: 1px solid transparent;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      white-space: nowrap;
-      scroll-snap-align: start;
-      transition: background 0.15s ease, color 0.15s ease;
-    }
-
-    .chip[aria-pressed="true"] {
-      background: var(--chip-active-bg);
-      color: var(--chip-active-fg);
-    }
-
-    .sort-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px 10px;
-    }
-
-    .sort-row label {
-      font-size: 14px;
-      color: var(--ink-soft);
-      white-space: nowrap;
-    }
-
-    select#sort {
-      width: auto;
-      flex: 1 1 130px;
-      background-color: var(--paper-raised);
-    }
-
-    .dado-btn {
-      flex: 0 0 auto;
-      min-height: 44px;
-      padding: 0 16px;
-      border-radius: 999px;
-      border: 1px solid var(--line-input);
-      background: var(--paper-raised);
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .dado-btn:active {
-      background: var(--chip-bg);
-    }
-
-    .result-line {
-      font-size: 13.5px;
-      color: var(--ink-soft);
-      margin-top: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      min-height: 24px;
-    }
-
-    .clear-filters {
-      background: none;
-      border: none;
-      color: var(--accent-strong);
-      font-size: 13.5px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      padding: 10px 0;
-      white-space: nowrap;
-    }
-
-    /* ---- Tarjetas ---- */
-    ul.list {
-      list-style: none;
-      margin: 10px 0 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    li.card {
-      background: var(--paper-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      box-shadow: var(--shadow);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    /* Tarjeta elegida por el botón del azar */
-    li.card.destacada {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-
-    li.card:focus {
-      outline: none;
-    }
-
-    .card-top {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .card-name {
-      font-family: 'Newsreader', Georgia, serif;
-      font-weight: 500;
-      font-size: 19px;
-      line-height: 1.25;
-      letter-spacing: -0.005em;
-      margin: 0;
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
-    .card-price {
-      font-size: 13.5px;
-      color: var(--accent-strong);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .card-meta {
-      margin: 5px 0 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px 9px;
-      font-size: 13.5px;
-      color: var(--ink-soft);
-      overflow-wrap: anywhere;
-    }
-
-    .dot {
-      color: var(--line);
-    }
-
-    .flag {
-      margin: 8px 0 0;
-      font-size: 12.5px;
-      background: var(--flag-bg);
-      color: var(--flag-fg);
-      padding: 5px 9px;
-      border-radius: 8px;
-      display: inline-block;
-    }
-
-    .card-links {
-      margin-top: 11px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .card-actions {
-      margin-top: 2px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px 18px;
-    }
-
-    .card-actions button {
-      background: none;
-      border: none;
-      padding: 11px 0;
-      min-height: 44px;
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--ink-soft);
-      cursor: pointer;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    .card-actions button.danger {
-      color: var(--danger);
-    }
-
-    .card-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      min-height: 44px;
-      padding: 0 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line-input);
-      background: transparent;
-      color: var(--ink);
-      font-size: 13.5px;
-      font-weight: 600;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-
-    .card-link:active {
-      background: var(--chip-bg);
-    }
-
-    .card-link svg {
-      width: 15px;
-      height: 15px;
-      flex: 0 0 auto;
-      color: var(--accent-strong);
-    }
-
-    .confirm-row {
-      margin-top: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 10px;
-      background: var(--danger-bg);
-      border-radius: 9px;
-      padding: 10px;
-    }
-
-    .confirm-row p {
-      font-size: 13px;
-      color: var(--ink);
-      flex: 1 1 100%;
-      margin: 0;
-    }
-
-    .confirm-row button {
-      font-size: 13.5px;
-      font-weight: 600;
-      border-radius: 7px;
-      padding: 0 14px;
-      min-height: 42px;
-      border: none;
-      cursor: pointer;
-    }
-
-    .confirm-yes {
-      background: var(--danger);
-      color: var(--paper-raised);
-    }
-
-    .confirm-no {
-      background: transparent;
-      color: var(--ink);
-      border: 1px solid var(--line-input);
-    }
-
-    .empty {
-      text-align: center;
-      color: var(--ink-soft);
-      padding: 36px 10px;
-      font-size: 14.5px;
-      line-height: 1.6;
-    }
-
-    .empty button {
-      display: inline-block;
-      margin-top: 12px;
-      background: none;
-      border: none;
-      color: var(--accent-strong);
-      font-size: 14.5px;
-      font-weight: 600;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      cursor: pointer;
-      padding: 10px;
-    }
-
-    /* ---- Pie y copia de seguridad ---- */
-    footer.note {
-      margin-top: 30px;
-      font-size: 13px;
-      color: var(--ink-soft);
-      line-height: 1.6;
-      border-top: 1px solid var(--line);
-      padding-top: 16px;
-    }
-
-    footer.note p {
-      margin: 0 0 12px;
-    }
-
-    details.tools summary {
-      cursor: pointer;
-      font-weight: 600;
-      color: var(--ink);
-      padding: 10px 0;
-      list-style: none;
-    }
-
-    details.tools summary::-webkit-details-marker {
-      display: none;
-    }
-
-    details.tools summary::before {
-      content: "▸ ";
-      color: var(--ink-soft);
-    }
-
-    details.tools[open] summary::before {
-      content: "▾ ";
-    }
-
-    .tools-body {
-      padding: 4px 0 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .tools-body textarea {
-      min-height: 110px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 13px;
-      line-height: 1.4;
-      resize: vertical;
-      background-color: var(--paper-raised);
-    }
-
-    .tools-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .tools-row .btn {
-      flex: 1 1 auto;
-      min-height: 44px;
-      font-size: 14px;
-    }
-
-    /* ---- Aviso flotante ---- */
-    .toast {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-      z-index: 50;
-      max-width: min(560px, calc(100vw - 32px));
-      background: var(--toast-bg);
-      color: var(--toast-fg);
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 14px;
-      line-height: 1.4;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .toast button {
-      background: none;
-      border: none;
-      color: inherit;
-      font-size: 14px;
-      font-weight: 700;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      cursor: pointer;
-      padding: 8px 2px;
-      min-height: 40px;
-      white-space: nowrap;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        animation-duration: 0.001ms !important;
-        transition-duration: 0.001ms !important;
-        scroll-behavior: auto !important;
-      }
-    }
-
-    @media print {
-
-      .controls,
-      .panel,
-      .add-btn,
-      .theme-btn,
-      .card-actions,
-      .confirm-row,
-      .toast,
-      details.tools {
-        display: none !important;
-      }
-
-      li.card {
-        break-inside: avoid;
-        border-color: #999;
-      }
-    }
-  </style>
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #171712;
+    --paper-raised: #201F19;
+    --ink: #EDE8D8;
+    --ink-soft: #A9A28E;
+    --line: #3A3830;
+    --line-input: #767060;
+    --accent: #D6A34F;
+    --accent-strong: #E8B968;
+    --wine: #D08787;
+    --green: #7FA98F;
+    --chip-bg: #2A2921;
+    --chip-active-bg: #7FA98F;
+    --chip-active-fg: #171712;
+    --flag-bg: #2E2A1E;
+    --flag-fg: #D6A34F;
+    --danger: #D08787;
+    --danger-bg: #332020;
+    --warn-bg: #2E2A1E;
+    --warn-fg: #E2C48A;
+    --focus-ring: rgba(214, 163, 79, 0.45);
+    --toast-bg: #E7E1CD;
+    --toast-fg: #1D2B22;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Work Sans', system-ui, -apple-system, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  button, input, select, textarea { font-family: inherit; }
+  button { touch-action: manipulation; }
+
+  /* Foco visible y coherente en todo lo interactivo */
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 20px 48px; }
+
+  header.page {
+    margin-bottom: 22px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .kicker { font-size: 13px; color: var(--accent-strong); letter-spacing: 0.02em; margin: 0 0 6px; }
+
+  h1 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.08;
+    margin: 0 0 10px;
+    letter-spacing: -0.01em;
+  }
+  h1 em { font-style: italic; color: var(--wine); }
+
+  .sub { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin: 0; max-width: 46ch; }
+  .count { font-family: 'Newsreader', serif; color: var(--ink); font-weight: 500; }
+
+  .header-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
+
+  .add-btn {
+    font-weight: 600;
+    font-size: 15px;
+    background: var(--green);
+    color: var(--paper);
+    border: none;
+    border-radius: 999px;
+    padding: 0 18px;
+    min-height: 44px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .add-btn:active { opacity: 0.85; }
+
+  .theme-btn {
+    background: transparent;
+    border: 1px solid var(--line-input);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Aviso de almacenamiento no disponible */
+  .banner {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  /* ---- Panel de alta / edición ---- */
+  .login-screen {
+    max-width: 340px;
+    margin: 15vh auto 0;
+    padding: 0 4px;
+  }
+  .login-screen h1 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 28px; margin: 0; }
+
+  .panel {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .panel h2 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 19px; margin: 0 0 12px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .field label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .field .hint { font-size: 12px; color: var(--ink-soft); font-weight: 400; }
+
+  /* 16px mínimo: por debajo, Safari en iOS hace zoom al enfocar el campo */
+  .field input,
+  .field select,
+  input.search,
+  select#sort,
+  textarea {
+    font-size: 16px;
+    padding: 11px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--line-input);
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    width: 100%;
+    min-height: 44px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .field select, select#sort {
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 14px center, right 9px center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 30px;
+  }
+  .field input:focus, .field select:focus, input.search:focus, select#sort:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+  .field input[aria-invalid="true"] { border-color: var(--danger); }
+
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; min-width: 0; }
+  .field-row .field.precio { flex: 0 0 116px; }
+
+  .panel-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+  .btn {
+    font-weight: 600;
+    font-size: 15px;
+    border-radius: 9px;
+    padding: 0 16px;
+    min-height: 46px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--green); color: var(--paper); border: none; flex: 1; }
+  .btn-primary:active { opacity: 0.85; }
+  .btn-secondary { background: transparent; color: var(--ink-soft); border: 1px solid var(--line-input); }
+
+  .msg { font-size: 12.5px; line-height: 1.45; margin: -4px 0 12px; }
+  .msg-error { color: var(--danger); }
+  .msg-warn { background: var(--warn-bg); color: var(--warn-fg); padding: 9px 11px; border-radius: 8px; margin-top: 0; }
+
+  /* ---- Controles ---- */
+  .controls { margin-top: 4px; display: flex; flex-direction: column; gap: 14px; }
+
+  input.search { background-color: var(--paper-raised); }
+  input.search::placeholder { color: var(--ink-soft); }
+  input.search::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+  .filter-block { display: flex; flex-direction: column; gap: 8px; }
+  .filter-label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+
+  .chip-row {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 14px;
+    padding: 0 15px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--ink);
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .chip[aria-pressed="true"] { background: var(--chip-active-bg); color: var(--chip-active-fg); }
+
+  .sort-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+  .sort-row label { font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+  select#sort { width: auto; flex: 1 1 130px; background-color: var(--paper-raised); }
+
+  .dado-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line-input);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dado-btn:active { background: var(--chip-bg); }
+
+  .result-line {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 24px;
+  }
+  .clear-filters {
+    background: none;
+    border: none;
+    color: var(--accent-strong);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 10px 0;
+    white-space: nowrap;
+  }
+
+  /* ---- Tarjetas ---- */
+  ul.list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  li.card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* Tarjeta elegida por el botón del azar */
+  li.card.destacada {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+  li.card:focus { outline: none; }
+
+  .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .card-name {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    font-size: 19px;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .card-price { font-size: 13.5px; color: var(--accent-strong); font-weight: 600; white-space: nowrap; }
+
+  .card-meta {
+    margin: 5px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 9px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+  }
+  .dot { color: var(--line); }
+
+  .flag {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    background: var(--flag-bg);
+    color: var(--flag-fg);
+    padding: 5px 9px;
+    border-radius: 8px;
+    display: inline-block;
+  }
+
+  .card-links { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .card-actions { margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
+  .card-actions button {
+    background: none;
+    border: none;
+    padding: 11px 0;
+    min-height: 44px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .card-actions button.danger { color: var(--danger); }
+
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-input);
+    background: transparent;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .card-link:active { background: var(--chip-bg); }
+  .card-link svg { width: 15px; height: 15px; flex: 0 0 auto; color: var(--accent-strong); }
+
+  .confirm-row {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    background: var(--danger-bg);
+    border-radius: 9px;
+    padding: 10px;
+  }
+  .confirm-row p { font-size: 13px; color: var(--ink); flex: 1 1 100%; margin: 0; }
+  .confirm-row button {
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 7px;
+    padding: 0 14px;
+    min-height: 42px;
+    border: none;
+    cursor: pointer;
+  }
+  .confirm-yes { background: var(--danger); color: var(--paper-raised); }
+  .confirm-no { background: transparent; color: var(--ink); border: 1px solid var(--line-input); }
+
+  .empty { text-align: center; color: var(--ink-soft); padding: 36px 10px; font-size: 14.5px; line-height: 1.6; }
+  .empty button {
+    display: inline-block;
+    margin-top: 12px;
+    background: none;
+    border: none;
+    color: var(--accent-strong);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 10px;
+  }
+
+  /* ---- Pie y copia de seguridad ---- */
+  footer.note {
+    margin-top: 30px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  footer.note p { margin: 0 0 12px; }
+
+  details.tools summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 10px 0;
+    list-style: none;
+  }
+  details.tools summary::-webkit-details-marker { display: none; }
+  details.tools summary::before { content: "▸ "; color: var(--ink-soft); }
+  details.tools[open] summary::before { content: "▾ "; }
+  .tools-body { padding: 4px 0 8px; display: flex; flex-direction: column; gap: 10px; }
+  .tools-body textarea {
+    min-height: 110px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    background-color: var(--paper-raised);
+  }
+  .tools-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tools-row .btn { flex: 1 1 auto; min-height: 44px; font-size: 14px; }
+
+  .sede-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .sede-list:empty { display: none; }
+  .sede-list li {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 9px;
+    padding: 9px 11px; font-size: 14px;
+  }
+  .sede-list .sede-quitar {
+    background: none; border: none; color: var(--danger); font-weight: 600;
+    font-size: 13px; padding: 8px 4px; min-height: 36px; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px; flex: 0 0 auto;
+  }
+
+  .sedes-group { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .sede-block {
+    border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px;
+  }
+  .sede-block .sede-nombre {
+    font-family: 'Newsreader', serif; font-weight: 500; font-size: 15px; margin: 0 0 6px;
+  }
+
+  /* ---- Aviso flotante ---- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    z-index: 50;
+    max-width: min(560px, calc(100vw - 32px));
+    background: var(--toast-bg);
+    color: var(--toast-fg);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .toast button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 8px 2px;
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+
+  @media print {
+    .controls, .panel, .add-btn, .theme-btn, .card-actions, .confirm-row, .toast, details.tools { display: none !important; }
+    li.card { break-inside: avoid; border-color: #999; }
+  }
+</style>
 </head>
-
 <body>
-  <div class="wrap">
+<div class="wrap">
 
-    <div class="login-screen" id="login-screen" hidden>
-      <p class="kicker">Gorditos</p>
-      <h1 style="margin-bottom:6px;">Entrar</h1>
-      <p class="sub" style="margin-bottom:20px;">Lista compartida — solo vosotros dos.</p>
-      <form id="login-form" novalidate>
-        <div class="field">
-          <label for="login-email">Email</label>
-          <input type="email" id="login-email" autocomplete="username" enterkeyhint="next" required>
-        </div>
-        <div class="field">
-          <label for="login-pass">Contraseña</label>
-          <input type="password" id="login-pass" autocomplete="current-password" enterkeyhint="done" required>
-        </div>
-        <p class="msg msg-error" id="login-error" hidden></p>
-        <button class="btn btn-primary" id="login-btn" type="submit" style="width:100%;">Entrar</button>
-      </form>
+  <div class="login-screen" id="login-screen" hidden>
+    <p class="kicker">Gorditos</p>
+    <h1 style="margin-bottom:6px;">Entrar</h1>
+    <p class="sub" style="margin-bottom:20px;">Lista compartida — solo vosotros dos.</p>
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" autocomplete="username" enterkeyhint="next" required>
+      </div>
+      <div class="field">
+        <label for="login-pass">Contraseña</label>
+        <input type="password" id="login-pass" autocomplete="current-password" enterkeyhint="done" required>
+      </div>
+      <p class="msg msg-error" id="login-error" hidden></p>
+      <button class="btn btn-primary" id="login-btn" type="submit" style="width:100%;">Entrar</button>
+    </form>
+  </div>
+
+  <div id="app-shell" hidden>
+
+  <header class="page">
+    <div>
+      <p class="kicker">Adrián · Madrid</p>
+      <h1>Dónde <em>comer</em></h1>
+      <p class="sub">La lista de los dos, ordenable por zona, tipo de cocina y precio.</p>
+    </div>
+    <div class="header-actions">
+      <button class="add-btn" id="open-add" type="button" aria-expanded="false" aria-controls="panel">＋ Añadir</button>
+      <button class="theme-btn" id="theme-btn" type="button">Tema: automático</button>
+      <button class="theme-btn" id="logout-btn" type="button">Salir</button>
+    </div>
+  </header>
+
+
+  <div class="banner" id="sync-banner" hidden></div>
+
+  <form class="panel" id="panel" novalidate aria-labelledby="panel-title" hidden>
+    <h2 id="panel-title">Añadir restaurante</h2>
+
+    <div class="field">
+      <label for="f-nombre">Nombre</label>
+      <input type="text" id="f-nombre" placeholder="Ej. Casa Dani"
+             autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="80" required
+             aria-describedby="f-nombre-error">
+    </div>
+    <p class="msg msg-error" id="f-nombre-error" hidden>Escribe un nombre para poder guardarlo.</p>
+    <p class="msg msg-warn" id="f-dup-warn" hidden></p>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="f-tipo">Tipo de cocina</label>
+        <input type="text" id="f-tipo" placeholder="Ej. Asturiana"
+               autocapitalize="sentences" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="60" list="tipos-sugeridos">
+      </div>
+      <div class="field precio">
+        <label for="f-precio">Precio</label>
+        <select id="f-precio">
+          <option value="1">€</option>
+          <option value="2" selected>€€</option>
+          <option value="3">€€€</option>
+        </select>
+      </div>
+    </div>
+    <datalist id="tipos-sugeridos"></datalist>
+
+    <div class="field">
+      <label for="f-zona">Zona</label>
+      <input type="text" id="f-zona" placeholder="Ej. Chamberí"
+             autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="80" list="zonas-sugeridas">
+    </div>
+    <datalist id="zonas-sugeridas"></datalist>
+
+    <div class="field">
+      <label for="f-carta">Carta o menú online <span class="hint">— opcional</span></label>
+      <input type="url" id="f-carta" placeholder="Ej. casadani.com/carta"
+             inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="500"
+             aria-describedby="f-carta-warn">
+    </div>
+    <p class="msg msg-warn" id="f-carta-warn" hidden></p>
+
+    <div class="field">
+      <label for="f-reserva">Reservar <span class="hint">— opcional: web o teléfono</span></label>
+      <input type="text" id="f-reserva" placeholder="Ej. 915 63 89 77 o casadani.com/reservas"
+             autocapitalize="none" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="500"
+             aria-describedby="f-reserva-warn">
+    </div>
+    <p class="msg msg-warn" id="f-reserva-warn" hidden></p>
+
+    <div class="field">
+      <label for="f-direccion">Dirección <span class="hint">— opcional, afina «Cómo llegar»</span></label>
+      <input type="text" id="f-direccion" placeholder="Ej. C/ Gaztambide, 56"
+             autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" maxlength="160">
     </div>
 
-    <div id="app-shell" hidden>
+    <details class="tools" id="sedes-details">
+      <summary>Varios locales <span class="hint">— opcional, solo si tiene más de uno</span></summary>
+      <div class="tools-body">
+        <p class="hint" style="margin:0 0 2px;">Si añades más de un local, la tarjeta muestra uno por cada zona que coincida con el filtro que tengas puesto (o todos, si no filtras). Con uno solo, va directo, sin preguntar. Los datos de arriba (carta, reserva, dirección) se ignoran si hay locales aquí.</p>
 
-      <header class="page">
-        <div>
-          <p class="kicker">Adrián · Madrid</p>
-          <h1>Dónde <em>comer</em></h1>
-          <p class="sub">La lista de los dos, ordenable por zona, tipo de cocina y precio.</p>
-        </div>
-        <div class="header-actions">
-          <button class="add-btn" id="open-add" type="button" aria-expanded="false" aria-controls="panel">＋
-            Añadir</button>
-          <button class="theme-btn" id="theme-btn" type="button">Tema: automático</button>
-          <button class="theme-btn" id="logout-btn" type="button">Salir</button>
-        </div>
-      </header>
-
-
-      <div class="banner" id="sync-banner" hidden></div>
-
-      <form class="panel" id="panel" novalidate aria-labelledby="panel-title" hidden>
-        <h2 id="panel-title">Añadir restaurante</h2>
+        <ul class="sede-list" id="sede-list"></ul>
 
         <div class="field">
-          <label for="f-nombre">Nombre</label>
-          <input type="text" id="f-nombre" placeholder="Ej. Casa Dani" autocapitalize="words" autocorrect="off"
-            spellcheck="false" enterkeyhint="done" maxlength="80" required aria-describedby="f-nombre-error">
+          <label for="f-sede-nombre">Nombre del local</label>
+          <input type="text" id="f-sede-nombre" placeholder="Ej. Alcalá" maxlength="60"
+                 autocapitalize="words" autocorrect="off" spellcheck="false">
         </div>
-        <p class="msg msg-error" id="f-nombre-error" hidden>Escribe un nombre para poder guardarlo.</p>
-        <p class="msg msg-warn" id="f-dup-warn" hidden></p>
-
-        <div class="field-row">
-          <div class="field">
-            <label for="f-tipo">Tipo de cocina</label>
-            <input type="text" id="f-tipo" placeholder="Ej. Asturiana" autocapitalize="sentences" autocorrect="off"
-              spellcheck="false" enterkeyhint="done" maxlength="60" list="tipos-sugeridos">
-          </div>
-          <div class="field precio">
-            <label for="f-precio">Precio</label>
-            <select id="f-precio">
-              <option value="1">€</option>
-              <option value="2" selected>€€</option>
-              <option value="3">€€€</option>
-            </select>
-          </div>
-        </div>
-        <datalist id="tipos-sugeridos"></datalist>
-
         <div class="field">
-          <label for="f-zona">Zona</label>
-          <input type="text" id="f-zona" placeholder="Ej. Chamberí" autocapitalize="words" autocorrect="off"
-            spellcheck="false" enterkeyhint="done" maxlength="80" list="zonas-sugeridas">
+          <label for="f-sede-zona">Zona <span class="hint">— para poder filtrar por barrio</span></label>
+          <input type="text" id="f-sede-zona" placeholder="Ej. Chamberí" maxlength="80" list="zonas-sugeridas"
+                 autocapitalize="words" autocorrect="off" spellcheck="false">
         </div>
-        <datalist id="zonas-sugeridas"></datalist>
-
         <div class="field">
-          <label for="f-carta">Carta o menú online <span class="hint">— opcional</span></label>
-          <input type="url" id="f-carta" placeholder="Ej. casadani.com/carta" inputmode="url" autocapitalize="none"
-            autocorrect="off" spellcheck="false" enterkeyhint="done" maxlength="500" aria-describedby="f-carta-warn">
+          <label for="f-sede-direccion">Dirección <span class="hint">— opcional</span></label>
+          <input type="text" id="f-sede-direccion" placeholder="Ej. C/ Alcalá, 25" maxlength="160"
+                 autocapitalize="words" autocorrect="off" spellcheck="false">
         </div>
-        <p class="msg msg-warn" id="f-carta-warn" hidden></p>
-
         <div class="field">
-          <label for="f-reserva">Reservar <span class="hint">— opcional: web o teléfono</span></label>
-          <input type="text" id="f-reserva" placeholder="Ej. 915 63 89 77 o casadani.com/reservas" autocapitalize="none"
-            autocorrect="off" spellcheck="false" enterkeyhint="done" maxlength="500" aria-describedby="f-reserva-warn">
+          <label for="f-sede-carta">Carta <span class="hint">— opcional</span></label>
+          <input type="url" id="f-sede-carta" placeholder="Ej. sitio.com/alcala/carta" maxlength="500"
+                 inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
-        <p class="msg msg-warn" id="f-reserva-warn" hidden></p>
-
         <div class="field">
-          <label for="f-direccion">Dirección <span class="hint">— opcional, afina «Cómo llegar»</span></label>
-          <input type="text" id="f-direccion" placeholder="Ej. C/ Gaztambide, 56" autocapitalize="words"
-            autocorrect="off" spellcheck="false" enterkeyhint="done" maxlength="160">
+          <label for="f-sede-reserva">Reservar <span class="hint">— opcional: web o teléfono</span></label>
+          <input type="text" id="f-sede-reserva" placeholder="Ej. 915 00 00 00" maxlength="500"
+                 autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
-
-        <div class="field">
-          <label for="f-nota">Nota <span class="hint">— opcional</span></label>
-          <input type="text" id="f-nota" placeholder="Ej. reservar con antelación" autocapitalize="sentences"
-            enterkeyhint="done" maxlength="120">
-        </div>
-
-        <div class="panel-actions">
-          <button class="btn btn-primary" id="save-btn" type="submit">Guardar</button>
-          <button class="btn btn-secondary" id="cancel-btn" type="button">Cancelar</button>
-        </div>
-      </form>
-
-      <div class="controls">
-        <div class="search-row">
-          <label class="sr-only" for="search">Buscar restaurante</label>
-          <input type="search" class="search" id="search" placeholder="Buscar nombre, cocina o zona…"
-            autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search" maxlength="60">
-        </div>
-
-        <div class="filter-block">
-          <span class="filter-label" id="lbl-zona">Zona</span>
-          <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
-        </div>
-
-        <div class="filter-block">
-          <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
-          <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
-        </div>
-
-        <div class="filter-block">
-          <span class="filter-label" id="lbl-precio">Precio</span>
-          <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
-        </div>
-
-        <div class="sort-row">
-          <label for="sort">Ordenar por</label>
-          <select id="sort">
-            <option value="nombre">Nombre (A–Z)</option>
-            <option value="zona">Zona</option>
-            <option value="tipo">Tipo de cocina</option>
-            <option value="precio">Precio (menor a mayor)</option>
-            <option value="recientes">Añadidos recientemente</option>
-          </select>
-          <button class="dado-btn" id="random-btn" type="button">Sorpréndeme</button>
-        </div>
+        <button class="btn btn-secondary" id="add-sede-btn" type="button">＋ Añadir este local</button>
       </div>
+    </details>
 
-      <div class="result-line">
-        <p id="result-count" aria-live="polite" style="margin:0;"></p>
-        <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
-      </div>
-
-      <ul class="list" id="list"></ul>
-      <div class="empty" id="empty" hidden></div>
-
-      <footer class="note">
-        <p>Lista compartida en tiempo real. Si no hay conexión, ves la última copia guardada en este dispositivo y no se
-          puede añadir ni editar hasta que vuelva.</p>
-
-        <details class="tools">
-          <summary>Copia de seguridad</summary>
-          <div class="tools-body">
-            <label class="sr-only" for="backup-box">Datos de la lista en formato JSON</label>
-            <textarea id="backup-box" spellcheck="false" autocapitalize="none" autocorrect="off"
-              placeholder="Pulsa «Crear copia» para volcar aquí tu lista, o pega una copia anterior y pulsa «Restaurar»."></textarea>
-            <div class="tools-row">
-              <button class="btn btn-secondary" id="export-btn" type="button">Crear copia</button>
-              <button class="btn btn-secondary" id="copy-btn" type="button">Copiar</button>
-              <button class="btn btn-secondary" id="import-btn" type="button">Restaurar</button>
-            </div>
-            <p id="tools-msg" class="msg" aria-live="polite" style="margin:0;"></p>
-          </div>
-        </details>
-      </footer>
-
+    <div class="field">
+      <label for="f-nota">Nota <span class="hint">— opcional</span></label>
+      <input type="text" id="f-nota" placeholder="Ej. reservar con antelación"
+             autocapitalize="sentences" enterkeyhint="done" maxlength="120">
     </div>
+
+    <div class="panel-actions">
+      <button class="btn btn-primary" id="save-btn" type="submit">Guardar</button>
+      <button class="btn btn-secondary" id="cancel-btn" type="button">Cancelar</button>
+    </div>
+  </form>
+
+  <div class="controls">
+    <div class="search-row">
+      <label class="sr-only" for="search">Buscar restaurante</label>
+      <input type="search" class="search" id="search"
+             placeholder="Buscar nombre, cocina o zona…"
+             autocapitalize="none" autocorrect="off" spellcheck="false"
+             enterkeyhint="search" maxlength="60">
+    </div>
+
+    <div class="filter-block">
+      <span class="filter-label" id="lbl-zona">Zona</span>
+      <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
+    </div>
+
+    <div class="filter-block">
+      <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
+      <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
+    </div>
+
+    <div class="filter-block">
+      <span class="filter-label" id="lbl-precio">Precio</span>
+      <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
+    </div>
+
+    <div class="sort-row">
+      <label for="sort">Ordenar por</label>
+      <select id="sort">
+        <option value="nombre">Nombre (A–Z)</option>
+        <option value="zona">Zona</option>
+        <option value="tipo">Tipo de cocina</option>
+        <option value="precio">Precio (menor a mayor)</option>
+        <option value="recientes">Añadidos recientemente</option>
+      </select>
+      <button class="dado-btn" id="random-btn" type="button">Sorpréndeme</button>
+    </div>
+  </div>
+
+  <div class="result-line">
+    <p id="result-count" aria-live="polite" style="margin:0;"></p>
+    <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
+  </div>
+
+  <ul class="list" id="list"></ul>
+  <div class="empty" id="empty" hidden></div>
+
+  <footer class="note">
+    <p>Lista compartida en tiempo real. Si no hay conexión, ves la última copia guardada en este dispositivo y no se puede añadir ni editar hasta que vuelva.</p>
+
+    <details class="tools">
+      <summary>Copia de seguridad</summary>
+      <div class="tools-body">
+        <label class="sr-only" for="backup-box">Datos de la lista en formato JSON</label>
+        <textarea id="backup-box" spellcheck="false" autocapitalize="none" autocorrect="off"
+                  placeholder="Pulsa «Crear copia» para volcar aquí tu lista, o pega una copia anterior y pulsa «Restaurar»."></textarea>
+        <div class="tools-row">
+          <button class="btn btn-secondary" id="export-btn" type="button">Crear copia</button>
+          <button class="btn btn-secondary" id="copy-btn" type="button">Copiar</button>
+          <button class="btn btn-secondary" id="import-btn" type="button">Restaurar</button>
+        </div>
+        <p id="tools-msg" class="msg" aria-live="polite" style="margin:0;"></p>
+      </div>
+    </details>
+  </footer>
 
   </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
-    <span id="toast-text"></span>
-    <button type="button" id="toast-action" hidden></button>
-  </div>
+</div>
 
-  <script>
-    (function () {
-      "use strict";
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-text"></span>
+  <button type="button" id="toast-action" hidden></button>
+</div>
 
-      /* ============================================================
-         0. Configuración de Supabase — EDITA ESTAS DOS LÍNEAS
-         ============================================================
-         Sácalas de tu proyecto en supabase.com → Project Settings → API.
-         Sin esto la app no tiene con quién hablar: se queda mostrando la
-         última copia guardada en este dispositivo, si la hay. */
+<script>
+(function () {
+  "use strict";
 
-      var SUPABASE_URL = "https://sxyxithmrrqvzrymkhhp.supabase.co";
-      var SUPABASE_ANON_KEY = "sb_publishable_bsdNhgcFImWdl86hKcGUEg_ZCKAOX7p";
+  /* ============================================================
+     0. Configuración de Supabase — EDITA ESTAS DOS LÍNEAS
+     ============================================================
+     Sácalas de tu proyecto en supabase.com → Project Settings → API.
+     Sin esto la app no tiene con quién hablar: se queda mostrando la
+     última copia guardada en este dispositivo, si la hay. */
 
-      var SUPABASE_CONFIGURADO = SUPABASE_URL.indexOf("TU-PROYECTO") === -1 &&
-        SUPABASE_ANON_KEY.indexOf("TU-CLAVE") === -1;
+  var SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+  var SUPABASE_ANON_KEY = "TU-CLAVE-ANON-PUBLICA";
 
-      /* ============================================================
-         1. Almacenamiento local — ahora solo caché de lectura y prefs.
-            La sesión de Supabase la gestiona su propio cliente por su
-            cuenta (también en localStorage, con su propia clave).
-         ============================================================ */
+  var SUPABASE_CONFIGURADO = SUPABASE_URL.indexOf("TU-PROYECTO") === -1 &&
+                              SUPABASE_ANON_KEY.indexOf("TU-CLAVE") === -1;
 
-      var CLAVE_V1 = "gorditos-restaurantes-v1";      // heredado, solo para la semilla inicial
-      var CLAVE_V2 = "gorditos-restaurantes-v2";      // heredado, solo para la semilla inicial
-      var CLAVE_OVERLAY = "gorditos-overlay-v3";      // heredado, solo para la semilla inicial
-      var CLAVE_CACHE = "gorditos-cache-v4";          // última copia vista de Supabase (solo lectura)
-      var CLAVE_FILTROS = "gorditos-filtros-v1";
-      var CLAVE_TEMA = "gorditos-tema-v1";
+  /* ============================================================
+     1. Almacenamiento local — ahora solo caché de lectura y prefs.
+        La sesión de Supabase la gestiona su propio cliente por su
+        cuenta (también en localStorage, con su propia clave).
+     ============================================================ */
 
-      function leerCrudo(clave) {
-        try { return localStorage.getItem(clave); } catch (e) { return null; }
-      }
-      function escribirCrudo(clave, valor) {
-        try { localStorage.setItem(clave, valor); return true; } catch (e) { return false; }
-      }
-      function parsearJson(raw) {
-        if (!raw) return null;
-        try { return JSON.parse(raw); } catch (e) { return null; }
-      }
+  var CLAVE_V1 = "gorditos-restaurantes-v1";      // heredado, solo para la semilla inicial
+  var CLAVE_V2 = "gorditos-restaurantes-v2";      // heredado, solo para la semilla inicial
+  var CLAVE_OVERLAY = "gorditos-overlay-v3";      // heredado, solo para la semilla inicial
+  var CLAVE_CACHE = "gorditos-cache-v4";          // última copia vista de Supabase (solo lectura)
+  var CLAVE_FILTROS = "gorditos-filtros-v1";
+  var CLAVE_TEMA = "gorditos-tema-v1";
 
-      /* ============================================================
-         2. Catálogo de arranque — solo se usa UNA VEZ, para poblar la
-            tabla compartida si está completamente vacía. Después de eso
-            no vuelve a leerse: la tabla de Supabase manda.
-            (Sigue siendo tuyo para editarlo a mano si quieres reinstalar
-            de cero alguna vez, pero ya no gobierna el día a día.)
-         ============================================================ */
+  function leerCrudo(clave) {
+    try { return localStorage.getItem(clave); } catch (e) { return null; }
+  }
+  function escribirCrudo(clave, valor) {
+    try { localStorage.setItem(clave, valor); return true; } catch (e) { return false; }
+  }
+  function parsearJson(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
 
-      var CATALOGO = [
-        { nombre: "La Bientirada", tipo: "Mediterránea", zona: "Varias zonas (Quevedo, Santa Engracia…)", precio: 2 },
-        { nombre: "La Ancha", tipo: "Española / Asador", zona: "Varias zonas (Alcalá, Zorrilla…)", precio: 3, carta: "https://www.laancha.com/" },
-        { nombre: "Lamucca", tipo: "Mediterránea / Internacional", zona: "Varias zonas (Prado, Serrano, Almagro…)", precio: 2, carta: "https://www.lamuccacompany.com/" },
-        { nombre: "El Urogallo", tipo: "Asturiana", zona: "Chamberí", precio: 2, carta: "https://carta.elurogallo.es/", reserva: "+34 919 55 09 09" },
-        { nombre: "Hundred", tipo: "Hamburguesas", zona: "Salamanca", precio: 2, carta: "https://hundredburgers.com/carta/", reserva: "https://hundredburgers.com/pide" },
-        { nombre: "Numa Pompilio", tipo: "Italiana", zona: "Salamanca", precio: 3, carta: "http://restaurantenuma.com/", reserva: "+34 916 85 97 19" },
-        { nombre: "Bazaar", tipo: "Internacional / Fusión", zona: "Chueca", precio: 2, carta: "https://andilana.com/restaurantes/bazaar/", reserva: "https://andilana.com/restaurantes/bazaar/#reservar" },
-        { nombre: "La finca de Susana", tipo: "Mediterránea", zona: "Centro (Sevilla)", precio: 2, carta: "https://andilana.com/restaurantes/la-finca-de-susana/", reserva: "https://andilana.com/restaurantes/la-finca-de-susana/#reservar" },
-        { nombre: "Santa Canela", tipo: "Cafetería / Brunch", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar en Madrid" },
-        { nombre: "Alcaravea", tipo: "Española tradicional renovada", zona: "Chamberí (Gaztambide)", precio: 3, reserva: "+34 912 83 80 05" },
-        { nombre: "Pez tortilla", tipo: "Tortilla española", zona: "Malasaña", precio: 1 },
-        { nombre: "Camino", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
-        { nombre: "Beata Pasta", tipo: "Italiana (pasta)", zona: "Malasaña", precio: 1 },
-        { nombre: "Ornella", tipo: "Italiana", zona: "Chamberí", precio: 2 },
-        { nombre: "Baldoria", tipo: "Italiana", zona: "Malasaña / Chueca", precio: 2 },
-        { nombre: "Casa Luna", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
-        { nombre: "Massart Pizza", tipo: "Pizza", zona: "Chamberí", precio: 1, carta: "https://www.massartpizza.com/" },
-        { nombre: "Riaño", tipo: "Asturiana", zona: "Chamberí", precio: 2 },
-        { nombre: "Jose Luis", tipo: "Tapas clásicas", zona: "Varias zonas (Salamanca, Serrano…)", precio: 3 },
-        { nombre: "Botania", tipo: "Mediterránea", zona: "Plaza de España / Universidad", precio: 3 },
-        { nombre: "SottoSopra", tipo: "Italiana", zona: "Chamberí", precio: 2 },
-        { nombre: "La Taberna de Peñalver", tipo: "Española tradicional", zona: "Chueca", precio: 2 },
-        { nombre: "Café de París", tipo: "Clásica española/francesa", zona: "Centro", precio: 2 },
-        { nombre: "El Ñeru", tipo: "Asturiana", zona: "Malasaña", precio: 2 },
-        { nombre: "El pimiento verde", tipo: "Tapas españolas", zona: "Varias zonas (Salamanca, Recoletos…)", precio: 2 },
-        { nombre: "Villa Capri", tipo: "Italiana", zona: "Chamberí (aprox.)", precio: 2, flag: "zona aproximada" },
-        { nombre: "Fass", tipo: "Cervecería alemana", zona: "Retiro (Menéndez Pelayo)", precio: 2 },
-        { nombre: "Lateral", tipo: "Tapas moderna", zona: "Varias zonas (cadena)", precio: 2, carta: "https://www.lateral.com/carta" },
-        { nombre: "Ópera Victoria", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/opera-victoria/", reserva: "https://andilana.com/restaurantes/opera-victoria/#reservar" },
-        { nombre: "Ginger", tipo: "Tapas y cócteles", zona: "Centro (Plaza del Ángel)", precio: 2, carta: "https://andilana.com/restaurantes/ginger/", reserva: "https://andilana.com/restaurantes/ginger/#reservar" },
-        { nombre: "La gloria de montera", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/la-gloria-de-montera/", reserva: "https://andilana.com/restaurantes/la-gloria-de-montera/#reservar" },
-        { nombre: "Perrachica", tipo: "Vermutería / Española moderna", zona: "Chamberí", precio: 2, carta: "https://glhrestaurants.com/l/restaurantes/perrachica/" },
-        { nombre: "PerretxiCo", tipo: "Pinchos vascos", zona: "Malasaña", precio: 2, carta: "https://perretxico.es/" },
-        { nombre: "Los bocadillos", tipo: "Bocadillos", zona: "Sin confirmar", precio: 1, flag: "dato sin confirmar" },
-        { nombre: "Reginella", tipo: "Pizza italiana", zona: "Chamberí / Salamanca", precio: 2 },
-        { nombre: "Raimunda", tipo: "Fusión mediterránea-iberoamericana", zona: "Recoletos / Salamanca", precio: 3 }
-      ];
+  /* ============================================================
+     2. Catálogo de arranque — solo se usa UNA VEZ, para poblar la
+        tabla compartida si está completamente vacía. Después de eso
+        no vuelve a leerse: la tabla de Supabase manda.
+        (Sigue siendo tuyo para editarlo a mano si quieres reinstalar
+        de cero alguna vez, pero ya no gobierna el día a día.)
+     ============================================================ */
 
-      /* ============================================================
-         3. Utilidades
-         ============================================================ */
+  var CATALOGO = [
+    { nombre: "La Bientirada", tipo: "Mediterránea", zona: "Varias zonas (Quevedo, Santa Engracia…)", precio: 2 },
+    { nombre: "La Ancha", tipo: "Española / Asador", zona: "Varias zonas (Alcalá, Zorrilla…)", precio: 3, carta: "https://www.laancha.com/" },
+    { nombre: "Lamucca", tipo: "Mediterránea / Internacional", zona: "Varias zonas (Prado, Serrano, Almagro…)", precio: 2, carta: "https://www.lamuccacompany.com/" },
+    { nombre: "El Urogallo", tipo: "Asturiana", zona: "Chamberí", precio: 2, carta: "https://carta.elurogallo.es/", reserva: "+34 919 55 09 09" },
+    { nombre: "Hundred", tipo: "Hamburguesas", zona: "Salamanca", precio: 2, carta: "https://hundredburgers.com/carta/", reserva: "https://hundredburgers.com/pide" },
+    { nombre: "Numa Pompilio", tipo: "Italiana", zona: "Salamanca", precio: 3, carta: "http://restaurantenuma.com/", reserva: "+34 916 85 97 19" },
+    { nombre: "Bazaar", tipo: "Internacional / Fusión", zona: "Chueca", precio: 2, carta: "https://andilana.com/restaurantes/bazaar/", reserva: "https://andilana.com/restaurantes/bazaar/#reservar" },
+    { nombre: "La finca de Susana", tipo: "Mediterránea", zona: "Centro (Sevilla)", precio: 2, carta: "https://andilana.com/restaurantes/la-finca-de-susana/", reserva: "https://andilana.com/restaurantes/la-finca-de-susana/#reservar" },
+    { nombre: "Santa Canela", tipo: "Cafetería / Brunch", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar en Madrid" },
+    { nombre: "Alcaravea", tipo: "Española tradicional renovada", zona: "Chamberí (Gaztambide)", precio: 3, reserva: "+34 912 83 80 05" },
+    { nombre: "Pez tortilla", tipo: "Tortilla española", zona: "Malasaña", precio: 1 },
+    { nombre: "Camino", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
+    { nombre: "Beata Pasta", tipo: "Italiana (pasta)", zona: "Malasaña", precio: 1 },
+    { nombre: "Ornella", tipo: "Italiana", zona: "Chamberí", precio: 2 },
+    { nombre: "Baldoria", tipo: "Italiana", zona: "Malasaña / Chueca", precio: 2 },
+    { nombre: "Casa Luna", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
+    { nombre: "Massart Pizza", tipo: "Pizza", zona: "Chamberí", precio: 1, carta: "https://www.massartpizza.com/" },
+    { nombre: "Riaño", tipo: "Asturiana", zona: "Chamberí", precio: 2 },
+    { nombre: "Jose Luis", tipo: "Tapas clásicas", zona: "Varias zonas (Salamanca, Serrano…)", precio: 3 },
+    { nombre: "Botania", tipo: "Mediterránea", zona: "Plaza de España / Universidad", precio: 3 },
+    { nombre: "SottoSopra", tipo: "Italiana", zona: "Chamberí", precio: 2 },
+    { nombre: "La Taberna de Peñalver", tipo: "Española tradicional", zona: "Chueca", precio: 2 },
+    { nombre: "Café de París", tipo: "Clásica española/francesa", zona: "Centro", precio: 2 },
+    { nombre: "El Ñeru", tipo: "Asturiana", zona: "Malasaña", precio: 2 },
+    { nombre: "El pimiento verde", tipo: "Tapas españolas", zona: "Varias zonas (Salamanca, Recoletos…)", precio: 2 },
+    { nombre: "Villa Capri", tipo: "Italiana", zona: "Chamberí (aprox.)", precio: 2, flag: "zona aproximada" },
+    { nombre: "Fass", tipo: "Cervecería alemana", zona: "Retiro (Menéndez Pelayo)", precio: 2 },
+    { nombre: "Lateral", tipo: "Tapas moderna", zona: "Varias zonas (cadena)", precio: 2, carta: "https://www.lateral.com/carta" },
+    { nombre: "Ópera Victoria", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/opera-victoria/", reserva: "https://andilana.com/restaurantes/opera-victoria/#reservar" },
+    { nombre: "Ginger", tipo: "Tapas y cócteles", zona: "Centro (Plaza del Ángel)", precio: 2, carta: "https://andilana.com/restaurantes/ginger/", reserva: "https://andilana.com/restaurantes/ginger/#reservar" },
+    { nombre: "La gloria de montera", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/la-gloria-de-montera/", reserva: "https://andilana.com/restaurantes/la-gloria-de-montera/#reservar" },
+    { nombre: "Perrachica", tipo: "Vermutería / Española moderna", zona: "Chamberí", precio: 2, carta: "https://glhrestaurants.com/l/restaurantes/perrachica/" },
+    { nombre: "PerretxiCo", tipo: "Pinchos vascos", zona: "Malasaña", precio: 2, carta: "https://perretxico.es/" },
+    { nombre: "Los bocadillos", tipo: "Bocadillos", zona: "Sin confirmar", precio: 1, flag: "dato sin confirmar" },
+    { nombre: "Reginella", tipo: "Pizza italiana", zona: "Chamberí / Salamanca", precio: 2 },
+    { nombre: "Raimunda", tipo: "Fusión mediterránea-iberoamericana", zona: "Recoletos / Salamanca", precio: 3 }
+  ];
 
-      function $(id) { return document.getElementById(id); }
+  /* ============================================================
+     3. Utilidades
+     ============================================================ */
 
-      function desplazarA(el, opciones) {
-        if (!el || typeof el.scrollIntoView !== "function") return;
-        try { el.scrollIntoView(opciones); } catch (e) { /* cosmético */ }
-      }
+  function $(id) { return document.getElementById(id); }
 
-      function texto(v) {
-        if (typeof v === "string") return v.trim();
-        if (v === null || v === undefined) return "";
-        if (typeof v === "number" || typeof v === "boolean") return String(v).trim();
-        return "";
-      }
+  function desplazarA(el, opciones) {
+    if (!el || typeof el.scrollIntoView !== "function") return;
+    try { el.scrollIntoView(opciones); } catch (e) { /* cosmético */ }
+  }
 
-      function plano(s) {
-        return texto(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      }
+  function texto(v) {
+    if (typeof v === "string") return v.trim();
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number" || typeof v === "boolean") return String(v).trim();
+    return "";
+  }
 
-      function comparar(a, b) {
-        return texto(a).localeCompare(texto(b), "es", { sensitivity: "base" });
-      }
+  function plano(s) {
+    return texto(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
 
-      function analizarUrl(valor) {
-        var v = texto(valor);
-        if (!v) return { href: "", valida: true, vacia: true };
-        var candidata = v;
-        if (!/^[a-z][a-z0-9+.\-]*:/i.test(candidata)) candidata = "https://" + candidata;
-        try {
-          var u = new URL(candidata);
-          if (u.protocol !== "http:" && u.protocol !== "https:") return { href: v, valida: false };
-          if (u.hostname.indexOf(".") === -1 || /\s/.test(u.hostname)) return { href: v, valida: false };
-          return { href: u.href, valida: true, vacia: false };
-        } catch (e) {
-          return { href: v, valida: false };
-        }
-      }
+  function comparar(a, b) {
+    return texto(a).localeCompare(texto(b), "es", { sensitivity: "base" });
+  }
 
-      function analizarReserva(valor) {
-        var v = texto(valor);
-        if (!v) return { vacia: true, valida: true, tipo: "", href: "" };
-        var digitos = v.replace(/\D/g, "");
-        if (/^[+()\d\s.\-]+$/.test(v) && digitos.length >= 7 && digitos.length <= 15) {
-          return { vacia: false, valida: true, tipo: "tel", href: "tel:" + v.replace(/[^\d+]/g, "") };
-        }
-        var an = analizarUrl(v);
-        return { vacia: false, valida: an.valida, tipo: "url", href: an.href };
-      }
+  function analizarUrl(valor) {
+    var v = texto(valor);
+    if (!v) return { href: "", valida: true, vacia: true };
+    var candidata = v;
+    if (!/^[a-z][a-z0-9+.\-]*:/i.test(candidata)) candidata = "https://" + candidata;
+    try {
+      var u = new URL(candidata);
+      if (u.protocol !== "http:" && u.protocol !== "https:") return { href: v, valida: false };
+      if (u.hostname.indexOf(".") === -1 || /\s/.test(u.hostname)) return { href: v, valida: false };
+      return { href: u.href, valida: true, vacia: false };
+    } catch (e) {
+      return { href: v, valida: false };
+    }
+  }
 
-      function esApple() {
-        var ua = navigator.userAgent || "";
-        var plat = navigator.platform || "";
-        return /iPad|iPhone|iPod|Macintosh|Mac OS X/.test(plat + " " + ua);
-      }
+  function analizarReserva(valor) {
+    var v = texto(valor);
+    if (!v) return { vacia: true, valida: true, tipo: "", href: "" };
+    var digitos = v.replace(/\D/g, "");
+    if (/^[+()\d\s.\-]+$/.test(v) && digitos.length >= 7 && digitos.length <= 15) {
+      return { vacia: false, valida: true, tipo: "tel", href: "tel:" + v.replace(/[^\d+]/g, "") };
+    }
+    var an = analizarUrl(v);
+    return { vacia: false, valida: an.valida, tipo: "url", href: an.href };
+  }
 
-      function consultaMapa(d) {
-        if (d.direccion) return d.direccion + ", Madrid";
-        var z = texto(d.zona);
-        if (/^Varias zonas/i.test(z) || /^Sin (confirmar|especificar)/i.test(z)) z = "";
-        z = z.replace(/\([^)]*\)/g, " ").split("/")[0].replace(/\s+/g, " ").trim();
-        return (z ? d.nombre + " " + z : d.nombre) + " Madrid";
-      }
+  function esApple() {
+    var ua = navigator.userAgent || "";
+    var plat = navigator.platform || "";
+    return /iPad|iPhone|iPod|Macintosh|Mac OS X/.test(plat + " " + ua);
+  }
 
-      function urlMapa(d) {
-        var q = encodeURIComponent(consultaMapa(d));
-        return esApple()
-          ? "https://maps.apple.com/?q=" + q
-          : "https://www.google.com/maps/search/?api=1&query=" + q;
-      }
+  function consultaMapa(d) {
+    if (d.direccion) return d.direccion + ", Madrid";
+    var z = texto(d.zona);
+    if (/^Varias zonas/i.test(z) || /^Sin (confirmar|especificar)/i.test(z)) z = "";
+    z = z.replace(/\([^)]*\)/g, " ").split("/")[0].replace(/\s+/g, " ").trim();
+    return (z ? d.nombre + " " + z : d.nombre) + " Madrid";
+  }
 
-      /* ============================================================
-         4. Normalización de registros (fila de Supabase ↔ objeto interno)
-         ============================================================ */
+  function urlMapa(d) {
+    var q = encodeURIComponent(consultaMapa(d));
+    return esApple()
+      ? "https://maps.apple.com/?q=" + q
+      : "https://www.google.com/maps/search/?api=1&query=" + q;
+  }
 
-      function normalizarRegistro(bruto) {
-        var o = (bruto && typeof bruto === "object") ? bruto : {};
-        var precio = parseInt(o.precio, 10);
-        if (!(precio >= 1 && precio <= 3)) precio = 2;
-        var carta = texto(o.carta || o.url || o.web || o.menu || o.enlace);
-        var an = analizarUrl(carta);
-        var res = analizarReserva(o.reserva || o.reservas || o.telefono);
-        return {
-          nombre: texto(o.nombre || o.name) || "Sin nombre",
-          tipo: texto(o.tipo) || "Sin especificar",
-          zona: texto(o.zona) || "Sin especificar",
-          precio: precio,
-          flag: texto(o.flag || o.nota),
-          carta: an.vacia ? "" : an.href,
-          reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva || o.reservas || o.telefono)),
-          direccion: texto(o.direccion)
-        };
-      }
+  /* ============================================================
+     4. Normalización de registros (fila de Supabase ↔ objeto interno)
+     ============================================================ */
 
-      // Fila tal como la espera la tabla de Supabase (sin id: lo pone el servidor).
-      function filaDesde(valores) {
-        return {
-          nombre: valores.nombre, tipo: valores.tipo, zona: valores.zona, precio: valores.precio,
-          flag: valores.flag, carta: valores.carta, reserva: valores.reserva, direccion: valores.direccion
-        };
-      }
+  function normalizarRegistro(bruto) {
+    var o = (bruto && typeof bruto === "object") ? bruto : {};
+    var precio = parseInt(o.precio, 10);
+    if (!(precio >= 1 && precio <= 3)) precio = 2;
+    var carta = texto(o.carta || o.url || o.web || o.menu || o.enlace);
+    var an = analizarUrl(carta);
+    var res = analizarReserva(o.reserva || o.reservas || o.telefono);
+    return {
+      nombre: texto(o.nombre || o.name) || "Sin nombre",
+      tipo: texto(o.tipo) || "Sin especificar",
+      zona: texto(o.zona) || "Sin especificar",
+      precio: precio,
+      flag: texto(o.flag || o.nota),
+      carta: an.vacia ? "" : an.href,
+      reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva || o.reservas || o.telefono)),
+      direccion: texto(o.direccion),
+      sedes: normalizarSedes(o.sedes)
+    };
+  }
 
-      // Fila de Supabase → objeto interno que usa el resto de la app.
-      function registroDesdeFila(fila) {
-        var r = normalizarRegistro(fila);
-        r.id = texto(fila.id);
-        var creado = fila.created_at ? Date.parse(fila.created_at) : NaN;
-        r.creado = isFinite(creado) ? creado : 0;
-        r.actualizadoPor = texto(fila.updated_by);
-        return r;
-      }
+  /**
+   * Una sede es un local físico del mismo restaurante, con su propia
+   * dirección, carta y reserva. Si un restaurante tiene varias, la
+   * tarjeta deja elegir a cuál ir antes de abrir cualquier enlace.
+   */
+  function normalizarSede(bruto) {
+    var o = (bruto && typeof bruto === "object") ? bruto : {};
+    var an = analizarUrl(texto(o.carta));
+    var res = analizarReserva(texto(o.reserva));
+    return {
+      nombre: texto(o.nombre),
+      zona: texto(o.zona),
+      direccion: texto(o.direccion),
+      carta: an.vacia ? "" : an.href,
+      reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva))
+    };
+  }
 
-      /* ============================================================
-         5. La mejor semilla que tengamos a mano en este dispositivo
-            (para el primer arranque de la tabla compartida, si está
-            vacía). Reutiliza, sin escribir nada, el catálogo+overlay de
-            la versión anterior si lo encuentra; si no, el CATALOGO de
-            arriba tal cual.
-         ============================================================ */
+  function normalizarSedes(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(normalizarSede).filter(function (s) { return s.nombre; });
+  }
 
-      function mejorSemillaLocal() {
-        function normalizarLista(arr) {
-          if (!Array.isArray(arr)) return [];
-          return arr.map(function (o) { return normalizarRegistro(o); });
-        }
+  // Fila tal como la espera la tabla de Supabase (sin id: lo pone el servidor).
+  function filaDesde(valores) {
+    return {
+      nombre: valores.nombre, tipo: valores.tipo, zona: valores.zona, precio: valores.precio,
+      flag: valores.flag, carta: valores.carta, reserva: valores.reserva, direccion: valores.direccion,
+      sedes: valores.sedes || []
+    };
+  }
 
-        var rawOverlay = parsearJson(leerCrudo(CLAVE_OVERLAY));
-        if (rawOverlay && typeof rawOverlay === "object") {
-          var ocultosSet = Object.create(null);
-          (rawOverlay.ocultos || []).forEach(function (id) { ocultosSet[id] = true; });
+  // Fila de Supabase → objeto interno que usa el resto de la app.
+  function registroDesdeFila(fila) {
+    var r = normalizarRegistro(fila);
+    r.id = texto(fila.id);
+    var creado = fila.created_at ? Date.parse(fila.created_at) : NaN;
+    r.creado = isFinite(creado) ? creado : 0;
+    r.actualizadoPor = texto(fila.updated_by);
+    return r;
+  }
 
-          var idDe = function (nombre) {
-            return "c_" + plano(nombre).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-          };
-          var base = CATALOGO
-            .filter(function (c) { return !ocultosSet[idDe(c.nombre)]; })
-            .map(function (c) {
-              var cambios = (rawOverlay.overrides || {})[idDe(c.nombre)];
-              return normalizarRegistro(cambios ? Object.assign({}, c, cambios) : c);
-            });
-          var extras = normalizarLista(rawOverlay.extras || []);
-          return base.concat(extras);
-        }
+  /* ============================================================
+     5. La mejor semilla que tengamos a mano en este dispositivo
+        (para el primer arranque de la tabla compartida, si está
+        vacía). Reutiliza, sin escribir nada, el catálogo+overlay de
+        la versión anterior si lo encuentra; si no, el CATALOGO de
+        arriba tal cual.
+     ============================================================ */
 
-        var rawV2 = parsearJson(leerCrudo(CLAVE_V2));
-        var itemsV2 = Array.isArray(rawV2) ? rawV2 : (rawV2 && Array.isArray(rawV2.items) ? rawV2.items : null);
-        if (itemsV2) return normalizarLista(itemsV2);
+  function mejorSemillaLocal() {
+    function normalizarLista(arr) {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(function (o) { return normalizarRegistro(o); });
+    }
 
-        var rawV1 = parsearJson(leerCrudo(CLAVE_V1));
-        if (Array.isArray(rawV1)) return normalizarLista(rawV1);
+    var rawOverlay = parsearJson(leerCrudo(CLAVE_OVERLAY));
+    if (rawOverlay && typeof rawOverlay === "object") {
+      var ocultosSet = Object.create(null);
+      (rawOverlay.ocultos || []).forEach(function (id) { ocultosSet[id] = true; });
 
-        return normalizarLista(CATALOGO);
-      }
-
-      /* ============================================================
-         6. Cliente de Supabase, sesión y sincronización
-         ============================================================ */
-
-      var sb = null;
-      if (SUPABASE_CONFIGURADO && window.supabase && typeof window.supabase.createClient === "function") {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      }
-
-      var data = [];               // lo que se ve en pantalla ahora mismo
-      var soloLectura = false;     // sin conexión / sin sesión: no se puede escribir
-      var canal = null;
-
-      function leerCache() {
-        var arr = parsearJson(leerCrudo(CLAVE_CACHE));
-        return Array.isArray(arr) ? arr : [];
-      }
-      function guardarCache() {
-        escribirCrudo(CLAVE_CACHE, JSON.stringify(data));
-      }
-
-      function upsertLocal(registro) {
-        var i = data.findIndex(function (x) { return x.id === registro.id; });
-        if (i === -1) data.push(registro); else data[i] = registro;
-      }
-      function quitarLocal(id) {
-        var i = data.findIndex(function (x) { return x.id === id; });
-        if (i !== -1) data.splice(i, 1);
-      }
-
-      function mostrarBanner(texto) {
-        var b = $("sync-banner");
-        if (!texto) { b.hidden = true; return; }
-        b.textContent = texto;
-        b.hidden = false;
-      }
-
-      /** Puebla la tabla compartida una sola vez, si está completamente vacía. */
-      function sembrarSiVacio() {
-        return sb.from("restaurantes").select("id", { count: "exact", head: true }).then(function (res) {
-          if (res.error || res.count > 0) return;
-          var filas = mejorSemillaLocal().map(filaDesde);
-          if (!filas.length) return;
-          return sb.from("restaurantes").insert(filas);
+      var idDe = function (nombre) {
+        return "c_" + plano(nombre).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      };
+      var base = CATALOGO
+        .filter(function (c) { return !ocultosSet[idDe(c.nombre)]; })
+        .map(function (c) {
+          var cambios = (rawOverlay.overrides || {})[idDe(c.nombre)];
+          return normalizarRegistro(cambios ? Object.assign({}, c, cambios) : c);
         });
-      }
+      var extras = normalizarLista(rawOverlay.extras || []);
+      return base.concat(extras);
+    }
 
-      function cargarTodo() {
-        return sb.from("restaurantes").select("*").order("created_at", { ascending: true }).then(function (res) {
-          if (res.error) throw res.error;
-          data = res.data.map(registroDesdeFila);
-          soloLectura = false;
-          guardarCache();
-          mostrarBanner(null);
-        });
-      }
+    var rawV2 = parsearJson(leerCrudo(CLAVE_V2));
+    var itemsV2 = Array.isArray(rawV2) ? rawV2 : (rawV2 && Array.isArray(rawV2.items) ? rawV2.items : null);
+    if (itemsV2) return normalizarLista(itemsV2);
 
-      function suscribirTiempoReal() {
-        if (!sb || canal) return;
-        canal = sb.channel("restaurantes-cambios").on("postgres_changes",
-          { event: "*", schema: "public", table: "restaurantes" },
-          function (payload) {
-            if (payload.eventType === "DELETE") {
-              quitarLocal(payload.old.id);
-            } else {
-              upsertLocal(registroDesdeFila(payload.new));
-            }
-            guardarCache();
-            refrescarFuentesChips();
-            render();
-          }
-        ).subscribe();
-      }
+    var rawV1 = parsearJson(leerCrudo(CLAVE_V1));
+    if (Array.isArray(rawV1)) return normalizarLista(rawV1);
 
-      function iniciarApp() {
-        $("login-screen").hidden = true;
-        $("app-shell").hidden = false;
+    return normalizarLista(CATALOGO);
+  }
 
-        cargarTodo()
-          .then(function () { return sembrarSiVacio(); })
-          .then(function () {
-            // Si se acaba de sembrar, se recarga para verla ya normalizada
-            // tal como la devuelve el servidor (con sus ids reales).
-            return data.length ? null : cargarTodo();
-          })
-          .then(function () {
-            suscribirTiempoReal();
-            refrescarFuentesChips();
-            render();
-          })
-          .catch(function () {
-            // Sin red ahora mismo: se enseña la última copia vista, sin permitir escribir.
-            data = leerCache();
-            soloLectura = true;
-            mostrarBanner(data.length
-              ? "Sin conexión: viendo la última copia guardada. No se puede añadir ni editar hasta que vuelva."
-              : "Sin conexión y sin ninguna copia guardada todavía. Conéctate al menos una vez.");
-            refrescarFuentesChips();
-            render();
-          });
-      }
+  /* ============================================================
+     6. Cliente de Supabase, sesión y sincronización
+     ============================================================ */
 
-      function requiereConexion() {
-        if (soloLectura || !sb) {
-          avisar("Sin conexión ahora mismo: no se puede guardar. Vuelve a intentarlo con red.");
-          return true;
-        }
-        return false;
-      }
+  var sb = null;
+  if (SUPABASE_CONFIGURADO && window.supabase && typeof window.supabase.createClient === "function") {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
 
-      /* ============================================================
-         7. Autenticación
-         ============================================================ */
+  var data = [];               // lo que se ve en pantalla ahora mismo
+  var soloLectura = false;     // sin conexión / sin sesión: no se puede escribir
+  var canal = null;
 
-      function mostrarLogin(mensajeError) {
-        $("app-shell").hidden = true;
-        $("login-screen").hidden = false;
-        var err = $("login-error");
-        if (mensajeError) { err.textContent = mensajeError; err.hidden = false; }
-        else { err.hidden = true; }
-      }
+  function leerCache() {
+    var arr = parsearJson(leerCrudo(CLAVE_CACHE));
+    return Array.isArray(arr) ? arr : [];
+  }
+  function guardarCache() {
+    escribirCrudo(CLAVE_CACHE, JSON.stringify(data));
+  }
 
-      // Declarada como función normal (no IIFE) y llamada al final del script
-      // (sección 18): necesita que `state`, las referencias del DOM y
-      // render()/refrescarFuentesChips() ya estén inicializados, y esas
-      // vienen en secciones posteriores de este mismo archivo.
-      function conectarAuth() {
-        if (!sb) {
-          mostrarBanner(SUPABASE_CONFIGURADO
-            ? "No se pudo cargar la conexión (revisa tu red). Viendo la última copia guardada."
-            : "Falta configurar Supabase en el código (SUPABASE_URL / SUPABASE_ANON_KEY).");
-          $("login-screen").hidden = true;
-          $("app-shell").hidden = false;
-          data = leerCache();
-          soloLectura = true;
-          refrescarFuentesChips();
-          render();
-          return;
-        }
+  function upsertLocal(registro) {
+    var i = data.findIndex(function (x) { return x.id === registro.id; });
+    if (i === -1) data.push(registro); else data[i] = registro;
+  }
+  function quitarLocal(id) {
+    var i = data.findIndex(function (x) { return x.id === id; });
+    if (i !== -1) data.splice(i, 1);
+  }
 
-        $("login-form").addEventListener("submit", function (e) {
-          e.preventDefault();
-          var email = $("login-email").value.trim();
-          var pass = $("login-pass").value;
-          var btn = $("login-btn");
-          btn.disabled = true;
-          sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
-            btn.disabled = false;
-            if (res.error) { mostrarLogin("No se pudo entrar: revisa el email y la contraseña."); return; }
-            iniciarApp();
-          }).catch(function () {
-            btn.disabled = false;
-            mostrarLogin("No se pudo conectar. Revisa tu conexión e inténtalo otra vez.");
-          });
-        });
+  function mostrarBanner(texto) {
+    var b = $("sync-banner");
+    if (!texto) { b.hidden = true; return; }
+    b.textContent = texto;
+    b.hidden = false;
+  }
 
-        sb.auth.getSession().then(function (res) {
-          if (res.data && res.data.session) iniciarApp();
-          else mostrarLogin();
-        }).catch(function () { mostrarLogin(); });
-      }
+  /** Puebla la tabla compartida una sola vez, si está completamente vacía. */
+  function sembrarSiVacio() {
+    return sb.from("restaurantes").select("id", { count: "exact", head: true }).then(function (res) {
+      if (res.error || res.count > 0) return;
+      var filas = mejorSemillaLocal().map(filaDesde);
+      if (!filas.length) return;
+      return sb.from("restaurantes").insert(filas);
+    });
+  }
 
-      /* ============================================================
-         8. Estado de la vista (filtros persistentes) — sin cambios
-         ============================================================ */
+  function cargarTodo() {
+    return sb.from("restaurantes").select("*").order("created_at", { ascending: true }).then(function (res) {
+      if (res.error) throw res.error;
+      data = res.data.map(registroDesdeFila);
+      soloLectura = false;
+      guardarCache();
+      mostrarBanner(null);
+    });
+  }
 
-      var etiquetaPrecio = { 1: "€", 2: "€€", 3: "€€€" };
-      var nombrePrecio = { 1: "económico", 2: "precio medio", 3: "caro" };
-
-      var state = { search: "", zona: "Todas", tipo: "Todos", precio: "Todos", sort: "nombre" };
-
-      (function restaurarFiltros() {
-        var g = parsearJson(leerCrudo(CLAVE_FILTROS));
-        if (!g || typeof g !== "object") return;
-        if (typeof g.zona === "string") state.zona = g.zona;
-        if (typeof g.tipo === "string") state.tipo = g.tipo;
-        if (typeof g.precio === "string") state.precio = g.precio;
-        if (typeof g.sort === "string") state.sort = g.sort;
-      })();
-
-      function guardarFiltros() {
-        escribirCrudo(CLAVE_FILTROS, JSON.stringify({
-          zona: state.zona, tipo: state.tipo, precio: state.precio, sort: state.sort
-        }));
-      }
-
-      var editandoId = null;
-      var pendienteConfirmarDuplicado = false;
-      var idsExpandidosBorrado = Object.create(null);
-
-      /* ============================================================
-         9. Referencias del DOM
-         ============================================================ */
-
-      var panel = $("panel");
-      var panelTitle = $("panel-title");
-      var btnAbrir = $("open-add");
-      var fNombre = $("f-nombre");
-      var fTipo = $("f-tipo");
-      var fZona = $("f-zona");
-      var fPrecio = $("f-precio");
-      var fCarta = $("f-carta");
-      var fReserva = $("f-reserva");
-      var fDireccion = $("f-direccion");
-      var fNota = $("f-nota");
-      var errNombre = $("f-nombre-error");
-      var avisoDup = $("f-dup-warn");
-      var avisoCarta = $("f-carta-warn");
-      var avisoReserva = $("f-reserva-warn");
-      var btnGuardar = $("save-btn");
-      var lista = $("list");
-      var vacio = $("empty");
-      var contador = $("result-count");
-      var btnLimpiar = $("clear-filters");
-
-      /* ============================================================
-         10. Aviso flotante — sin cambios
-         ============================================================ */
-
-      var temporizadorToast = null;
-      var toast, toastText, toastAction;
-      function refsToast() {
-        if (!toast) { toast = $("toast"); toastText = $("toast-text"); toastAction = $("toast-action"); }
-        return !!(toast && toastText && toastAction);
-      }
-      function avisar(mensaje, accion) {
-        if (!refsToast()) return;
-        clearTimeout(temporizadorToast);
-        toastText.textContent = mensaje;
-        if (accion) {
-          toastAction.textContent = accion.etiqueta;
-          toastAction.hidden = false;
-          toastAction.onclick = function () { ocultarToast(); accion.alPulsar(); };
+  function suscribirTiempoReal() {
+    if (!sb || canal) return;
+    canal = sb.channel("restaurantes-cambios").on("postgres_changes",
+      { event: "*", schema: "public", table: "restaurantes" },
+      function (payload) {
+        if (payload.eventType === "DELETE") {
+          quitarLocal(payload.old.id);
         } else {
-          toastAction.hidden = true;
-          toastAction.onclick = null;
+          upsertLocal(registroDesdeFila(payload.new));
         }
-        toast.hidden = false;
-        temporizadorToast = setTimeout(ocultarToast, accion ? 7000 : 3200);
-      }
-      function ocultarToast() {
-        clearTimeout(temporizadorToast);
-        if (!refsToast()) return;
-        toast.hidden = true;
-        toastAction.onclick = null;
-      }
-
-      /* ============================================================
-         11. Tema claro / oscuro / automático — sin cambios
-         ============================================================ */
-
-      (function tema() {
-        var btn = $("theme-btn");
-        var metaLight = document.querySelector('meta[data-scheme="light"]');
-        var metaDark = document.querySelector('meta[data-scheme="dark"]');
-        var metaManual = document.querySelector('meta[data-scheme="manual"]');
-        var ciclo = ["auto", "light", "dark"];
-        var nombres = { auto: "automático", light: "claro", dark: "oscuro" };
-        var actual = leerCrudo(CLAVE_TEMA);
-        if (ciclo.indexOf(actual) === -1) actual = "auto";
-
-        function aplicar(t) {
-          actual = t;
-          if (t === "auto") {
-            document.documentElement.removeAttribute("data-theme");
-            metaLight.media = "(prefers-color-scheme: light)";
-            metaDark.media = "(prefers-color-scheme: dark)";
-            metaManual.media = "not all";
-          } else {
-            document.documentElement.setAttribute("data-theme", t);
-            metaLight.media = "not all";
-            metaDark.media = "not all";
-            metaManual.media = "all";
-            metaManual.content = (t === "dark") ? "#171712" : "#F1EEE2";
-          }
-          btn.textContent = "Tema: " + nombres[t];
-          btn.setAttribute("aria-label", "Cambiar tema. Ahora: " + nombres[t]);
-          escribirCrudo(CLAVE_TEMA, t);
-        }
-        btn.addEventListener("click", function () { aplicar(ciclo[(ciclo.indexOf(actual) + 1) % ciclo.length]); });
-        aplicar(actual);
-      })();
-
-      $("logout-btn").addEventListener("click", function () {
-        if (canal && sb) { sb.removeChannel(canal); canal = null; }
-        if (sb) sb.auth.signOut();
-        mostrarLogin();
-      });
-
-      /* ============================================================
-         12. Filtros por chips — sin cambios
-         ============================================================ */
-
-      function grupoZona(z) {
-        var v = texto(z);
-        if (!v) return "Sin especificar";
-        if (v.indexOf("Varias zonas") === 0) return "Varias zonas";
-        if (v === "Sin confirmar") return "Sin confirmar";
-        return v.split(/[(\/]/)[0].trim() || "Sin especificar";
-      }
-
-      var firmasChips = {};
-
-      function construirChips(contenedorId, valores, clave) {
-        var contenedor = $(contenedorId);
-        var firma = valores.join("\u0000") + "|" + state[clave];
-        if (valores.indexOf(state[clave]) === -1) {
-          state[clave] = valores[0];
-          firma = valores.join("\u0000") + "|" + state[clave];
-        }
-        if (firmasChips[contenedorId] === firma) return;
-        firmasChips[contenedorId] = firma;
-
-        var scroll = contenedor.scrollLeft;
-        var frag = document.createDocumentFragment();
-        valores.forEach(function (v) {
-          var chip = document.createElement("button");
-          chip.className = "chip";
-          chip.type = "button";
-          chip.textContent = v;
-          chip.setAttribute("aria-pressed", state[clave] === v ? "true" : "false");
-          chip.addEventListener("click", function () {
-            state[clave] = v;
-            var hermanos = contenedor.children;
-            for (var i = 0; i < hermanos.length; i++) hermanos[i].setAttribute("aria-pressed", "false");
-            chip.setAttribute("aria-pressed", "true");
-            firmasChips[contenedorId] = valores.join("\u0000") + "|" + v;
-            guardarFiltros();
-            render();
-          });
-          frag.appendChild(chip);
-        });
-        contenedor.replaceChildren(frag);
-        contenedor.scrollLeft = scroll;
-      }
-
-      function refrescarFuentesChips() {
-        var zonas = ["Todas"], tipos = ["Todos"];
-        var vistasZ = Object.create(null), vistosT = Object.create(null);
-        data.forEach(function (d) {
-          var z = grupoZona(d.zona);
-          if (!vistasZ[z]) { vistasZ[z] = true; zonas.push(z); }
-          var t = d.tipo || "Sin especificar";
-          if (!vistosT[t]) { vistosT[t] = true; tipos.push(t); }
-        });
-        zonas = [zonas[0]].concat(zonas.slice(1).sort(comparar));
-        tipos = [tipos[0]].concat(tipos.slice(1).sort(comparar));
-        construirChips("zona-chips", zonas, "zona");
-        construirChips("tipo-chips", tipos, "tipo");
-        construirChips("precio-chips", ["Todos", "€", "€€", "€€€"], "precio");
-        rellenarDatalist("zonas-sugeridas", zonas.slice(1));
-        rellenarDatalist("tipos-sugeridos", tipos.slice(1));
-      }
-
-      function rellenarDatalist(id, valores) {
-        var dl = $(id);
-        if (!dl) return;
-        var frag = document.createDocumentFragment();
-        valores.forEach(function (v) {
-          if (!v || v === "Sin especificar") return;
-          var op = document.createElement("option");
-          op.value = v;
-          frag.appendChild(op);
-        });
-        dl.replaceChildren(frag);
-      }
-
-      function hayFiltros() {
-        return state.zona !== "Todas" || state.tipo !== "Todos" || state.precio !== "Todos" || state.search !== "";
-      }
-
-      $("clear-filters").addEventListener("click", function () {
-        state.zona = "Todas"; state.tipo = "Todos"; state.precio = "Todos"; state.search = "";
-        $("search").value = "";
-        firmasChips = {};
-        guardarFiltros();
+        guardarCache();
         refrescarFuentesChips();
         render();
-        $("search").focus();
-      });
+      }
+    ).subscribe();
+  }
 
-      /* ============================================================
-         13. Búsqueda y orden — sin cambios
-         ============================================================ */
+  function iniciarApp() {
+    $("login-screen").hidden = true;
+    $("app-shell").hidden = false;
 
-      var debounceBusqueda = null;
-      $("search").addEventListener("input", function (e) {
-        var v = e.target.value;
-        clearTimeout(debounceBusqueda);
-        debounceBusqueda = setTimeout(function () { state.search = plano(v); render(); }, 110);
+    cargarTodo()
+      .then(function () { return sembrarSiVacio(); })
+      .then(function () {
+        // Si se acaba de sembrar, se recarga para verla ya normalizada
+        // tal como la devuelve el servidor (con sus ids reales).
+        return data.length ? null : cargarTodo();
+      })
+      .then(function () {
+        suscribirTiempoReal();
+        refrescarFuentesChips();
+        render();
+      })
+      .catch(function () {
+        // Sin red ahora mismo: se enseña la última copia vista, sin permitir escribir.
+        data = leerCache();
+        soloLectura = true;
+        mostrarBanner(data.length
+          ? "Sin conexión: viendo la última copia guardada. No se puede añadir ni editar hasta que vuelva."
+          : "Sin conexión y sin ninguna copia guardada todavía. Conéctate al menos una vez.");
+        refrescarFuentesChips();
+        render();
       });
-      $("search").addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
-      });
+  }
 
-      var selectOrden = $("sort");
-      selectOrden.value = state.sort;
-      if (selectOrden.value !== state.sort) { state.sort = "nombre"; selectOrden.value = "nombre"; }
-      selectOrden.addEventListener("change", function (e) {
-        state.sort = e.target.value;
+  function requiereConexion() {
+    if (soloLectura || !sb) {
+      avisar("Sin conexión ahora mismo: no se puede guardar. Vuelve a intentarlo con red.");
+      return true;
+    }
+    return false;
+  }
+
+  /* ============================================================
+     7. Autenticación
+     ============================================================ */
+
+  function mostrarLogin(mensajeError) {
+    $("app-shell").hidden = true;
+    $("login-screen").hidden = false;
+    var err = $("login-error");
+    if (mensajeError) { err.textContent = mensajeError; err.hidden = false; }
+    else { err.hidden = true; }
+  }
+
+  // Declarada como función normal (no IIFE) y llamada al final del script
+  // (sección 18): necesita que `state`, las referencias del DOM y
+  // render()/refrescarFuentesChips() ya estén inicializados, y esas
+  // vienen en secciones posteriores de este mismo archivo.
+  function conectarAuth() {
+    if (!sb) {
+      mostrarBanner(SUPABASE_CONFIGURADO
+        ? "No se pudo cargar la conexión (revisa tu red). Viendo la última copia guardada."
+        : "Falta configurar Supabase en el código (SUPABASE_URL / SUPABASE_ANON_KEY).");
+      $("login-screen").hidden = true;
+      $("app-shell").hidden = false;
+      data = leerCache();
+      soloLectura = true;
+      refrescarFuentesChips();
+      render();
+      return;
+    }
+
+    $("login-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var email = $("login-email").value.trim();
+      var pass = $("login-pass").value;
+      var btn = $("login-btn");
+      btn.disabled = true;
+      sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
+        btn.disabled = false;
+        if (res.error) { mostrarLogin("No se pudo entrar: revisa el email y la contraseña."); return; }
+        iniciarApp();
+      }).catch(function () {
+        btn.disabled = false;
+        mostrarLogin("No se pudo conectar. Revisa tu conexión e inténtalo otra vez.");
+      });
+    });
+
+    sb.auth.getSession().then(function (res) {
+      if (res.data && res.data.session) iniciarApp();
+      else mostrarLogin();
+    }).catch(function () { mostrarLogin(); });
+  }
+
+  /* ============================================================
+     8. Estado de la vista (filtros persistentes) — sin cambios
+     ============================================================ */
+
+  var etiquetaPrecio = { 1: "€", 2: "€€", 3: "€€€" };
+  var nombrePrecio = { 1: "económico", 2: "precio medio", 3: "caro" };
+
+  var state = { search: "", zona: "Todas", tipo: "Todos", precio: "Todos", sort: "nombre" };
+
+  (function restaurarFiltros() {
+    var g = parsearJson(leerCrudo(CLAVE_FILTROS));
+    if (!g || typeof g !== "object") return;
+    if (typeof g.zona === "string") state.zona = g.zona;
+    if (typeof g.tipo === "string") state.tipo = g.tipo;
+    if (typeof g.precio === "string") state.precio = g.precio;
+    if (typeof g.sort === "string") state.sort = g.sort;
+  })();
+
+  function guardarFiltros() {
+    escribirCrudo(CLAVE_FILTROS, JSON.stringify({
+      zona: state.zona, tipo: state.tipo, precio: state.precio, sort: state.sort
+    }));
+  }
+
+  var editandoId = null;
+  var pendienteConfirmarDuplicado = false;
+  var idsExpandidosBorrado = Object.create(null);
+
+  /* ============================================================
+     9. Referencias del DOM
+     ============================================================ */
+
+  var panel = $("panel");
+  var panelTitle = $("panel-title");
+  var btnAbrir = $("open-add");
+  var fNombre = $("f-nombre");
+  var fTipo = $("f-tipo");
+  var fZona = $("f-zona");
+  var fPrecio = $("f-precio");
+  var fCarta = $("f-carta");
+  var fReserva = $("f-reserva");
+  var fDireccion = $("f-direccion");
+  var fNota = $("f-nota");
+  var sedesDetails = $("sedes-details");
+  var sedeListEl = $("sede-list");
+  var fSedeNombre = $("f-sede-nombre");
+  var fSedeZona = $("f-sede-zona");
+  var fSedeDireccion = $("f-sede-direccion");
+  var fSedeCarta = $("f-sede-carta");
+  var fSedeReserva = $("f-sede-reserva");
+  var errNombre = $("f-nombre-error");
+  var avisoDup = $("f-dup-warn");
+  var avisoCarta = $("f-carta-warn");
+  var avisoReserva = $("f-reserva-warn");
+  var btnGuardar = $("save-btn");
+  var lista = $("list");
+  var vacio = $("empty");
+  var contador = $("result-count");
+  var btnLimpiar = $("clear-filters");
+
+  /* ============================================================
+     10. Aviso flotante — sin cambios
+     ============================================================ */
+
+  var temporizadorToast = null;
+  var toast, toastText, toastAction;
+  function refsToast() {
+    if (!toast) { toast = $("toast"); toastText = $("toast-text"); toastAction = $("toast-action"); }
+    return !!(toast && toastText && toastAction);
+  }
+  function avisar(mensaje, accion) {
+    if (!refsToast()) return;
+    clearTimeout(temporizadorToast);
+    toastText.textContent = mensaje;
+    if (accion) {
+      toastAction.textContent = accion.etiqueta;
+      toastAction.hidden = false;
+      toastAction.onclick = function () { ocultarToast(); accion.alPulsar(); };
+    } else {
+      toastAction.hidden = true;
+      toastAction.onclick = null;
+    }
+    toast.hidden = false;
+    temporizadorToast = setTimeout(ocultarToast, accion ? 7000 : 3200);
+  }
+  function ocultarToast() {
+    clearTimeout(temporizadorToast);
+    if (!refsToast()) return;
+    toast.hidden = true;
+    toastAction.onclick = null;
+  }
+
+  /* ============================================================
+     11. Tema claro / oscuro / automático — sin cambios
+     ============================================================ */
+
+  (function tema() {
+    var btn = $("theme-btn");
+    var metaLight = document.querySelector('meta[data-scheme="light"]');
+    var metaDark = document.querySelector('meta[data-scheme="dark"]');
+    var metaManual = document.querySelector('meta[data-scheme="manual"]');
+    var ciclo = ["auto", "light", "dark"];
+    var nombres = { auto: "automático", light: "claro", dark: "oscuro" };
+    var actual = leerCrudo(CLAVE_TEMA);
+    if (ciclo.indexOf(actual) === -1) actual = "auto";
+
+    function aplicar(t) {
+      actual = t;
+      if (t === "auto") {
+        document.documentElement.removeAttribute("data-theme");
+        metaLight.media = "(prefers-color-scheme: light)";
+        metaDark.media = "(prefers-color-scheme: dark)";
+        metaManual.media = "not all";
+      } else {
+        document.documentElement.setAttribute("data-theme", t);
+        metaLight.media = "not all";
+        metaDark.media = "not all";
+        metaManual.media = "all";
+        metaManual.content = (t === "dark") ? "#171712" : "#F1EEE2";
+      }
+      btn.textContent = "Tema: " + nombres[t];
+      btn.setAttribute("aria-label", "Cambiar tema. Ahora: " + nombres[t]);
+      escribirCrudo(CLAVE_TEMA, t);
+    }
+    btn.addEventListener("click", function () { aplicar(ciclo[(ciclo.indexOf(actual) + 1) % ciclo.length]); });
+    aplicar(actual);
+  })();
+
+  $("logout-btn").addEventListener("click", function () {
+    if (canal && sb) { sb.removeChannel(canal); canal = null; }
+    if (sb) sb.auth.signOut();
+    mostrarLogin();
+  });
+
+  /* ============================================================
+     12. Filtros por chips — sin cambios
+     ============================================================ */
+
+  function grupoZona(z) {
+    var v = texto(z);
+    if (!v) return "Sin especificar";
+    if (v.indexOf("Varias zonas") === 0) return "Varias zonas";
+    if (v === "Sin confirmar") return "Sin confirmar";
+    return v.split(/[(\/]/)[0].trim() || "Sin especificar";
+  }
+
+  /**
+   * Las zonas por las que "cuenta" un restaurante a efectos de filtro y
+   * chips. Con varias sedes, una por cada una (usando la zona propia de
+   * la sede, o la del restaurante si esa sede no la tiene puesta
+   * todavía). Sin sedes, la de siempre.
+   */
+  function zonasDe(d) {
+    if (d.sedes && d.sedes.length) {
+      var vistos = Object.create(null);
+      var salida = [];
+      d.sedes.forEach(function (s) {
+        var z = grupoZona(s.zona || d.zona);
+        if (!vistos[z]) { vistos[z] = true; salida.push(z); }
+      });
+      return salida.length ? salida : [grupoZona(d.zona)];
+    }
+    return [grupoZona(d.zona)];
+  }
+
+  var firmasChips = {};
+
+  function construirChips(contenedorId, valores, clave) {
+    var contenedor = $(contenedorId);
+    var firma = valores.join("\u0000") + "|" + state[clave];
+    if (valores.indexOf(state[clave]) === -1) {
+      state[clave] = valores[0];
+      firma = valores.join("\u0000") + "|" + state[clave];
+    }
+    if (firmasChips[contenedorId] === firma) return;
+    firmasChips[contenedorId] = firma;
+
+    var scroll = contenedor.scrollLeft;
+    var frag = document.createDocumentFragment();
+    valores.forEach(function (v) {
+      var chip = document.createElement("button");
+      chip.className = "chip";
+      chip.type = "button";
+      chip.textContent = v;
+      chip.setAttribute("aria-pressed", state[clave] === v ? "true" : "false");
+      chip.addEventListener("click", function () {
+        state[clave] = v;
+        var hermanos = contenedor.children;
+        for (var i = 0; i < hermanos.length; i++) hermanos[i].setAttribute("aria-pressed", "false");
+        chip.setAttribute("aria-pressed", "true");
+        firmasChips[contenedorId] = valores.join("\u0000") + "|" + v;
         guardarFiltros();
         render();
       });
+      frag.appendChild(chip);
+    });
+    contenedor.replaceChildren(frag);
+    contenedor.scrollLeft = scroll;
+  }
 
-      /* ============================================================
-         14. Panel de alta y edición
-         ============================================================ */
-
-      function limpiarAvisosFormulario() {
-        errNombre.hidden = true;
-        avisoDup.hidden = true;
-        avisoCarta.hidden = true;
-        avisoReserva.hidden = true;
-        fNombre.removeAttribute("aria-invalid");
-        btnGuardar.textContent = "Guardar";
-        pendienteConfirmarDuplicado = false;
-      }
-
-      function abrirPanel(item) {
-        if (item) {
-          editandoId = item.id;
-          panelTitle.textContent = "Editar restaurante";
-          fNombre.value = item.nombre;
-          fTipo.value = item.tipo === "Sin especificar" ? "" : item.tipo;
-          fZona.value = item.zona === "Sin especificar" ? "" : item.zona;
-          fPrecio.value = String(item.precio);
-          fCarta.value = item.carta || "";
-          fReserva.value = item.reserva || "";
-          fDireccion.value = item.direccion || "";
-          fNota.value = item.flag || "";
-          btnGuardar.textContent = "Guardar cambios";
-        } else {
-          editandoId = null;
-          panelTitle.textContent = "Añadir restaurante";
-          panel.reset();
-          fPrecio.value = "2";
-          btnGuardar.textContent = "Guardar";
-        }
-        limpiarAvisosFormulario();
-        if (item) btnGuardar.textContent = "Guardar cambios";
-        panel.hidden = false;
-        btnAbrir.setAttribute("aria-expanded", "true");
-        cerrarTodasLasConfirmaciones();
-        desplazarA(panel, { behavior: "smooth", block: "start" });
-        setTimeout(function () {
-          try { fNombre.focus({ preventScroll: true }); } catch (e) { fNombre.focus(); }
-        }, 220);
-      }
-
-      function cerrarPanel(devolverFoco) {
-        panel.hidden = true;
-        editandoId = null;
-        limpiarAvisosFormulario();
-        btnAbrir.setAttribute("aria-expanded", "false");
-        if (devolverFoco) btnAbrir.focus();
-      }
-
-      btnAbrir.addEventListener("click", function () {
-        if (panel.hidden) abrirPanel(null); else cerrarPanel(true);
+  function refrescarFuentesChips() {
+    var zonas = ["Todas"], tipos = ["Todos"];
+    var vistasZ = Object.create(null), vistosT = Object.create(null);
+    data.forEach(function (d) {
+      zonasDe(d).forEach(function (z) {
+        if (!vistasZ[z]) { vistasZ[z] = true; zonas.push(z); }
       });
-      $("cancel-btn").addEventListener("click", function () { cerrarPanel(true); });
+      var t = d.tipo || "Sin especificar";
+      if (!vistosT[t]) { vistosT[t] = true; tipos.push(t); }
+    });
+    zonas = [zonas[0]].concat(zonas.slice(1).sort(comparar));
+    tipos = [tipos[0]].concat(tipos.slice(1).sort(comparar));
+    construirChips("zona-chips", zonas, "zona");
+    construirChips("tipo-chips", tipos, "tipo");
+    construirChips("precio-chips", ["Todos", "€", "€€", "€€€"], "precio");
+    rellenarDatalist("zonas-sugeridas", zonas.slice(1));
+    rellenarDatalist("tipos-sugeridos", tipos.slice(1));
+  }
 
-      document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape") return;
-        if (!panel.hidden) { cerrarPanel(true); return; }
-        if (Object.keys(idsExpandidosBorrado).length) { cerrarTodasLasConfirmaciones(); render(); }
+  function rellenarDatalist(id, valores) {
+    var dl = $(id);
+    if (!dl) return;
+    var frag = document.createDocumentFragment();
+    valores.forEach(function (v) {
+      if (!v || v === "Sin especificar") return;
+      var op = document.createElement("option");
+      op.value = v;
+      frag.appendChild(op);
+    });
+    dl.replaceChildren(frag);
+  }
+
+  function hayFiltros() {
+    return state.zona !== "Todas" || state.tipo !== "Todos" || state.precio !== "Todos" || state.search !== "";
+  }
+
+  $("clear-filters").addEventListener("click", function () {
+    state.zona = "Todas"; state.tipo = "Todos"; state.precio = "Todos"; state.search = "";
+    $("search").value = "";
+    firmasChips = {};
+    guardarFiltros();
+    refrescarFuentesChips();
+    render();
+    $("search").focus();
+  });
+
+  /* ============================================================
+     13. Búsqueda y orden — sin cambios
+     ============================================================ */
+
+  var debounceBusqueda = null;
+  $("search").addEventListener("input", function (e) {
+    var v = e.target.value;
+    clearTimeout(debounceBusqueda);
+    debounceBusqueda = setTimeout(function () { state.search = plano(v); render(); }, 110);
+  });
+  $("search").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+  });
+
+  var selectOrden = $("sort");
+  selectOrden.value = state.sort;
+  if (selectOrden.value !== state.sort) { state.sort = "nombre"; selectOrden.value = "nombre"; }
+  selectOrden.addEventListener("change", function (e) {
+    state.sort = e.target.value;
+    guardarFiltros();
+    render();
+  });
+
+  /* ============================================================
+     14. Panel de alta y edición
+     ============================================================ */
+
+  var sedesEnEdicion = [];
+
+  function renderSedeList() {
+    sedeListEl.replaceChildren();
+    sedesEnEdicion.forEach(function (s, i) {
+      var li = document.createElement("li");
+      var nombre = document.createElement("span");
+      var detalle = [s.zona, s.direccion].filter(Boolean).join(" — ");
+      nombre.textContent = s.nombre + (detalle ? " — " + detalle : "");
+      var quitar = document.createElement("button");
+      quitar.type = "button";
+      quitar.className = "sede-quitar";
+      quitar.textContent = "Quitar";
+      quitar.setAttribute("aria-label", "Quitar el local " + s.nombre);
+      quitar.addEventListener("click", function () {
+        sedesEnEdicion.splice(i, 1);
+        renderSedeList();
       });
+      li.appendChild(nombre);
+      li.appendChild(quitar);
+      sedeListEl.appendChild(li);
+    });
+  }
 
-      fCarta.addEventListener("blur", function () {
-        var an = analizarUrl(fCarta.value);
-        avisoCarta.hidden = an.vacia || an.valida;
-        if (!avisoCarta.hidden) avisoCarta.textContent = "Eso no parece una dirección web. Se guardará igualmente, pero no aparecerá el botón de la carta hasta que lo corrijas.";
-      });
-      fReserva.addEventListener("blur", function () {
-        var res = analizarReserva(fReserva.value);
-        avisoReserva.hidden = res.vacia || res.valida;
-        if (!avisoReserva.hidden) avisoReserva.textContent = "Eso no parece ni una web ni un teléfono. Se guardará igualmente, pero no aparecerá el botón de reservar hasta que lo corrijas.";
-      });
+  function limpiarCamposSede() {
+    fSedeNombre.value = "";
+    fSedeZona.value = "";
+    fSedeDireccion.value = "";
+    fSedeCarta.value = "";
+    fSedeReserva.value = "";
+  }
 
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", function () {
-          var activo = document.activeElement;
-          if (!activo || panel.hidden || !panel.contains(activo)) return;
-          setTimeout(function () { desplazarA(activo, { block: "center", behavior: "smooth" }); }, 60);
-        });
+  $("add-sede-btn").addEventListener("click", function () {
+    var nombre = fSedeNombre.value.trim();
+    if (!nombre) { fSedeNombre.focus(); return; }
+    sedesEnEdicion.push(normalizarSede({
+      nombre: nombre, zona: fSedeZona.value.trim(), direccion: fSedeDireccion.value.trim(),
+      carta: fSedeCarta.value, reserva: fSedeReserva.value
+    }));
+    limpiarCamposSede();
+    renderSedeList();
+    fSedeNombre.focus();
+  });
+
+  function limpiarAvisosFormulario() {
+    errNombre.hidden = true;
+    avisoDup.hidden = true;
+    avisoCarta.hidden = true;
+    avisoReserva.hidden = true;
+    fNombre.removeAttribute("aria-invalid");
+    btnGuardar.textContent = "Guardar";
+    pendienteConfirmarDuplicado = false;
+  }
+
+  function abrirPanel(item) {
+    if (item) {
+      editandoId = item.id;
+      panelTitle.textContent = "Editar restaurante";
+      fNombre.value = item.nombre;
+      fTipo.value = item.tipo === "Sin especificar" ? "" : item.tipo;
+      fZona.value = item.zona === "Sin especificar" ? "" : item.zona;
+      fPrecio.value = String(item.precio);
+      fCarta.value = item.carta || "";
+      fReserva.value = item.reserva || "";
+      fDireccion.value = item.direccion || "";
+      fNota.value = item.flag || "";
+      sedesEnEdicion = (item.sedes || []).map(function (s) { return Object.assign({}, s); });
+      btnGuardar.textContent = "Guardar cambios";
+    } else {
+      editandoId = null;
+      panelTitle.textContent = "Añadir restaurante";
+      panel.reset();
+      fPrecio.value = "2";
+      sedesEnEdicion = [];
+      btnGuardar.textContent = "Guardar";
+    }
+    limpiarCamposSede();
+    renderSedeList();
+    sedesDetails.open = sedesEnEdicion.length > 0;
+    limpiarAvisosFormulario();
+    if (item) btnGuardar.textContent = "Guardar cambios";
+    panel.hidden = false;
+    btnAbrir.setAttribute("aria-expanded", "true");
+    cerrarTodasLasConfirmaciones();
+    desplazarA(panel, { behavior: "smooth", block: "start" });
+    setTimeout(function () {
+      try { fNombre.focus({ preventScroll: true }); } catch (e) { fNombre.focus(); }
+    }, 220);
+  }
+
+  function cerrarPanel(devolverFoco) {
+    panel.hidden = true;
+    editandoId = null;
+    sedesEnEdicion = [];
+    limpiarCamposSede();
+    renderSedeList();
+    sedesDetails.open = false;
+    limpiarAvisosFormulario();
+    btnAbrir.setAttribute("aria-expanded", "false");
+    if (devolverFoco) btnAbrir.focus();
+  }
+
+  btnAbrir.addEventListener("click", function () {
+    if (panel.hidden) abrirPanel(null); else cerrarPanel(true);
+  });
+  $("cancel-btn").addEventListener("click", function () { cerrarPanel(true); });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (!panel.hidden) { cerrarPanel(true); return; }
+    if (Object.keys(idsExpandidosBorrado).length) { cerrarTodasLasConfirmaciones(); render(); }
+  });
+
+  fCarta.addEventListener("blur", function () {
+    var an = analizarUrl(fCarta.value);
+    avisoCarta.hidden = an.vacia || an.valida;
+    if (!avisoCarta.hidden) avisoCarta.textContent = "Eso no parece una dirección web. Se guardará igualmente, pero no aparecerá el botón de la carta hasta que lo corrijas.";
+  });
+  fReserva.addEventListener("blur", function () {
+    var res = analizarReserva(fReserva.value);
+    avisoReserva.hidden = res.vacia || res.valida;
+    if (!avisoReserva.hidden) avisoReserva.textContent = "Eso no parece ni una web ni un teléfono. Se guardará igualmente, pero no aparecerá el botón de reservar hasta que lo corrijas.";
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", function () {
+      var activo = document.activeElement;
+      if (!activo || panel.hidden || !panel.contains(activo)) return;
+      setTimeout(function () { desplazarA(activo, { block: "center", behavior: "smooth" }); }, 60);
+    });
+  }
+
+  function buscarDuplicado(nombre, excluirId) {
+    var clave = plano(nombre);
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].id === excluirId) continue;
+      if (plano(data[i].nombre) === clave) return data[i];
+    }
+    return null;
+  }
+
+  panel.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (requiereConexion()) return;
+
+    var nombre = fNombre.value.trim();
+    if (!nombre) {
+      errNombre.hidden = false;
+      fNombre.setAttribute("aria-invalid", "true");
+      fNombre.focus();
+      return;
+    }
+    errNombre.hidden = true;
+    fNombre.removeAttribute("aria-invalid");
+
+    var dup = buscarDuplicado(nombre, editandoId);
+    if (dup && !pendienteConfirmarDuplicado) {
+      avisoDup.textContent = "Ya tenéis «" + dup.nombre + "» en " + dup.zona + ". Pulsa otra vez si de verdad quieres añadirlo por duplicado.";
+      avisoDup.hidden = false;
+      pendienteConfirmarDuplicado = true;
+      btnGuardar.textContent = "Añadir de todos modos";
+      desplazarA(avisoDup, { block: "nearest", behavior: "smooth" });
+      return;
+    }
+
+    var an = analizarUrl(fCarta.value);
+    var res = analizarReserva(fReserva.value);
+    var valores = normalizarRegistro({
+      nombre: nombre, tipo: fTipo.value.trim(), zona: fZona.value.trim(),
+      precio: Number(fPrecio.value) || 2, flag: fNota.value.trim(),
+      carta: fCarta.value, reserva: fReserva.value, direccion: fDireccion.value.trim(),
+      sedes: sedesEnEdicion
+    });
+
+    var eraEdicion = !!editandoId;
+    var fila = filaDesde(valores);
+    var promesa = eraEdicion
+      ? sb.from("restaurantes").update(fila).eq("id", editandoId).select().single()
+      : sb.from("restaurantes").insert(fila).select().single();
+
+    btnGuardar.disabled = true;
+    promesa.then(function (resDb) {
+      btnGuardar.disabled = false;
+      if (resDb.error) { avisar("No se pudo guardar: " + (resDb.error.message || "inténtalo de nuevo.")); return; }
+      upsertLocal(registroDesdeFila(resDb.data));
+      guardarCache();
+      cerrarPanel(true);
+      refrescarFuentesChips();
+      render();
+      avisar(eraEdicion ? "Cambios guardados." : "«" + valores.nombre + "» añadido.");
+      if ((!an.vacia && !an.valida) || (!res.vacia && !res.valida)) {
+        setTimeout(function () { avisar("Algún enlace no es válido, así que ese botón no se muestra en la tarjeta."); }, 1800);
       }
+    }).catch(function () {
+      btnGuardar.disabled = false;
+      avisar("No se pudo guardar: revisa la conexión.");
+    });
+  });
 
-      function buscarDuplicado(nombre, excluirId) {
-        var clave = plano(nombre);
-        for (var i = 0; i < data.length; i++) {
-          if (data[i].id === excluirId) continue;
-          if (plano(data[i].nombre) === clave) return data[i];
-        }
-        return null;
-      }
+  /* ============================================================
+     15. Borrado con confirmación y deshacer
+     ============================================================ */
 
-      panel.addEventListener("submit", function (e) {
-        e.preventDefault();
-        if (requiereConexion()) return;
+  function cerrarTodasLasConfirmaciones() { idsExpandidosBorrado = Object.create(null); }
 
-        var nombre = fNombre.value.trim();
-        if (!nombre) {
-          errNombre.hidden = false;
-          fNombre.setAttribute("aria-invalid", "true");
-          fNombre.focus();
-          return;
-        }
-        errNombre.hidden = true;
-        fNombre.removeAttribute("aria-invalid");
+  function eliminar(item) {
+    if (requiereConexion()) return;
+    cerrarTodasLasConfirmaciones();
 
-        var dup = buscarDuplicado(nombre, editandoId);
-        if (dup && !pendienteConfirmarDuplicado) {
-          avisoDup.textContent = "Ya tenéis «" + dup.nombre + "» en " + dup.zona + ". Pulsa otra vez si de verdad quieres añadirlo por duplicado.";
-          avisoDup.hidden = false;
-          pendienteConfirmarDuplicado = true;
-          btnGuardar.textContent = "Añadir de todos modos";
-          desplazarA(avisoDup, { block: "nearest", behavior: "smooth" });
-          return;
-        }
+    sb.from("restaurantes").delete().eq("id", item.id).then(function (res) {
+      if (res.error) { avisar("No se pudo eliminar: inténtalo de nuevo."); return; }
+      quitarLocal(item.id);
+      guardarCache();
+      refrescarFuentesChips();
+      render();
 
-        var an = analizarUrl(fCarta.value);
-        var res = analizarReserva(fReserva.value);
-        var valores = normalizarRegistro({
-          nombre: nombre, tipo: fTipo.value.trim(), zona: fZona.value.trim(),
-          precio: Number(fPrecio.value) || 2, flag: fNota.value.trim(),
-          carta: fCarta.value, reserva: fReserva.value, direccion: fDireccion.value.trim()
-        });
-
-        var eraEdicion = !!editandoId;
-        var fila = filaDesde(valores);
-        var promesa = eraEdicion
-          ? sb.from("restaurantes").update(fila).eq("id", editandoId).select().single()
-          : sb.from("restaurantes").insert(fila).select().single();
-
-        btnGuardar.disabled = true;
-        promesa.then(function (resDb) {
-          btnGuardar.disabled = false;
-          if (resDb.error) { avisar("No se pudo guardar: " + (resDb.error.message || "inténtalo de nuevo.")); return; }
-          upsertLocal(registroDesdeFila(resDb.data));
-          guardarCache();
-          cerrarPanel(true);
-          refrescarFuentesChips();
-          render();
-          avisar(eraEdicion ? "Cambios guardados." : "«" + valores.nombre + "» añadido.");
-          if ((!an.vacia && !an.valida) || (!res.vacia && !res.valida)) {
-            setTimeout(function () { avisar("Algún enlace no es válido, así que ese botón no se muestra en la tarjeta."); }, 1800);
-          }
-        }).catch(function () {
-          btnGuardar.disabled = false;
-          avisar("No se pudo guardar: revisa la conexión.");
-        });
-      });
-
-      /* ============================================================
-         15. Borrado con confirmación y deshacer
-         ============================================================ */
-
-      function cerrarTodasLasConfirmaciones() { idsExpandidosBorrado = Object.create(null); }
-
-      function eliminar(item) {
-        if (requiereConexion()) return;
-        cerrarTodasLasConfirmaciones();
-
-        sb.from("restaurantes").delete().eq("id", item.id).then(function (res) {
-          if (res.error) { avisar("No se pudo eliminar: inténtalo de nuevo."); return; }
-          quitarLocal(item.id);
-          guardarCache();
-          refrescarFuentesChips();
-          render();
-
-          avisar("«" + item.nombre + "» eliminado.", {
-            etiqueta: "Deshacer",
-            alPulsar: function () {
-              sb.from("restaurantes").insert(filaDesde(item)).select().single().then(function (r2) {
-                if (r2.error) { avisar("No se pudo restaurar."); return; }
-                upsertLocal(registroDesdeFila(r2.data));
-                guardarCache();
-                refrescarFuentesChips();
-                render();
-                avisar("Restaurado.");
-              });
-            }
-          });
-        }).catch(function () { avisar("No se pudo eliminar: revisa la conexión."); });
-      }
-
-      /* ============================================================
-         16. Pintado de la lista — sin cambios respecto a la versión anterior
-         ============================================================ */
-
-      var svgBase = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
-      var ICONOS = {
-        carta: svgBase + '<path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>',
-        reserva: svgBase + '<path d="M4 6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"></path><path d="M8 3v4M16 3v4M4 10h16"></path><path d="m9.5 15 1.8 1.8 3.4-3.4"></path></svg>',
-        tel: svgBase + '<path d="M16.5 21A13.5 13.5 0 0 1 3 7.5 2.5 2.5 0 0 1 5.5 5h1.8a1 1 0 0 1 1 .78l.7 3.1a1 1 0 0 1-.42 1.05l-1.4.95a11 11 0 0 0 4.94 4.94l.95-1.4a1 1 0 0 1 1.05-.42l3.1.7a1 1 0 0 1 .78 1v1.8A2.5 2.5 0 0 1 16.5 21Z"></path></svg>',
-        mapa: svgBase + '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>'
-      };
-
-      function crearPildora(etiqueta, href, icono, descripcion, externo) {
-        var a = document.createElement("a");
-        a.className = "card-link";
-        a.href = href;
-        if (externo) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
-        a.innerHTML = icono;
-        var txt = document.createElement("span");
-        txt.textContent = etiqueta;
-        a.appendChild(txt);
-        a.setAttribute("aria-label", descripcion);
-        return a;
-      }
-
-      function coincide(d) {
-        if (state.search) {
-          var heno = plano(d.nombre) + " " + plano(d.tipo) + " " + plano(d.zona);
-          if (heno.indexOf(state.search) === -1) return false;
-        }
-        if (state.zona !== "Todas" && grupoZona(d.zona) !== state.zona) return false;
-        if (state.tipo !== "Todos" && (d.tipo || "Sin especificar") !== state.tipo) return false;
-        if (state.precio !== "Todos" && etiquetaPrecio[d.precio] !== state.precio) return false;
-        return true;
-      }
-
-      function ordenar(items) {
-        var s = state.sort;
-        return items.sort(function (a, b) {
-          if (s === "zona") return comparar(a.zona, b.zona) || comparar(a.nombre, b.nombre);
-          if (s === "tipo") return comparar(a.tipo, b.tipo) || comparar(a.nombre, b.nombre);
-          if (s === "precio") return (a.precio - b.precio) || comparar(a.nombre, b.nombre);
-          if (s === "recientes") return (b.creado - a.creado) || comparar(a.nombre, b.nombre);
-          return comparar(a.nombre, b.nombre);
-        });
-      }
-
-      function crearTarjeta(d) {
-        var li = document.createElement("li");
-        li.className = "card";
-        li.dataset.id = d.id;
-
-        var top = document.createElement("div");
-        top.className = "card-top";
-        var nombre = document.createElement("h3");
-        nombre.className = "card-name";
-        nombre.textContent = d.nombre;
-        var precio = document.createElement("span");
-        precio.className = "card-price";
-        precio.textContent = etiquetaPrecio[d.precio] || "€€";
-        precio.setAttribute("aria-hidden", "true");
-        var precioSr = document.createElement("span");
-        precioSr.className = "sr-only";
-        precioSr.textContent = nombrePrecio[d.precio] || "precio medio";
-        top.appendChild(nombre); top.appendChild(precio); top.appendChild(precioSr);
-        li.appendChild(top);
-
-        var meta = document.createElement("p");
-        meta.className = "card-meta";
-        var tipoEl = document.createElement("span");
-        tipoEl.textContent = d.tipo || "Sin especificar";
-        var sep = document.createElement("span");
-        sep.className = "dot"; sep.setAttribute("aria-hidden", "true"); sep.textContent = "·";
-        var zonaEl = document.createElement("span");
-        zonaEl.textContent = d.zona || "Sin especificar";
-        meta.appendChild(tipoEl); meta.appendChild(sep); meta.appendChild(zonaEl);
-        li.appendChild(meta);
-
-        if (d.flag) {
-          var nota = document.createElement("p");
-          nota.className = "flag";
-          nota.textContent = d.flag;
-          li.appendChild(nota);
-        }
-
-        var enlaces = document.createElement("div");
-        enlaces.className = "card-links";
-        if (d.carta && analizarUrl(d.carta).valida) {
-          enlaces.appendChild(crearPildora("Carta", d.carta, ICONOS.carta, "Ver la carta de " + d.nombre + " (se abre en Safari)", true));
-        }
-        var reserva = analizarReserva(d.reserva);
-        if (!reserva.vacia && reserva.valida) {
-          if (reserva.tipo === "tel") {
-            enlaces.appendChild(crearPildora("Llamar", reserva.href, ICONOS.tel, "Llamar a " + d.nombre + " para reservar", false));
-          } else {
-            enlaces.appendChild(crearPildora("Reservar", reserva.href, ICONOS.reserva, "Reservar en " + d.nombre + " (se abre en Safari)", true));
-          }
-        }
-        enlaces.appendChild(crearPildora("Cómo llegar", urlMapa(d), ICONOS.mapa, "Cómo llegar a " + d.nombre + " (abre la app de mapas)", true));
-        li.appendChild(enlaces);
-
-        var acciones = document.createElement("div");
-        acciones.className = "card-actions";
-        var btnEditar = document.createElement("button");
-        btnEditar.type = "button"; btnEditar.textContent = "Editar";
-        btnEditar.setAttribute("aria-label", "Editar " + d.nombre);
-        btnEditar.addEventListener("click", function () { abrirPanel(d); });
-
-        var btnBorrar = document.createElement("button");
-        btnBorrar.type = "button"; btnBorrar.className = "danger"; btnBorrar.textContent = "Eliminar";
-        btnBorrar.setAttribute("aria-label", "Eliminar " + d.nombre);
-        btnBorrar.setAttribute("aria-expanded", idsExpandidosBorrado[d.id] ? "true" : "false");
-
-        acciones.appendChild(btnEditar); acciones.appendChild(btnBorrar);
-        li.appendChild(acciones);
-
-        var confirmacion = document.createElement("div");
-        confirmacion.className = "confirm-row";
-        confirmacion.setAttribute("role", "group");
-        confirmacion.setAttribute("aria-label", "Confirmar borrado de " + d.nombre);
-        confirmacion.hidden = !idsExpandidosBorrado[d.id];
-        var pregunta = document.createElement("p");
-        pregunta.textContent = "¿Eliminar «" + d.nombre + "» de la lista?";
-        var si = document.createElement("button");
-        si.type = "button"; si.className = "confirm-yes"; si.textContent = "Sí, eliminar";
-        var no = document.createElement("button");
-        no.type = "button"; no.className = "confirm-no"; no.textContent = "Cancelar";
-        confirmacion.appendChild(pregunta); confirmacion.appendChild(si); confirmacion.appendChild(no);
-        li.appendChild(confirmacion);
-
-        btnBorrar.addEventListener("click", function () {
-          var abierto = !!idsExpandidosBorrado[d.id];
-          cerrarTodasLasConfirmaciones();
-          if (!abierto) {
-            idsExpandidosBorrado[d.id] = true;
-            confirmacion.hidden = false;
-            btnBorrar.setAttribute("aria-expanded", "true");
-            si.focus();
-          } else {
-            confirmacion.hidden = true;
-            btnBorrar.setAttribute("aria-expanded", "false");
-          }
-          var otras = lista.querySelectorAll(".confirm-row");
-          for (var i = 0; i < otras.length; i++) if (otras[i] !== confirmacion) otras[i].hidden = true;
-        });
-        no.addEventListener("click", function () {
-          delete idsExpandidosBorrado[d.id];
-          confirmacion.hidden = true;
-          btnBorrar.setAttribute("aria-expanded", "false");
-          btnBorrar.focus();
-        });
-        si.addEventListener("click", function () { eliminar(d); });
-
-        return li;
-      }
-
-      function render() {
-        var items = ordenar(data.filter(coincide));
-
-        contador.replaceChildren();
-        var fuerte = document.createElement("span");
-        fuerte.className = "count";
-        fuerte.textContent = String(items.length);
-        contador.appendChild(fuerte);
-        contador.appendChild(document.createTextNode(" de " + data.length + (data.length === 1 ? " restaurante" : " restaurantes")));
-
-        btnLimpiar.hidden = !hayFiltros();
-
-        if (items.length === 0) {
-          lista.replaceChildren();
-          vacio.hidden = false;
-          vacio.replaceChildren();
-          var p = document.createElement("p");
-          p.style.margin = "0";
-          if (data.length === 0) {
-            p.textContent = "La lista está vacía. Añade el primer sitio al que quieras volver.";
-            var b = document.createElement("button");
-            b.type = "button"; b.textContent = "Añadir un restaurante";
-            b.addEventListener("click", function () { abrirPanel(null); });
-            vacio.appendChild(p); vacio.appendChild(b);
-          } else {
-            p.textContent = "Ningún restaurante coincide con esos filtros.";
-            vacio.appendChild(p);
-          }
-          return;
-        }
-        vacio.hidden = true;
-        var frag = document.createDocumentFragment();
-        items.forEach(function (d) { frag.appendChild(crearTarjeta(d)); });
-        lista.replaceChildren(frag);
-      }
-
-      /* ============================================================
-         16 bis. «Sorpréndeme» — sin cambios
-         ============================================================ */
-
-      var ultimoAzar = null;
-      var tempDestacada = null;
-
-      function destacar(d) {
-        var hijos = lista.children;
-        var li = null;
-        for (var i = 0; i < hijos.length; i++) {
-          hijos[i].classList.remove("destacada");
-          if (hijos[i].dataset.id === d.id) li = hijos[i];
-        }
-        if (!li) return;
-        li.classList.add("destacada");
-        li.setAttribute("tabindex", "-1");
-        desplazarA(li, { behavior: "smooth", block: "center" });
-        setTimeout(function () {
-          try { li.focus({ preventScroll: true }); } catch (e) { li.focus(); }
-        }, 320);
-        clearTimeout(tempDestacada);
-        tempDestacada = setTimeout(function () { li.classList.remove("destacada"); }, 4500);
-      }
-
-      $("random-btn").addEventListener("click", function () {
-        var visibles = ordenar(data.filter(coincide));
-        if (!visibles.length) {
-          avisar(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía: añade alguno primero.");
-          return;
-        }
-        var elegido;
-        if (visibles.length === 1) {
-          elegido = visibles[0];
-        } else {
-          var candidatos = visibles.filter(function (d) { return d.id !== ultimoAzar; });
-          elegido = candidatos[Math.floor(Math.random() * candidatos.length)];
-        }
-        ultimoAzar = elegido.id;
-        cerrarTodasLasConfirmaciones();
-        destacar(elegido);
-        avisar("Te toca: " + elegido.nombre + ".");
-      });
-
-      /* ============================================================
-         17. Copia de seguridad: exportar / restaurar (contra Supabase)
-         ============================================================ */
-
-      (function copias() {
-        var caja = $("backup-box");
-        var msg = $("tools-msg");
-        function decir(t, error) { msg.textContent = t; msg.className = "msg" + (error ? " msg-error" : ""); }
-
-        $("export-btn").addEventListener("click", function () {
-          caja.value = JSON.stringify({ v: 4, guardado: Date.now(), items: data }, null, 2);
-          decir("Copia creada abajo. Cópiala y guárdala en Notas, en un correo o donde prefieras.");
-        });
-
-        $("copy-btn").addEventListener("click", function () {
-          if (!caja.value) { decir("Primero pulsa «Crear copia».", true); return; }
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(caja.value).then(function () { decir("Copiado al portapapeles."); },
-              function () { caja.select(); decir("No se pudo copiar solo: el texto está seleccionado, cópialo a mano.", true); });
-          } else {
-            caja.select();
-            decir("El texto está seleccionado, cópialo a mano.");
-          }
-        });
-
-        $("import-btn").addEventListener("click", function () {
-          if (requiereConexion()) return;
-          var entrada = parsearJson(caja.value.trim());
-          var brutos = Array.isArray(entrada) ? entrada : (entrada && Array.isArray(entrada.items) ? entrada.items : null);
-          if (!brutos) { decir("Eso no parece una copia válida. Pega el texto completo que generó «Crear copia».", true); return; }
-
-          var porId = Object.create(null);
-          data.forEach(function (d) { porId[d.id] = d; });
-
-          var operaciones = brutos.map(function (bruto) {
-            var v = normalizarRegistro(bruto);
-            var existente = bruto.id && porId[bruto.id];
-            return existente
-              ? sb.from("restaurantes").update(filaDesde(v)).eq("id", existente.id).select().single()
-              : sb.from("restaurantes").insert(filaDesde(v)).select().single();
-          });
-
-          Promise.all(operaciones).then(function (resultados) {
-            var nuevos = 0, actualizados = 0, fallidos = 0;
-            resultados.forEach(function (r, i) {
-              if (r.error) { fallidos++; return; }
-              upsertLocal(registroDesdeFila(r.data));
-              if (brutos[i].id && porId[brutos[i].id]) actualizados++; else nuevos++;
-            });
+      avisar("«" + item.nombre + "» eliminado.", {
+        etiqueta: "Deshacer",
+        alPulsar: function () {
+          sb.from("restaurantes").insert(filaDesde(item)).select().single().then(function (r2) {
+            if (r2.error) { avisar("No se pudo restaurar."); return; }
+            upsertLocal(registroDesdeFila(r2.data));
             guardarCache();
             refrescarFuentesChips();
             render();
-            decir("Restaurado: " + nuevos + " nuevos, " + actualizados + " actualizados" + (fallidos ? ", " + fallidos + " fallidos" : "") + ".");
-            avisar("Copia restaurada.");
+            avisar("Restaurado.");
           });
-        });
-      })();
+        }
+      });
+    }).catch(function () { avisar("No se pudo eliminar: revisa la conexión."); });
+  }
 
-      /* ============================================================
-         18. Arranque
-         ============================================================ */
+  /* ============================================================
+     16. Pintado de la lista — sin cambios respecto a la versión anterior
+     ============================================================ */
 
-      conectarAuth();
+  var svgBase = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  var ICONOS = {
+    carta:   svgBase + '<path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>',
+    reserva: svgBase + '<path d="M4 6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"></path><path d="M8 3v4M16 3v4M4 10h16"></path><path d="m9.5 15 1.8 1.8 3.4-3.4"></path></svg>',
+    tel:     svgBase + '<path d="M16.5 21A13.5 13.5 0 0 1 3 7.5 2.5 2.5 0 0 1 5.5 5h1.8a1 1 0 0 1 1 .78l.7 3.1a1 1 0 0 1-.42 1.05l-1.4.95a11 11 0 0 0 4.94 4.94l.95-1.4a1 1 0 0 1 1.05-.42l3.1.7a1 1 0 0 1 .78 1v1.8A2.5 2.5 0 0 1 16.5 21Z"></path></svg>',
+    mapa:    svgBase + '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>'
+  };
 
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", function () {
-          navigator.serviceWorker.register("sw.js").catch(function () { });
-        });
-        navigator.serviceWorker.addEventListener("message", function (e) {
-          if (!e.data || e.data.tipo !== "actualizacion") return;
-          avisar("Hay una versión nueva de la app.", { etiqueta: "Actualizar", alPulsar: function () { location.reload(); } });
-        });
+  function crearPildora(etiqueta, href, icono, descripcion, externo) {
+    var a = document.createElement("a");
+    a.className = "card-link";
+    a.href = href;
+    if (externo) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
+    a.innerHTML = icono;
+    var txt = document.createElement("span");
+    txt.textContent = etiqueta;
+    a.appendChild(txt);
+    a.setAttribute("aria-label", descripcion);
+    return a;
+  }
+
+  function coincide(d) {
+    if (state.search) {
+      var heno = plano(d.nombre) + " " + plano(d.tipo) + " " + plano(d.zona);
+      (d.sedes || []).forEach(function (s) {
+        heno += " " + plano(s.nombre) + " " + plano(s.zona) + " " + plano(s.direccion);
+      });
+      if (heno.indexOf(state.search) === -1) return false;
+    }
+    if (state.zona !== "Todas" && zonasDe(d).indexOf(state.zona) === -1) return false;
+    if (state.tipo !== "Todos" && (d.tipo || "Sin especificar") !== state.tipo) return false;
+    if (state.precio !== "Todos" && etiquetaPrecio[d.precio] !== state.precio) return false;
+    return true;
+  }
+
+  function ordenar(items) {
+    var s = state.sort;
+    return items.sort(function (a, b) {
+      if (s === "zona") return comparar(a.zona, b.zona) || comparar(a.nombre, b.nombre);
+      if (s === "tipo") return comparar(a.tipo, b.tipo) || comparar(a.nombre, b.nombre);
+      if (s === "precio") return (a.precio - b.precio) || comparar(a.nombre, b.nombre);
+      if (s === "recientes") return (b.creado - a.creado) || comparar(a.nombre, b.nombre);
+      return comparar(a.nombre, b.nombre);
+    });
+  }
+
+  function crearTarjeta(d) {
+    var li = document.createElement("li");
+    li.className = "card";
+    li.dataset.id = d.id;
+
+    var top = document.createElement("div");
+    top.className = "card-top";
+    var nombre = document.createElement("h3");
+    nombre.className = "card-name";
+    nombre.textContent = d.nombre;
+    var precio = document.createElement("span");
+    precio.className = "card-price";
+    precio.textContent = etiquetaPrecio[d.precio] || "€€";
+    precio.setAttribute("aria-hidden", "true");
+    var precioSr = document.createElement("span");
+    precioSr.className = "sr-only";
+    precioSr.textContent = nombrePrecio[d.precio] || "precio medio";
+    top.appendChild(nombre); top.appendChild(precio); top.appendChild(precioSr);
+    li.appendChild(top);
+
+    var meta = document.createElement("p");
+    meta.className = "card-meta";
+    var tipoEl = document.createElement("span");
+    tipoEl.textContent = d.tipo || "Sin especificar";
+    var sep = document.createElement("span");
+    sep.className = "dot"; sep.setAttribute("aria-hidden", "true"); sep.textContent = "·";
+    var zonaEl = document.createElement("span");
+    zonaEl.textContent = d.zona || "Sin especificar";
+    meta.appendChild(tipoEl); meta.appendChild(sep); meta.appendChild(zonaEl);
+    li.appendChild(meta);
+
+    if (d.flag) {
+      var nota = document.createElement("p");
+      nota.className = "flag";
+      nota.textContent = d.flag;
+      li.appendChild(nota);
+    }
+
+    /**
+     * Devuelve las píldoras (carta/reservar/llamar/mapa) para un juego
+     * de datos concreto. Se reutiliza igual para el restaurante entero
+     * (sin sedes) que para cada sede por separado.
+     */
+    function construirPildoras(etiquetaBase, carta, reserva, mapaHref) {
+      var frag = [];
+      if (carta && analizarUrl(carta).valida) {
+        frag.push(crearPildora("Carta", carta, ICONOS.carta, "Ver la carta de " + etiquetaBase + " (se abre en Safari)", true));
       }
-    })();
+      var res = analizarReserva(reserva);
+      if (!res.vacia && res.valida) {
+        if (res.tipo === "tel") {
+          frag.push(crearPildora("Llamar", res.href, ICONOS.tel, "Llamar a " + etiquetaBase + " para reservar", false));
+        } else {
+          frag.push(crearPildora("Reservar", res.href, ICONOS.reserva, "Reservar en " + etiquetaBase + " (se abre en Safari)", true));
+        }
+      }
+      frag.push(crearPildora("Cómo llegar", mapaHref, ICONOS.mapa, "Cómo llegar a " + etiquetaBase + " (abre la app de mapas)", true));
+      return frag;
+    }
 
-  </script>
+    var sedes = d.sedes || [];
+
+    if (sedes.length > 1) {
+      // Varios locales: una fila de píldoras por sede, con su propio nombre.
+      // Si hay un filtro de zona puesto, solo se enseña el local que
+      // coincide con esa zona — no los demás, que ahora mismo no tocan.
+      var sedesAMostrar = sedes;
+      if (state.zona !== "Todas") {
+        var filtradas = sedes.filter(function (s) { return grupoZona(s.zona || d.zona) === state.zona; });
+        if (filtradas.length) sedesAMostrar = filtradas;
+      }
+
+      var grupo = document.createElement("div");
+      grupo.className = "sedes-group";
+      sedesAMostrar.forEach(function (s) {
+        var bloque = document.createElement("div");
+        bloque.className = "sede-block";
+        var nombreSede = document.createElement("p");
+        nombreSede.className = "sede-nombre";
+        nombreSede.textContent = s.nombre;
+        bloque.appendChild(nombreSede);
+        var enlacesSede = document.createElement("div");
+        enlacesSede.className = "card-links";
+        var mapaSede = urlMapa({ nombre: d.nombre + " " + s.nombre, zona: "", direccion: s.direccion });
+        construirPildoras(d.nombre + " (" + s.nombre + ")", s.carta, s.reserva, mapaSede)
+          .forEach(function (p) { enlacesSede.appendChild(p); });
+        bloque.appendChild(enlacesSede);
+        grupo.appendChild(bloque);
+      });
+      li.appendChild(grupo);
+    } else {
+      // Sin sedes, o una sola (que si la hay, manda sobre los campos sueltos):
+      // se comporta exactamente igual que un restaurante normal.
+      var unica = sedes.length === 1 ? sedes[0] : null;
+      var carta = unica ? unica.carta : d.carta;
+      var reserva = unica ? unica.reserva : d.reserva;
+      var mapaHref = unica ? urlMapa({ nombre: d.nombre + " " + unica.nombre, zona: "", direccion: unica.direccion }) : urlMapa(d);
+
+      var enlaces = document.createElement("div");
+      enlaces.className = "card-links";
+      construirPildoras(d.nombre, carta, reserva, mapaHref).forEach(function (p) { enlaces.appendChild(p); });
+      li.appendChild(enlaces);
+    }
+
+    var acciones = document.createElement("div");
+    acciones.className = "card-actions";
+    var btnEditar = document.createElement("button");
+    btnEditar.type = "button"; btnEditar.textContent = "Editar";
+    btnEditar.setAttribute("aria-label", "Editar " + d.nombre);
+    btnEditar.addEventListener("click", function () { abrirPanel(d); });
+
+    var btnBorrar = document.createElement("button");
+    btnBorrar.type = "button"; btnBorrar.className = "danger"; btnBorrar.textContent = "Eliminar";
+    btnBorrar.setAttribute("aria-label", "Eliminar " + d.nombre);
+    btnBorrar.setAttribute("aria-expanded", idsExpandidosBorrado[d.id] ? "true" : "false");
+
+    acciones.appendChild(btnEditar); acciones.appendChild(btnBorrar);
+    li.appendChild(acciones);
+
+    var confirmacion = document.createElement("div");
+    confirmacion.className = "confirm-row";
+    confirmacion.setAttribute("role", "group");
+    confirmacion.setAttribute("aria-label", "Confirmar borrado de " + d.nombre);
+    confirmacion.hidden = !idsExpandidosBorrado[d.id];
+    var pregunta = document.createElement("p");
+    pregunta.textContent = "¿Eliminar «" + d.nombre + "» de la lista?";
+    var si = document.createElement("button");
+    si.type = "button"; si.className = "confirm-yes"; si.textContent = "Sí, eliminar";
+    var no = document.createElement("button");
+    no.type = "button"; no.className = "confirm-no"; no.textContent = "Cancelar";
+    confirmacion.appendChild(pregunta); confirmacion.appendChild(si); confirmacion.appendChild(no);
+    li.appendChild(confirmacion);
+
+    btnBorrar.addEventListener("click", function () {
+      var abierto = !!idsExpandidosBorrado[d.id];
+      cerrarTodasLasConfirmaciones();
+      if (!abierto) {
+        idsExpandidosBorrado[d.id] = true;
+        confirmacion.hidden = false;
+        btnBorrar.setAttribute("aria-expanded", "true");
+        si.focus();
+      } else {
+        confirmacion.hidden = true;
+        btnBorrar.setAttribute("aria-expanded", "false");
+      }
+      var otras = lista.querySelectorAll(".confirm-row");
+      for (var i = 0; i < otras.length; i++) if (otras[i] !== confirmacion) otras[i].hidden = true;
+    });
+    no.addEventListener("click", function () {
+      delete idsExpandidosBorrado[d.id];
+      confirmacion.hidden = true;
+      btnBorrar.setAttribute("aria-expanded", "false");
+      btnBorrar.focus();
+    });
+    si.addEventListener("click", function () { eliminar(d); });
+
+    return li;
+  }
+
+  function render() {
+    var items = ordenar(data.filter(coincide));
+
+    contador.replaceChildren();
+    var fuerte = document.createElement("span");
+    fuerte.className = "count";
+    fuerte.textContent = String(items.length);
+    contador.appendChild(fuerte);
+    contador.appendChild(document.createTextNode(" de " + data.length + (data.length === 1 ? " restaurante" : " restaurantes")));
+
+    btnLimpiar.hidden = !hayFiltros();
+
+    if (items.length === 0) {
+      lista.replaceChildren();
+      vacio.hidden = false;
+      vacio.replaceChildren();
+      var p = document.createElement("p");
+      p.style.margin = "0";
+      if (data.length === 0) {
+        p.textContent = "La lista está vacía. Añade el primer sitio al que quieras volver.";
+        var b = document.createElement("button");
+        b.type = "button"; b.textContent = "Añadir un restaurante";
+        b.addEventListener("click", function () { abrirPanel(null); });
+        vacio.appendChild(p); vacio.appendChild(b);
+      } else {
+        p.textContent = "Ningún restaurante coincide con esos filtros.";
+        vacio.appendChild(p);
+      }
+      return;
+    }
+    vacio.hidden = true;
+    var frag = document.createDocumentFragment();
+    items.forEach(function (d) { frag.appendChild(crearTarjeta(d)); });
+    lista.replaceChildren(frag);
+  }
+
+  /* ============================================================
+     16 bis. «Sorpréndeme» — sin cambios
+     ============================================================ */
+
+  var ultimoAzar = null;
+  var tempDestacada = null;
+
+  function destacar(d) {
+    var hijos = lista.children;
+    var li = null;
+    for (var i = 0; i < hijos.length; i++) {
+      hijos[i].classList.remove("destacada");
+      if (hijos[i].dataset.id === d.id) li = hijos[i];
+    }
+    if (!li) return;
+    li.classList.add("destacada");
+    li.setAttribute("tabindex", "-1");
+    desplazarA(li, { behavior: "smooth", block: "center" });
+    setTimeout(function () {
+      try { li.focus({ preventScroll: true }); } catch (e) { li.focus(); }
+    }, 320);
+    clearTimeout(tempDestacada);
+    tempDestacada = setTimeout(function () { li.classList.remove("destacada"); }, 4500);
+  }
+
+  $("random-btn").addEventListener("click", function () {
+    var visibles = ordenar(data.filter(coincide));
+    if (!visibles.length) {
+      avisar(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía: añade alguno primero.");
+      return;
+    }
+    var elegido;
+    if (visibles.length === 1) {
+      elegido = visibles[0];
+    } else {
+      var candidatos = visibles.filter(function (d) { return d.id !== ultimoAzar; });
+      elegido = candidatos[Math.floor(Math.random() * candidatos.length)];
+    }
+    ultimoAzar = elegido.id;
+    cerrarTodasLasConfirmaciones();
+    destacar(elegido);
+    avisar("Te toca: " + elegido.nombre + ".");
+  });
+
+  /* ============================================================
+     17. Copia de seguridad: exportar / restaurar (contra Supabase)
+     ============================================================ */
+
+  (function copias() {
+    var caja = $("backup-box");
+    var msg = $("tools-msg");
+    function decir(t, error) { msg.textContent = t; msg.className = "msg" + (error ? " msg-error" : ""); }
+
+    $("export-btn").addEventListener("click", function () {
+      caja.value = JSON.stringify({ v: 4, guardado: Date.now(), items: data }, null, 2);
+      decir("Copia creada abajo. Cópiala y guárdala en Notas, en un correo o donde prefieras.");
+    });
+
+    $("copy-btn").addEventListener("click", function () {
+      if (!caja.value) { decir("Primero pulsa «Crear copia».", true); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(caja.value).then(function () { decir("Copiado al portapapeles."); },
+          function () { caja.select(); decir("No se pudo copiar solo: el texto está seleccionado, cópialo a mano.", true); });
+      } else {
+        caja.select();
+        decir("El texto está seleccionado, cópialo a mano.");
+      }
+    });
+
+    $("import-btn").addEventListener("click", function () {
+      if (requiereConexion()) return;
+      var entrada = parsearJson(caja.value.trim());
+      var brutos = Array.isArray(entrada) ? entrada : (entrada && Array.isArray(entrada.items) ? entrada.items : null);
+      if (!brutos) { decir("Eso no parece una copia válida. Pega el texto completo que generó «Crear copia».", true); return; }
+
+      var porId = Object.create(null);
+      data.forEach(function (d) { porId[d.id] = d; });
+
+      var operaciones = brutos.map(function (bruto) {
+        var v = normalizarRegistro(bruto);
+        var existente = bruto.id && porId[bruto.id];
+        return existente
+          ? sb.from("restaurantes").update(filaDesde(v)).eq("id", existente.id).select().single()
+          : sb.from("restaurantes").insert(filaDesde(v)).select().single();
+      });
+
+      Promise.all(operaciones).then(function (resultados) {
+        var nuevos = 0, actualizados = 0, fallidos = 0;
+        resultados.forEach(function (r, i) {
+          if (r.error) { fallidos++; return; }
+          upsertLocal(registroDesdeFila(r.data));
+          if (brutos[i].id && porId[brutos[i].id]) actualizados++; else nuevos++;
+        });
+        guardarCache();
+        refrescarFuentesChips();
+        render();
+        decir("Restaurado: " + nuevos + " nuevos, " + actualizados + " actualizados" + (fallidos ? ", " + fallidos + " fallidos" : "") + ".");
+        avisar("Copia restaurada.");
+      });
+    });
+  })();
+
+  /* ============================================================
+     18. Arranque
+     ============================================================ */
+
+  conectarAuth();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+    navigator.serviceWorker.addEventListener("message", function (e) {
+      if (!e.data || e.data.tipo !== "actualizacion") return;
+      avisar("Hay una versión nueva de la app.", { etiqueta: "Actualizar", alPulsar: function () { location.reload(); } });
+    });
+  }
+})();
+
+</script>
 </body>
-
 </html>
