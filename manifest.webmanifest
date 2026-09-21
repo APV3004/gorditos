@@ -4,7 +4,7 @@
   "description": "Guía personal de restaurantes en Madrid: filtra por zona, tipo de cocina y precio.",
   "lang": "es",
   "dir": "ltr",
-  "start_url": "./restaurantes-madrid.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
