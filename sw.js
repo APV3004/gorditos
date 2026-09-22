@@ -11,7 +11,7 @@
    Al publicar cambios sube CACHE una versión: al activarse borra las
    cachés antiguas.                                                  */
 
-var CACHE = "gorditos-v5";
+var CACHE = "gorditos-v6";
 
 /* Solo lo que se puede nombrar de antemano. La página en sí no está
    aquí a propósito: se cachea sola en la primera visita, bajo la ruta
@@ -22,7 +22,11 @@ var PRECARGA = [
   "./icon-512.png"
 ];
 
-var FUENTES = ["https://fonts.googleapis.com", "https://fonts.gstatic.com"];
+// Orígenes externos que se guardan para poder abrir la app sin red:
+// las fuentes y las librerías (Supabase y Leaflet vienen de jsDelivr).
+// Las teselas del mapa y Nominatim NO: la política de OpenStreetMap
+// desaconseja cachearlas en masa, y sin red tampoco servirían de mucho.
+var FUENTES = ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
