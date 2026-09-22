@@ -96,3 +96,21 @@ si tiene varios) que tengan **dirección** puesta, y tu posición.
 - Tu ubicación no sale del móvil: las distancias se calculan en local.
   El GPS solo está encendido con el mapa abierto o al ordenar por
   «Más cerca de mí».
+
+## Listas por grupo
+
+Cada restaurante pertenece a una lista (Familia, Amigos…). Cada persona
+solo ve las listas de las que es miembro: lo garantiza la base de datos
+(las políticas de `supabase-migracion-listas.sql`), no la app.
+
+- **Crear cuentas:** Authentication → Users → Add user, con «Auto Confirm
+  User» marcado. El registro público debe estar DESACTIVADO
+  (Authentication → Sign In / Providers → «Allow new users to sign up»).
+- **Añadir a alguien a una lista:** en la app, «Gestionar» → su email.
+  Tiene que tener cuenta antes.
+- **Gestores:** pueden renombrar la lista y añadir o quitar gente. Una
+  lista con gente no se puede quedar sin gestor. Si se va el último
+  miembro, la lista y sus restaurantes se borran.
+- **Contraseña:** cada uno la cambia en «Gestionar» → Tu contraseña.
+- Al pulsar «Salir», se borran de ese dispositivo las copias guardadas
+  de tus listas.
