@@ -25,6 +25,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<!-- Tus claves de Supabase viven en este archivo aparte: así puedes
+     actualizar index.html sin tener que volver a pegarlas. -->
+<script src="config.js"></script>
 <style>
   :root {
     --paper: #F1EEE2;
@@ -541,6 +548,53 @@
   }
 
   .sedes-group { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* ---- Lista / Mapa ---- */
+  .result-acciones { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px 14px; }
+  .vista-toggle {
+    display: inline-flex; padding: 2px; border-radius: 999px;
+    border: 1px solid var(--line-input); background: var(--paper-raised);
+  }
+  .vista-toggle button {
+    min-height: 40px; padding: 0 15px; border: none; border-radius: 999px;
+    background: transparent; color: var(--ink-soft);
+    font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  .vista-toggle button[aria-pressed="true"] { background: var(--chip-active-bg); color: var(--chip-active-fg); }
+
+  .mapa-wrap { margin-top: 10px; }
+  .mapa {
+    position: relative; z-index: 0;            /* los paneles de Leaflet no tapan el aviso ni el formulario */
+    height: 62vh; min-height: 320px;
+    border-radius: var(--radius); border: 1px solid var(--line);
+    overflow: hidden; background: var(--chip-bg);
+  }
+  .mapa-pie { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 10px; }
+  .mapa-nota { margin: 0; flex: 1; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+
+  .leaflet-container { font: inherit; }
+  .leaflet-container a.card-link { color: var(--ink); }
+  .marcador-rest { stroke: var(--paper-raised); fill: var(--accent); }
+  .marcador-yo { stroke: #FFFFFF; fill: #2F6FEB; }
+  .precision-yo { stroke: #2F6FEB; fill: #2F6FEB; }
+
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--paper-raised); color: var(--ink);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  }
+  .leaflet-popup-content { margin: 12px 14px; min-width: 210px; }
+  .popup-nombre { font-family: 'Newsreader', Georgia, serif; font-size: 17px; font-weight: 500; margin: 0; }
+  .popup-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  .popup .card-links { margin-top: 9px; }
+  .popup .card-link { padding: 0 11px; font-size: 12.5px; }
+
+  .card-dist { color: var(--accent-strong); font-weight: 600; }
+
+  /* En oscuro, el callejero de OpenStreetMap se invierte para no deslumbrar */
+  :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+  }
   .sede-block {
     border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px;
   }
@@ -774,6 +828,7 @@
         <option value="tipo">Tipo de cocina</option>
         <option value="precio">Precio (menor a mayor)</option>
         <option value="recientes">Añadidos recientemente</option>
+        <option value="cerca">Más cerca de mí</option>
       </select>
       <button class="dado-btn" id="random-btn" type="button">Sorpréndeme</button>
     </div>
@@ -781,7 +836,21 @@
 
   <div class="result-line">
     <p id="result-count" aria-live="polite" style="margin:0;"></p>
-    <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
+    <div class="result-acciones">
+      <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
+      <div class="vista-toggle" role="group" aria-label="Cómo ver los restaurantes">
+        <button type="button" id="vista-lista" aria-pressed="true">Lista</button>
+        <button type="button" id="vista-mapa" aria-pressed="false">Mapa</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mapa-wrap" id="mapa-wrap" hidden>
+    <div id="map" class="mapa" role="region" aria-label="Mapa de los restaurantes con dirección"></div>
+    <div class="mapa-pie">
+      <p class="mapa-nota" id="mapa-nota" aria-live="polite"></p>
+      <button class="dado-btn" id="centrar-btn" type="button">Mi ubicación</button>
+    </div>
   </div>
 
   <ul class="list" id="list"></ul>
@@ -820,16 +889,23 @@
   "use strict";
 
   /* ============================================================
-     0. Configuración de Supabase — EDITA ESTAS DOS LÍNEAS
+     0. Configuración de Supabase — vive en config.js, NO aquí
      ============================================================
-     Sácalas de tu proyecto en supabase.com → Project Settings → API.
-     Sin esto la app no tiene con quién hablar: se queda mostrando la
-     última copia guardada en este dispositivo, si la hay. */
+     config.js define window.GORDITOS_CONFIG = { supabaseUrl, supabaseAnonKey }.
+     Así este archivo se puede sustituir entero en cada actualización
+     sin volver a pegar las claves. Sin config.js la app no tiene con
+     quién hablar: enseña la última copia guardada, si la hay. */
 
-  var SUPABASE_URL = "https://sxyxithmrrqvzrymkhhp.supabase.co";
-  var SUPABASE_ANON_KEY = "sb_publishable_bsdNhgcFImWdl86hKcGUEg_ZCKAOX7p";
+  var CONFIG = (window.GORDITOS_CONFIG && typeof window.GORDITOS_CONFIG === "object") ? window.GORDITOS_CONFIG : {};
 
-  var SUPABASE_CONFIGURADO = SUPABASE_URL.indexOf("TU-PROYECTO") === -1 &&
+  // Tolerante con lo que se suele copiar mal del panel de Supabase:
+  // la "API URL" con /rest/v1 al final, o una barra final de más.
+  var SUPABASE_URL = texto(CONFIG.supabaseUrl).replace(/\/rest\/v1\/?$/i, "").replace(/\/+$/, "");
+  var SUPABASE_ANON_KEY = texto(CONFIG.supabaseAnonKey);
+
+  var SUPABASE_CONFIGURADO = /^https:\/\/[^\s]+$/.test(SUPABASE_URL) &&
+                              SUPABASE_URL.indexOf("TU-PROYECTO") === -1 &&
+                              SUPABASE_ANON_KEY.length > 20 &&
                               SUPABASE_ANON_KEY.indexOf("TU-CLAVE") === -1;
 
   /* ============================================================
@@ -996,8 +1072,33 @@
       carta: an.vacia ? "" : an.href,
       reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva || o.reservas || o.telefono)),
       direccion: texto(o.direccion),
+      geo: normalizarGeo(o.geo),
       sedes: normalizarSedes(o.sedes)
     };
+  }
+
+  /**
+   * Coordenadas ya calculadas para una dirección concreta. Se guardan
+   * junto con el texto de la dirección que se buscó ("dir"): si la
+   * dirección cambia, las coordenadas dejan de valer solas, sin tener
+   * que acordarse de borrarlas. { nf: true } = se buscó y no se encontró.
+   */
+  function normalizarGeo(g) {
+    if (!g || typeof g !== "object") return null;
+    var dir = texto(g.dir);
+    if (!dir) return null;
+    if (g.nf) return { dir: dir, nf: true };
+    var lat = Number(g.lat), lng = Number(g.lng);
+    if (!isFinite(lat) || !isFinite(lng)) return null;
+    return { lat: lat, lng: lng, dir: dir };
+  }
+
+  function geoVigente(geo, direccion) {
+    return !!(geo && direccion && geo.dir === direccion);
+  }
+
+  function geoUtil(geo, direccion) {
+    return geoVigente(geo, direccion) && !geo.nf;
   }
 
   /**
@@ -1014,7 +1115,8 @@
       zona: texto(o.zona),
       direccion: texto(o.direccion),
       carta: an.vacia ? "" : an.href,
-      reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva))
+      reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva)),
+      geo: normalizarGeo(o.geo)
     };
   }
 
@@ -1028,6 +1130,7 @@
     return {
       nombre: valores.nombre, tipo: valores.tipo, zona: valores.zona, precio: valores.precio,
       flag: valores.flag, carta: valores.carta, reserva: valores.reserva, direccion: valores.direccion,
+      geo: valores.geo || null,
       sedes: valores.sedes || []
     };
   }
@@ -1214,7 +1317,7 @@
     if (!sb) {
       mostrarBanner(SUPABASE_CONFIGURADO
         ? "No se pudo cargar la conexión (revisa tu red). Viendo la última copia guardada."
-        : "Falta configurar Supabase en el código (SUPABASE_URL / SUPABASE_ANON_KEY).");
+        : "Falta configurar Supabase: revisa que config.js esté subido junto a index.html y tenga tu URL y tu clave.");
       $("login-screen").hidden = true;
       $("app-shell").hidden = false;
       data = leerCache();
@@ -1253,7 +1356,7 @@
   var etiquetaPrecio = { 1: "€", 2: "€€", 3: "€€€" };
   var nombrePrecio = { 1: "económico", 2: "precio medio", 3: "caro" };
 
-  var state = { search: "", zona: "Todas", tipo: "Todos", precio: "Todos", sort: "nombre" };
+  var state = { search: "", zona: "Todas", tipo: "Todos", precio: "Todos", sort: "nombre", vista: "lista" };
 
   (function restaurarFiltros() {
     var g = parsearJson(leerCrudo(CLAVE_FILTROS));
@@ -1262,11 +1365,12 @@
     if (typeof g.tipo === "string") state.tipo = g.tipo;
     if (typeof g.precio === "string") state.precio = g.precio;
     if (typeof g.sort === "string") state.sort = g.sort;
+    if (g.vista === "mapa" || g.vista === "lista") state.vista = g.vista;
   })();
 
   function guardarFiltros() {
     escribirCrudo(CLAVE_FILTROS, JSON.stringify({
-      zona: state.zona, tipo: state.tipo, precio: state.precio, sort: state.sort
+      zona: state.zona, tipo: state.tipo, precio: state.precio, sort: state.sort, vista: state.vista
     }));
   }
 
@@ -1512,6 +1616,10 @@
   selectOrden.addEventListener("change", function (e) {
     state.sort = e.target.value;
     guardarFiltros();
+    if (state.sort === "cerca" && !miPos) {
+      ubicacionDenegada = false;
+      avisar("Buscando tu ubicación… Solo cuentan los restaurantes con dirección.");
+    }
     render();
   });
 
@@ -1694,6 +1802,11 @@
     });
 
     var eraEdicion = !!editandoId;
+    if (eraEdicion) {
+      var original = null;
+      for (var k = 0; k < data.length; k++) if (data[k].id === editandoId) { original = data[k]; break; }
+      if (original && geoVigente(original.geo, valores.direccion)) valores.geo = original.geo;
+    }
     var fila = filaDesde(valores);
     var promesa = eraEdicion
       ? sb.from("restaurantes").update(fila).eq("id", editandoId).select().single()
@@ -1709,6 +1822,7 @@
       refrescarFuentesChips();
       render();
       avisar(eraEdicion ? "Cambios guardados." : "«" + valores.nombre + "» añadido.");
+      procesarGeo();
       if ((!an.vacia && !an.valida) || (!res.vacia && !res.valida)) {
         setTimeout(function () { avisar("Algún enlace no es válido, así que ese botón no se muestra en la tarjeta."); }, 1800);
       }
@@ -1797,8 +1911,36 @@
       if (s === "tipo") return comparar(a.tipo, b.tipo) || comparar(a.nombre, b.nombre);
       if (s === "precio") return (a.precio - b.precio) || comparar(a.nombre, b.nombre);
       if (s === "recientes") return (b.creado - a.creado) || comparar(a.nombre, b.nombre);
+      if (s === "cerca") {
+        // Sin ubicación o sin dirección = Infinity: al final, en orden alfabético.
+        var da = distanciaMin(a), db = distanciaMin(b);
+        if (da !== db) return da === Infinity ? 1 : (db === Infinity ? -1 : da - db);
+        return comparar(a.nombre, b.nombre);
+      }
       return comparar(a.nombre, b.nombre);
     });
+  }
+
+  /**
+   * Devuelve las píldoras (carta/reservar/llamar/mapa) para un juego
+   * de datos concreto. Se reutiliza igual para el restaurante entero
+   * (sin sedes) que para cada sede por separado.
+   */
+  function construirPildoras(etiquetaBase, carta, reserva, mapaHref) {
+    var frag = [];
+    if (carta && analizarUrl(carta).valida) {
+      frag.push(crearPildora("Carta", carta, ICONOS.carta, "Ver la carta de " + etiquetaBase + " (se abre en Safari)", true));
+    }
+    var res = analizarReserva(reserva);
+    if (!res.vacia && res.valida) {
+      if (res.tipo === "tel") {
+        frag.push(crearPildora("Llamar", res.href, ICONOS.tel, "Llamar a " + etiquetaBase + " para reservar", false));
+      } else {
+        frag.push(crearPildora("Reservar", res.href, ICONOS.reserva, "Reservar en " + etiquetaBase + " (se abre en Safari)", true));
+      }
+    }
+    frag.push(crearPildora("Cómo llegar", mapaHref, ICONOS.mapa, "Cómo llegar a " + etiquetaBase + " (abre la app de mapas)", true));
+    return frag;
   }
 
   function crearTarjeta(d) {
@@ -1830,6 +1972,14 @@
     var zonaEl = document.createElement("span");
     zonaEl.textContent = d.zona || "Sin especificar";
     meta.appendChild(tipoEl); meta.appendChild(sep); meta.appendChild(zonaEl);
+    var dist = formatoDistancia(distanciaMin(d));
+    if (dist) {
+      var sep2 = sep.cloneNode(true);
+      var distEl = document.createElement("span");
+      distEl.className = "card-dist";
+      distEl.textContent = dist;
+      meta.appendChild(sep2); meta.appendChild(distEl);
+    }
     li.appendChild(meta);
 
     if (d.flag) {
@@ -1839,27 +1989,6 @@
       li.appendChild(nota);
     }
 
-    /**
-     * Devuelve las píldoras (carta/reservar/llamar/mapa) para un juego
-     * de datos concreto. Se reutiliza igual para el restaurante entero
-     * (sin sedes) que para cada sede por separado.
-     */
-    function construirPildoras(etiquetaBase, carta, reserva, mapaHref) {
-      var frag = [];
-      if (carta && analizarUrl(carta).valida) {
-        frag.push(crearPildora("Carta", carta, ICONOS.carta, "Ver la carta de " + etiquetaBase + " (se abre en Safari)", true));
-      }
-      var res = analizarReserva(reserva);
-      if (!res.vacia && res.valida) {
-        if (res.tipo === "tel") {
-          frag.push(crearPildora("Llamar", res.href, ICONOS.tel, "Llamar a " + etiquetaBase + " para reservar", false));
-        } else {
-          frag.push(crearPildora("Reservar", res.href, ICONOS.reserva, "Reservar en " + etiquetaBase + " (se abre en Safari)", true));
-        }
-      }
-      frag.push(crearPildora("Cómo llegar", mapaHref, ICONOS.mapa, "Cómo llegar a " + etiquetaBase + " (abre la app de mapas)", true));
-      return frag;
-    }
 
     var sedes = d.sedes || [];
 
@@ -1972,6 +2101,16 @@
 
     btnLimpiar.hidden = !hayFiltros();
 
+    aplicarVista();
+    if (state.vista === "mapa" || state.sort === "cerca") procesarGeo();
+
+    if (state.vista === "mapa") {
+      lista.replaceChildren();
+      vacio.hidden = true;
+      pintarMapa(items);
+      return;
+    }
+
     if (items.length === 0) {
       lista.replaceChildren();
       vacio.hidden = false;
@@ -1997,7 +2136,358 @@
   }
 
   /* ============================================================
-     16 bis. «Sorpréndeme» — sin cambios
+     16 ter. Mapa, ubicación y distancias
+     ============================================================ */
+
+  var MADRID = [40.4168, -3.7038];
+  var BBOX_MADRID = { latMin: 39.85, latMax: 41.2, lngMin: -4.6, lngMax: -3.0 };  // Comunidad de Madrid, con margen
+  var GEO_PAUSA_MS = 1100;          // Nominatim pide como mucho 1 petición por segundo
+
+  var mapa = null, capaRest = null, marcadorYo = null, circuloYo = null;
+  var marcadoresPorId = Object.create(null);
+  var firmaAjuste = null, encuadradoConPuntos = false;
+  var ultimosItems = [];
+  var miPos = null, posRender = null, vigilancia = null;
+  var ubicacionDenegada = false, esperandoCentrar = false;
+
+  function distanciaM(a, b) {
+    var R = 6371000, rad = Math.PI / 180;
+    var dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+
+  function formatoDistancia(m) {
+    if (!isFinite(m)) return "";
+    if (m < 1000) return "a " + Math.max(10, Math.round(m / 10) * 10) + " m";
+    return "a " + (m / 1000).toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km";
+  }
+
+  /**
+   * Los puntos físicos de un restaurante: sus sedes si las tiene, o él
+   * mismo. Con un filtro de zona puesto, solo las sedes de esa zona
+   * (igual que hace la tarjeta).
+   */
+  function puntosDe(d, respetarZona) {
+    var sedes = d.sedes || [];
+    if (!sedes.length) {
+      return [{ nombreSede: "", direccion: d.direccion, geo: d.geo, carta: d.carta, reserva: d.reserva }];
+    }
+    var elegidas = sedes;
+    if (respetarZona && state.zona !== "Todas") {
+      var f = sedes.filter(function (s) { return grupoZona(s.zona || d.zona) === state.zona; });
+      if (f.length) elegidas = f;
+    }
+    return elegidas.map(function (s) {
+      return { nombreSede: sedes.length > 1 ? s.nombre : "", direccion: s.direccion, geo: s.geo, carta: s.carta, reserva: s.reserva };
+    });
+  }
+
+  function distanciaMin(d) {
+    if (!miPos) return Infinity;
+    var min = Infinity;
+    puntosDe(d, false).forEach(function (p) {
+      if (geoUtil(p.geo, p.direccion)) min = Math.min(min, distanciaM(miPos, p.geo));
+    });
+    return min;
+  }
+
+  /* ---- Direcciones → coordenadas (una sola vez, y se guardan) ---- */
+
+  function geocodificar(dir) {
+    if (typeof fetch !== "function") return Promise.resolve(null);
+    var consulta = /madrid/i.test(dir) ? dir : dir + ", Madrid";
+    var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es" +
+              "&accept-language=es&q=" + encodeURIComponent(consulta);
+    return fetch(url, { headers: { "Accept": "application/json" } })
+      .then(function (r) {
+        if (!r.ok) throw new Error("http " + r.status);
+        return r.json();
+      })
+      .then(function (arr) {
+        var p = Array.isArray(arr) ? arr[0] : null;
+        var lat = p ? Number(p.lat) : NaN, lng = p ? Number(p.lon) : NaN;
+        // Un resultado fuera de Madrid es un falso positivo (misma calle en
+        // otra ciudad): mejor "no encontrada" que un pin en el sitio equivocado.
+        var dentro = isFinite(lat) && isFinite(lng) &&
+                     lat >= BBOX_MADRID.latMin && lat <= BBOX_MADRID.latMax &&
+                     lng >= BBOX_MADRID.lngMin && lng <= BBOX_MADRID.lngMax;
+        return dentro ? { lat: lat, lng: lng, dir: dir } : { dir: dir, nf: true };
+      })
+      .catch(function () { return null; });   // error de red: no se guarda nada, se reintenta otro día
+  }
+
+  var geoEnMarcha = false;
+  var geoIntentadas = Object.create(null);
+
+  function tareasGeo() {
+    var tareas = [];
+    data.forEach(function (d) {
+      if (d.sedes && d.sedes.length) {
+        d.sedes.forEach(function (s, i) {
+          if (s.direccion && !geoVigente(s.geo, s.direccion)) tareas.push({ id: d.id, sede: i, dir: s.direccion });
+        });
+      } else if (d.direccion && !geoVigente(d.geo, d.direccion)) {
+        tareas.push({ id: d.id, sede: -1, dir: d.direccion });
+      }
+    });
+    return tareas.filter(function (t) { return !geoIntentadas[t.id + "|" + t.sede + "|" + t.dir]; });
+  }
+
+  /** Cola con pausa entre peticiones, para respetar el límite de Nominatim. */
+  function procesarGeo() {
+    if (geoEnMarcha || soloLectura || !sb) return;
+    var tareas = tareasGeo();
+    if (!tareas.length) return;
+    geoEnMarcha = true;
+    actualizarNotaMapa();
+
+    (function siguiente(i) {
+      if (i >= tareas.length) {
+        geoEnMarcha = false;
+        actualizarNotaMapa();
+        procesarGeo();              // por si se añadió algo mientras tanto
+        return;
+      }
+      var t = tareas[i];
+      geoIntentadas[t.id + "|" + t.sede + "|" + t.dir] = true;
+      geocodificar(t.dir)
+        .then(function (geo) { return geo ? guardarGeo(t, geo) : null; })
+        .catch(function () {})
+        .then(function () { setTimeout(function () { siguiente(i + 1); }, GEO_PAUSA_MS); });
+    })(0);
+  }
+
+  function guardarGeo(t, geo) {
+    var d = null;
+    for (var i = 0; i < data.length; i++) if (data[i].id === t.id) { d = data[i]; break; }
+    if (!d) return null;
+
+    var cambio;
+    if (t.sede === -1) {
+      if (d.direccion !== t.dir) return null;          // la cambiaron mientras se buscaba
+      cambio = { geo: geo };
+    } else {
+      var sedes = (d.sedes || []).map(function (s) { return Object.assign({}, s); });
+      if (!sedes[t.sede] || sedes[t.sede].direccion !== t.dir) return null;
+      sedes[t.sede].geo = geo;
+      cambio = { sedes: sedes };
+    }
+
+    return sb.from("restaurantes").update(cambio).eq("id", d.id).select().single().then(function (res) {
+      if (res.error) return;
+      upsertLocal(registroDesdeFila(res.data));
+      guardarCache();
+      render();
+    });
+  }
+
+  /* ---- Ubicación ---- */
+
+  function necesitaUbicacion() {
+    return !document.hidden && !ubicacionDenegada && (state.vista === "mapa" || state.sort === "cerca");
+  }
+
+  function gestionarUbicacion() {
+    if (!navigator.geolocation) return;
+    if (necesitaUbicacion()) {
+      if (vigilancia !== null) return;
+      vigilancia = navigator.geolocation.watchPosition(alUbicar, alFallarUbicacion,
+        { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+    } else if (vigilancia !== null) {
+      // Fuera del mapa y sin ordenar por cercanía: el GPS se apaga.
+      navigator.geolocation.clearWatch(vigilancia);
+      vigilancia = null;
+    }
+  }
+
+  function alUbicar(pos) {
+    miPos = { lat: pos.coords.latitude, lng: pos.coords.longitude, precision: pos.coords.accuracy || 0 };
+    pintarYo();
+    if (esperandoCentrar && mapa) {
+      esperandoCentrar = false;
+      mapa.setView([miPos.lat, miPos.lng], 15);
+    }
+    // Solo se repinta si te has movido algo apreciable: el GPS manda
+    // lecturas cada pocos segundos y rehacer la lista con cada una sobra.
+    if (!posRender || distanciaM(posRender, miPos) > 40) {
+      posRender = miPos;
+      render();
+    }
+  }
+
+  function alFallarUbicacion(err) {
+    if (err && err.code === 1) {
+      ubicacionDenegada = true;
+      if (vigilancia !== null) { navigator.geolocation.clearWatch(vigilancia); vigilancia = null; }
+      if (state.sort === "cerca") avisar("Sin permiso de ubicación: no se puede ordenar por cercanía.");
+    }
+    actualizarNotaMapa();
+  }
+
+  document.addEventListener("visibilitychange", gestionarUbicacion);
+
+  /* ---- Mapa ---- */
+
+  function asegurarMapa() {
+    if (mapa) return true;
+    var L = window.L;
+    if (!L || typeof L.map !== "function") return false;
+    mapa = L.map("map", { zoomControl: true }).setView(MADRID, 12);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+    }).addTo(mapa);
+    capaRest = L.layerGroup().addTo(mapa);
+    return true;
+  }
+
+  function pintarYo() {
+    if (!mapa || !miPos) return;
+    var L = window.L, ll = [miPos.lat, miPos.lng];
+    if (!marcadorYo) {
+      circuloYo = L.circle(ll, { radius: miPos.precision, weight: 1, fillOpacity: 0.12, interactive: false, className: "precision-yo" }).addTo(mapa);
+      marcadorYo = L.circleMarker(ll, { radius: 7, weight: 3, fillOpacity: 1, className: "marcador-yo" }).addTo(mapa);
+      marcadorYo.bindPopup("Estás aquí");
+    } else {
+      marcadorYo.setLatLng(ll);
+      circuloYo.setLatLng(ll);
+      circuloYo.setRadius(miPos.precision);
+    }
+  }
+
+  function crearPopup(d, p) {
+    var caja = document.createElement("div");
+    caja.className = "popup";
+
+    var nombre = document.createElement("p");
+    nombre.className = "popup-nombre";
+    nombre.textContent = d.nombre;                     // textContent: nada de HTML inyectado
+    caja.appendChild(nombre);
+
+    var partes = [];
+    if (p.nombreSede) partes.push(p.nombreSede);
+    partes.push(d.tipo || "Sin especificar");
+    if (miPos) partes.push(formatoDistancia(distanciaM(miPos, p.geo)));
+    var sub = document.createElement("p");
+    sub.className = "popup-sub";
+    sub.textContent = partes.join(" · ");
+    caja.appendChild(sub);
+
+    var enlaces = document.createElement("div");
+    enlaces.className = "card-links";
+    var etiqueta = d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : "");
+    construirPildoras(etiqueta, p.carta, p.reserva, urlMapa({ nombre: d.nombre, zona: "", direccion: p.direccion }))
+      .forEach(function (x) { enlaces.appendChild(x); });
+    caja.appendChild(enlaces);
+    return caja;
+  }
+
+  function pintarMapa(items) {
+    ultimosItems = items;
+    if (!asegurarMapa()) { actualizarNotaMapa(); return; }
+    var L = window.L;
+
+    capaRest.clearLayers();
+    marcadoresPorId = Object.create(null);
+    var puntos = [];
+
+    items.forEach(function (d) {
+      puntosDe(d, true).forEach(function (p) {
+        if (!geoUtil(p.geo, p.direccion)) return;
+        var ll = [p.geo.lat, p.geo.lng];
+        var m = L.circleMarker(ll, { radius: 9, weight: 2, fillOpacity: 0.95, className: "marcador-rest" });
+        m.bindPopup(crearPopup(d, p));
+        m.addTo(capaRest);
+        if (!marcadoresPorId[d.id]) marcadoresPorId[d.id] = { marcador: m, ll: ll };
+        puntos.push(ll);
+      });
+    });
+
+    pintarYo();
+
+    // Encuadre: al abrir el mapa y al cambiar filtros, no con cada cambio
+    // que llegue en tiempo real (el mapa no debe saltar mientras lo miras).
+    var firma = [state.zona, state.tipo, state.precio, state.search].join("|");
+    if (puntos.length && (!encuadradoConPuntos || firma !== firmaAjuste)) {
+      var limites = L.latLngBounds(puntos.slice());
+      if (miPos && !encuadradoConPuntos && distanciaM(miPos, { lat: MADRID[0], lng: MADRID[1] }) < 30000) {
+        limites.extend([miPos.lat, miPos.lng]);
+      }
+      mapa.fitBounds(limites, { padding: [30, 30], maxZoom: 16 });
+      encuadradoConPuntos = true;
+      firmaAjuste = firma;
+    }
+
+    actualizarNotaMapa();
+  }
+
+  function actualizarNotaMapa() {
+    var nota = $("mapa-nota");
+    if (!nota) return;
+    var items = ultimosItems;
+    var frases = [];
+
+    if (!window.L || typeof window.L.map !== "function") {
+      frases.push("No se pudo cargar el mapa (¿sin conexión?). La lista sigue funcionando.");
+    } else if (!items.length) {
+      frases.push(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía.");
+    } else {
+      var enMapa = 0, sinDir = 0, pendientes = 0, noHalladas = [];
+      items.forEach(function (d) {
+        var ps = puntosDe(d, true);
+        if (ps.some(function (p) { return geoUtil(p.geo, p.direccion); })) enMapa++;
+        if (!ps.some(function (p) { return p.direccion; })) sinDir++;
+        ps.forEach(function (p) {
+          if (!p.direccion) return;
+          if (!geoVigente(p.geo, p.direccion)) pendientes++;
+          else if (p.geo.nf) noHalladas.push(d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : ""));
+        });
+      });
+      frases.push(enMapa + (enMapa === 1 ? " restaurante en el mapa." : " restaurantes en el mapa."));
+      if (sinDir) frases.push(sinDir + " sin dirección: no salen hasta que se la pongas.");
+      if (pendientes) frases.push(geoEnMarcha ? "Situando " + pendientes + " direcciones…" : pendientes + " direcciones pendientes de situar.");
+      if (noHalladas.length) frases.push("No se encontró la dirección de " + noHalladas.join(", ") + ": revísala.");
+    }
+
+    if (ubicacionDenegada) frases.push("Sin permiso de ubicación: actívalo en los ajustes del navegador para ver lo que tienes cerca.");
+    nota.textContent = frases.join(" ");
+  }
+
+  function aplicarVista() {
+    var esMapa = state.vista === "mapa";
+    $("mapa-wrap").hidden = !esMapa;
+    lista.hidden = esMapa;
+    $("vista-lista").setAttribute("aria-pressed", esMapa ? "false" : "true");
+    $("vista-mapa").setAttribute("aria-pressed", esMapa ? "true" : "false");
+    gestionarUbicacion();
+  }
+
+  function cambiarVista(v) {
+    if (state.vista === v) return;
+    state.vista = v;
+    guardarFiltros();
+    render();
+    // Leaflet calcula su tamaño al crearse: si el contenedor estuvo oculto,
+    // hay que avisarle de que ya se ve.
+    if (v === "mapa" && mapa) setTimeout(function () { mapa.invalidateSize(); }, 0);
+  }
+
+  $("vista-lista").addEventListener("click", function () { cambiarVista("lista"); });
+  $("vista-mapa").addEventListener("click", function () { cambiarVista("mapa"); });
+
+  $("centrar-btn").addEventListener("click", function () {
+    if (!navigator.geolocation) { avisar("Este navegador no da la ubicación."); return; }
+    if (miPos && mapa) { mapa.setView([miPos.lat, miPos.lng], 15); return; }
+    ubicacionDenegada = false;
+    esperandoCentrar = true;
+    avisar("Buscando tu ubicación…");
+    gestionarUbicacion();
+  });
+
+  /* ============================================================
+     16 bis. «Sorpréndeme»
      ============================================================ */
 
   var ultimoAzar = null;
@@ -2023,8 +2513,12 @@
 
   $("random-btn").addEventListener("click", function () {
     var visibles = ordenar(data.filter(coincide));
+    var enMapa = state.vista === "mapa";
+    if (enMapa) visibles = visibles.filter(function (d) { return marcadoresPorId[d.id]; });
     if (!visibles.length) {
-      avisar(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía: añade alguno primero.");
+      avisar(!data.length ? "La lista está vacía: añade alguno primero."
+           : enMapa ? "Ninguno de los que se ven tiene dirección en el mapa."
+           : "Ningún restaurante coincide con esos filtros.");
       return;
     }
     var elegido;
@@ -2036,7 +2530,13 @@
     }
     ultimoAzar = elegido.id;
     cerrarTodasLasConfirmaciones();
-    destacar(elegido);
+    if (enMapa) {
+      var m = marcadoresPorId[elegido.id];
+      mapa.setView(m.ll, Math.max(mapa.getZoom(), 15));
+      m.marcador.openPopup();
+    } else {
+      destacar(elegido);
+    }
     avisar("Te toca: " + elegido.nombre + ".");
   });
 
