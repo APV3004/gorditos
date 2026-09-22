@@ -218,6 +218,26 @@
   }
 
   /* ---- Panel de alta / edición ---- */
+  /* ---- Selector de lista y panel de gestión ---- */
+  .lista-bar { display: flex; align-items: center; gap: 10px; margin: -6px 0 18px; }
+  .lista-bar label { font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+  select#lista-sel {
+    flex: 1; min-width: 0; min-height: 44px; font-size: 16px;
+    padding: 0 30px 0 12px; border-radius: 9px;
+    border: 1px solid var(--line-input); background-color: var(--paper-raised); color: var(--ink);
+    -webkit-appearance: none; appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 14px center, right 9px center;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  }
+  .lista-bar .theme-btn { min-height: 44px; margin-left: auto; }
+  .pl-sub { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 16px; margin: 18px 0 8px; }
+  .fila-inline { display: flex; gap: 8px; }
+  .fila-inline input { flex: 1; min-width: 0; }
+  .fila-inline .btn { flex: 0 0 auto; }
+  .check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; margin: 0 0 8px; }
+  .check input { width: 20px; height: 20px; accent-color: var(--green); flex: 0 0 auto; }
+
   .login-screen {
     max-width: 340px;
     margin: 15vh auto 0;
@@ -672,7 +692,7 @@
     <div>
       <p class="kicker">Adrián · Madrid</p>
       <h1>Dónde <em>comer</em></h1>
-      <p class="sub">La lista de los dos, ordenable por zona, tipo de cocina y precio.</p>
+      <p class="sub">Vuestras listas, ordenables por zona, tipo de cocina y precio.</p>
     </div>
     <div class="header-actions">
       <button class="add-btn" id="open-add" type="button" aria-expanded="false" aria-controls="panel">＋ Añadir</button>
@@ -682,7 +702,68 @@
   </header>
 
 
+  <div class="lista-bar" id="lista-bar" hidden>
+    <label for="lista-sel" id="lista-sel-label">Lista</label>
+    <select id="lista-sel"></select>
+    <button class="theme-btn" id="gestionar-btn" type="button" aria-expanded="false" aria-controls="panel-listas">Gestionar</button>
+  </div>
+
   <div class="banner" id="sync-banner" hidden></div>
+
+  <section class="panel" id="panel-listas" aria-labelledby="pl-titulo" hidden>
+    <h2 id="pl-titulo">Listas y cuenta</h2>
+
+    <div id="pl-actual">
+      <h3 class="pl-sub" id="pl-titulo-lista"></h3>
+
+      <div class="field" id="pl-renombrar-bloque">
+        <label for="pl-nombre">Nombre</label>
+        <div class="fila-inline">
+          <input type="text" id="pl-nombre" maxlength="60" autocapitalize="sentences" autocorrect="off">
+          <button class="btn btn-secondary" id="pl-renombrar" type="button">Renombrar</button>
+        </div>
+      </div>
+
+      <p class="filter-label" style="margin:10px 0 6px;">Quién la ve</p>
+      <ul class="sede-list" id="pl-miembros"></ul>
+
+      <div id="pl-anadir-bloque" style="margin-top:12px;">
+        <div class="field">
+          <label for="pl-email">Añadir a alguien por su email</label>
+          <input type="email" id="pl-email" inputmode="email" autocapitalize="none" autocorrect="off"
+                 spellcheck="false" autocomplete="off" placeholder="Ej. marta@gmail.com" maxlength="200">
+        </div>
+        <label class="check"><input type="checkbox" id="pl-admin"> También puede gestionar la lista (añadir y quitar gente)</label>
+        <button class="btn btn-secondary" id="pl-anadir" type="button">Añadir a la lista</button>
+        <p class="hint" style="margin:8px 0 0;">Tiene que tener cuenta: créasela antes en Supabase → Authentication → Users.</p>
+      </div>
+    </div>
+
+    <h3 class="pl-sub">Nueva lista</h3>
+    <div class="field">
+      <label for="pl-nueva" class="sr-only">Nombre de la nueva lista</label>
+      <div class="fila-inline">
+        <input type="text" id="pl-nueva" maxlength="60" placeholder="Ej. Amigos del curro" autocapitalize="sentences">
+        <button class="btn btn-secondary" id="pl-crear" type="button">Crear</button>
+      </div>
+    </div>
+
+    <h3 class="pl-sub">Tu contraseña</h3>
+    <div class="field">
+      <label for="pl-pass1">Nueva contraseña <span class="hint">— mínimo 8 caracteres</span></label>
+      <input type="password" id="pl-pass1" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="pl-pass2">Repítela</label>
+      <input type="password" id="pl-pass2" autocomplete="new-password">
+    </div>
+    <button class="btn btn-secondary" id="pl-pass-btn" type="button">Cambiar contraseña</button>
+
+    <p class="msg" id="pl-msg" aria-live="polite" style="margin:14px 0 0;"></p>
+    <div class="panel-actions">
+      <button class="btn btn-secondary" id="pl-cerrar" type="button">Cerrar</button>
+    </div>
+  </section>
 
   <form class="panel" id="panel" novalidate aria-labelledby="panel-title" hidden>
     <h2 id="panel-title">Añadir restaurante</h2>
@@ -914,10 +995,9 @@
         cuenta (también en localStorage, con su propia clave).
      ============================================================ */
 
-  var CLAVE_V1 = "gorditos-restaurantes-v1";      // heredado, solo para la semilla inicial
-  var CLAVE_V2 = "gorditos-restaurantes-v2";      // heredado, solo para la semilla inicial
-  var CLAVE_OVERLAY = "gorditos-overlay-v3";      // heredado, solo para la semilla inicial
-  var CLAVE_CACHE = "gorditos-cache-v4";          // última copia vista de Supabase (solo lectura)
+  var CLAVE_CACHE = "gorditos-cache-v5-";          // + id de lista: última copia vista de cada lista
+  var CLAVE_LISTAS = "gorditos-listas-v1";         // tus listas y sus miembros, para poder abrir sin red
+  var CLAVE_LISTA_ACTUAL = "gorditos-lista-actual-v1";
   var CLAVE_FILTROS = "gorditos-filtros-v1";
   var CLAVE_TEMA = "gorditos-tema-v1";
 
@@ -931,53 +1011,6 @@
     if (!raw) return null;
     try { return JSON.parse(raw); } catch (e) { return null; }
   }
-
-  /* ============================================================
-     2. Catálogo de arranque — solo se usa UNA VEZ, para poblar la
-        tabla compartida si está completamente vacía. Después de eso
-        no vuelve a leerse: la tabla de Supabase manda.
-        (Sigue siendo tuyo para editarlo a mano si quieres reinstalar
-        de cero alguna vez, pero ya no gobierna el día a día.)
-     ============================================================ */
-
-  var CATALOGO = [
-    { nombre: "La Bientirada", tipo: "Mediterránea", zona: "Varias zonas (Quevedo, Santa Engracia…)", precio: 2 },
-    { nombre: "La Ancha", tipo: "Española / Asador", zona: "Varias zonas (Alcalá, Zorrilla…)", precio: 3, carta: "https://www.laancha.com/" },
-    { nombre: "Lamucca", tipo: "Mediterránea / Internacional", zona: "Varias zonas (Prado, Serrano, Almagro…)", precio: 2, carta: "https://www.lamuccacompany.com/" },
-    { nombre: "El Urogallo", tipo: "Asturiana", zona: "Chamberí", precio: 2, carta: "https://carta.elurogallo.es/", reserva: "+34 919 55 09 09" },
-    { nombre: "Hundred", tipo: "Hamburguesas", zona: "Salamanca", precio: 2, carta: "https://hundredburgers.com/carta/", reserva: "https://hundredburgers.com/pide" },
-    { nombre: "Numa Pompilio", tipo: "Italiana", zona: "Salamanca", precio: 3, carta: "http://restaurantenuma.com/", reserva: "+34 916 85 97 19" },
-    { nombre: "Bazaar", tipo: "Internacional / Fusión", zona: "Chueca", precio: 2, carta: "https://andilana.com/restaurantes/bazaar/", reserva: "https://andilana.com/restaurantes/bazaar/#reservar" },
-    { nombre: "La finca de Susana", tipo: "Mediterránea", zona: "Centro (Sevilla)", precio: 2, carta: "https://andilana.com/restaurantes/la-finca-de-susana/", reserva: "https://andilana.com/restaurantes/la-finca-de-susana/#reservar" },
-    { nombre: "Santa Canela", tipo: "Cafetería / Brunch", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar en Madrid" },
-    { nombre: "Alcaravea", tipo: "Española tradicional renovada", zona: "Chamberí (Gaztambide)", precio: 3, reserva: "+34 912 83 80 05" },
-    { nombre: "Pez tortilla", tipo: "Tortilla española", zona: "Malasaña", precio: 1 },
-    { nombre: "Camino", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
-    { nombre: "Beata Pasta", tipo: "Italiana (pasta)", zona: "Malasaña", precio: 1 },
-    { nombre: "Ornella", tipo: "Italiana", zona: "Chamberí", precio: 2 },
-    { nombre: "Baldoria", tipo: "Italiana", zona: "Malasaña / Chueca", precio: 2 },
-    { nombre: "Casa Luna", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar" },
-    { nombre: "Massart Pizza", tipo: "Pizza", zona: "Chamberí", precio: 1, carta: "https://www.massartpizza.com/" },
-    { nombre: "Riaño", tipo: "Asturiana", zona: "Chamberí", precio: 2 },
-    { nombre: "Jose Luis", tipo: "Tapas clásicas", zona: "Varias zonas (Salamanca, Serrano…)", precio: 3 },
-    { nombre: "Botania", tipo: "Mediterránea", zona: "Plaza de España / Universidad", precio: 3 },
-    { nombre: "SottoSopra", tipo: "Italiana", zona: "Chamberí", precio: 2 },
-    { nombre: "La Taberna de Peñalver", tipo: "Española tradicional", zona: "Chueca", precio: 2 },
-    { nombre: "Café de París", tipo: "Clásica española/francesa", zona: "Centro", precio: 2 },
-    { nombre: "El Ñeru", tipo: "Asturiana", zona: "Malasaña", precio: 2 },
-    { nombre: "El pimiento verde", tipo: "Tapas españolas", zona: "Varias zonas (Salamanca, Recoletos…)", precio: 2 },
-    { nombre: "Villa Capri", tipo: "Italiana", zona: "Chamberí (aprox.)", precio: 2, flag: "zona aproximada" },
-    { nombre: "Fass", tipo: "Cervecería alemana", zona: "Retiro (Menéndez Pelayo)", precio: 2 },
-    { nombre: "Lateral", tipo: "Tapas moderna", zona: "Varias zonas (cadena)", precio: 2, carta: "https://www.lateral.com/carta" },
-    { nombre: "Ópera Victoria", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/opera-victoria/", reserva: "https://andilana.com/restaurantes/opera-victoria/#reservar" },
-    { nombre: "Ginger", tipo: "Tapas y cócteles", zona: "Centro (Plaza del Ángel)", precio: 2, carta: "https://andilana.com/restaurantes/ginger/", reserva: "https://andilana.com/restaurantes/ginger/#reservar" },
-    { nombre: "La gloria de montera", tipo: "Sin confirmar", zona: "Sin confirmar", precio: 2, flag: "dato sin confirmar", carta: "https://andilana.com/restaurantes/la-gloria-de-montera/", reserva: "https://andilana.com/restaurantes/la-gloria-de-montera/#reservar" },
-    { nombre: "Perrachica", tipo: "Vermutería / Española moderna", zona: "Chamberí", precio: 2, carta: "https://glhrestaurants.com/l/restaurantes/perrachica/" },
-    { nombre: "PerretxiCo", tipo: "Pinchos vascos", zona: "Malasaña", precio: 2, carta: "https://perretxico.es/" },
-    { nombre: "Los bocadillos", tipo: "Bocadillos", zona: "Sin confirmar", precio: 1, flag: "dato sin confirmar" },
-    { nombre: "Reginella", tipo: "Pizza italiana", zona: "Chamberí / Salamanca", precio: 2 },
-    { nombre: "Raimunda", tipo: "Fusión mediterránea-iberoamericana", zona: "Recoletos / Salamanca", precio: 3 }
-  ];
 
   /* ============================================================
      3. Utilidades
@@ -1146,48 +1179,6 @@
   }
 
   /* ============================================================
-     5. La mejor semilla que tengamos a mano en este dispositivo
-        (para el primer arranque de la tabla compartida, si está
-        vacía). Reutiliza, sin escribir nada, el catálogo+overlay de
-        la versión anterior si lo encuentra; si no, el CATALOGO de
-        arriba tal cual.
-     ============================================================ */
-
-  function mejorSemillaLocal() {
-    function normalizarLista(arr) {
-      if (!Array.isArray(arr)) return [];
-      return arr.map(function (o) { return normalizarRegistro(o); });
-    }
-
-    var rawOverlay = parsearJson(leerCrudo(CLAVE_OVERLAY));
-    if (rawOverlay && typeof rawOverlay === "object") {
-      var ocultosSet = Object.create(null);
-      (rawOverlay.ocultos || []).forEach(function (id) { ocultosSet[id] = true; });
-
-      var idDe = function (nombre) {
-        return "c_" + plano(nombre).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-      };
-      var base = CATALOGO
-        .filter(function (c) { return !ocultosSet[idDe(c.nombre)]; })
-        .map(function (c) {
-          var cambios = (rawOverlay.overrides || {})[idDe(c.nombre)];
-          return normalizarRegistro(cambios ? Object.assign({}, c, cambios) : c);
-        });
-      var extras = normalizarLista(rawOverlay.extras || []);
-      return base.concat(extras);
-    }
-
-    var rawV2 = parsearJson(leerCrudo(CLAVE_V2));
-    var itemsV2 = Array.isArray(rawV2) ? rawV2 : (rawV2 && Array.isArray(rawV2.items) ? rawV2.items : null);
-    if (itemsV2) return normalizarLista(itemsV2);
-
-    var rawV1 = parsearJson(leerCrudo(CLAVE_V1));
-    if (Array.isArray(rawV1)) return normalizarLista(rawV1);
-
-    return normalizarLista(CATALOGO);
-  }
-
-  /* ============================================================
      6. Cliente de Supabase, sesión y sincronización
      ============================================================ */
 
@@ -1196,16 +1187,31 @@
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 
-  var data = [];               // lo que se ve en pantalla ahora mismo
+  var data = [];               // restaurantes de la lista que se está viendo
   var soloLectura = false;     // sin conexión / sin sesión: no se puede escribir
   var canal = null;
 
+  var listas = [];             // [{ id, nombre }]: las listas de las que eres miembro
+  var miembros = [];           // [{ lista_id, user_id, rol, email }] de esas listas
+  var listaActual = null;
+  var miId = "", miEmail = "";
+
   function leerCache() {
-    var arr = parsearJson(leerCrudo(CLAVE_CACHE));
+    var arr = listaActual ? parsearJson(leerCrudo(CLAVE_CACHE + listaActual)) : null;
     return Array.isArray(arr) ? arr : [];
   }
   function guardarCache() {
-    escribirCrudo(CLAVE_CACHE, JSON.stringify(data));
+    if (listaActual) escribirCrudo(CLAVE_CACHE + listaActual, JSON.stringify(data));
+  }
+  function guardarCacheListas() {
+    escribirCrudo(CLAVE_LISTAS, JSON.stringify({ listas: listas, miembros: miembros, miId: miId }));
+  }
+  function leerCacheListas() {
+    var c = parsearJson(leerCrudo(CLAVE_LISTAS));
+    if (!c || !Array.isArray(c.listas)) return;
+    listas = c.listas;
+    miembros = Array.isArray(c.miembros) ? c.miembros : [];
+    if (!miId && c.miId) miId = c.miId;
   }
 
   function upsertLocal(registro) {
@@ -1224,19 +1230,44 @@
     b.hidden = false;
   }
 
-  /** Puebla la tabla compartida una sola vez, si está completamente vacía. */
-  function sembrarSiVacio() {
-    return sb.from("restaurantes").select("id", { count: "exact", head: true }).then(function (res) {
-      if (res.error || res.count > 0) return;
-      var filas = mejorSemillaLocal().map(filaDesde);
-      if (!filas.length) return;
-      return sb.from("restaurantes").insert(filas);
+  // Toda fila nueva va a la lista que se está viendo.
+  function conLista(fila) {
+    return Object.assign({}, fila, { lista_id: listaActual });
+  }
+
+  /** Mantiene la lista elegida si sigue existiendo; si no, la última usada o la primera. */
+  function elegirListaActual() {
+    var ids = listas.map(function (l) { return l.id; });
+    if (listaActual && ids.indexOf(listaActual) !== -1) return;
+    var guardada = leerCrudo(CLAVE_LISTA_ACTUAL);
+    listaActual = ids.indexOf(guardada) !== -1 ? guardada : (ids[0] || null);
+  }
+
+  function cargarListas() {
+    return Promise.all([
+      sb.from("listas").select("id,nombre").order("created_at", { ascending: true }),
+      sb.from("miembros").select("lista_id,user_id,rol,email")
+    ]).then(function (r) {
+      if (r[0].error) throw r[0].error;
+      if (r[1].error) throw r[1].error;
+      listas = (r[0].data || []).map(function (l) {
+        return { id: texto(l.id), nombre: texto(l.nombre) || "Sin nombre" };
+      });
+      miembros = (r[1].data || []).map(function (m) {
+        return { lista_id: texto(m.lista_id), user_id: texto(m.user_id), rol: m.rol === "admin" ? "admin" : "miembro", email: texto(m.email) };
+      });
+      elegirListaActual();
+      guardarCacheListas();
+      pintarSelectorListas();
     });
   }
 
   function cargarTodo() {
-    return sb.from("restaurantes").select("*").order("created_at", { ascending: true }).then(function (res) {
+    if (!listaActual) { data = []; soloLectura = false; mostrarBanner(null); return Promise.resolve(); }
+    var pedida = listaActual;
+    return sb.from("restaurantes").select("*").eq("lista_id", pedida).order("created_at", { ascending: true }).then(function (res) {
       if (res.error) throw res.error;
+      if (pedida !== listaActual) return;       // cambiaste de lista mientras cargaba
       data = res.data.map(registroDesdeFila);
       soloLectura = false;
       guardarCache();
@@ -1245,42 +1276,68 @@
   }
 
   function suscribirTiempoReal() {
-    if (!sb || canal) return;
-    canal = sb.channel("restaurantes-cambios").on("postgres_changes",
-      { event: "*", schema: "public", table: "restaurantes" },
-      function (payload) {
-        if (payload.eventType === "DELETE") {
-          quitarLocal(payload.old.id);
-        } else {
-          upsertLocal(registroDesdeFila(payload.new));
-        }
-        guardarCache();
-        refrescarFuentesChips();
-        render();
+    if (!sb) return;
+    if (canal) { sb.removeChannel(canal); canal = null; }
+    if (!listaActual) return;
+    var lista = listaActual;
+    var filtro = "lista_id=eq." + lista;
+
+    function alCambiar(payload) {
+      if (lista !== listaActual) return;
+      if (payload.eventType === "DELETE") {
+        // Los borrados no pasan por las políticas ni se pueden filtrar:
+        // llegan los de todas las listas, solo con el id. Si no es de
+        // esta lista, no está en `data` y no pasa nada.
+        quitarLocal(payload.old && payload.old.id);
+      } else {
+        var fila = payload.new || {};
+        if (fila.lista_id && fila.lista_id !== lista) quitarLocal(fila.id);
+        else upsertLocal(registroDesdeFila(fila));
       }
-    ).subscribe();
+      guardarCache();
+      refrescarFuentesChips();
+      render();
+    }
+
+    canal = sb.channel("restaurantes-" + lista)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "restaurantes", filter: filtro }, alCambiar)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "restaurantes", filter: filtro }, alCambiar)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "restaurantes" }, alCambiar)
+      .subscribe();
   }
 
-  function iniciarApp() {
+  function modoSinConexion() {
+    leerCacheListas();
+    elegirListaActual();
+    pintarSelectorListas();
+    data = leerCache();
+    soloLectura = true;
+  }
+
+  function avisoSinListas() {
+    if (!listas.length && !soloLectura) {
+      mostrarBanner("Aún no estás en ninguna lista. Crea una en «Gestionar», o pide a quien gestione una que te añada con tu email (" + miEmail + ").");
+    }
+  }
+
+  function iniciarApp(sesion) {
+    var usuario = (sesion && sesion.user) || {};
+    miId = texto(usuario.id);
+    miEmail = texto(usuario.email);
     $("login-screen").hidden = true;
     $("app-shell").hidden = false;
 
-    cargarTodo()
-      .then(function () { return sembrarSiVacio(); })
-      .then(function () {
-        // Si se acaba de sembrar, se recarga para verla ya normalizada
-        // tal como la devuelve el servidor (con sus ids reales).
-        return data.length ? null : cargarTodo();
-      })
+    cargarListas()
+      .then(cargarTodo)
       .then(function () {
         suscribirTiempoReal();
+        avisoSinListas();
         refrescarFuentesChips();
         render();
       })
       .catch(function () {
-        // Sin red ahora mismo: se enseña la última copia vista, sin permitir escribir.
-        data = leerCache();
-        soloLectura = true;
+        // Sin red ahora mismo: la última copia vista, sin permitir escribir.
+        modoSinConexion();
         mostrarBanner(data.length
           ? "Sin conexión: viendo la última copia guardada. No se puede añadir ni editar hasta que vuelva."
           : "Sin conexión y sin ninguna copia guardada todavía. Conéctate al menos una vez.");
@@ -1289,7 +1346,40 @@
       });
   }
 
+  /** Enseña la lista actual: primero lo guardado (al instante), luego lo fresco. */
+  function activarListaActual() {
+    if (listaActual) escribirCrudo(CLAVE_LISTA_ACTUAL, listaActual);
+    data = leerCache();
+    if (!panel.hidden) cerrarPanel(false);
+    cerrarTodasLasConfirmaciones();
+    ultimoAzar = null;
+    encuadradoConPuntos = false;
+    firmaAjuste = null;
+    pintarSelectorListas();
+    pintarPanelListas();
+    mostrarBanner(null);
+    refrescarFuentesChips();
+    render();
+    if (!sb || soloLectura) return Promise.resolve();
+    return cargarTodo().then(function () {
+      suscribirTiempoReal();
+      avisoSinListas();
+      refrescarFuentesChips();
+      render();
+    }).catch(function () {});
+  }
+
+  function cambiarLista(id) {
+    if (!id || id === listaActual) return;
+    listaActual = id;
+    activarListaActual();
+  }
+
   function requiereConexion() {
+    if (!soloLectura && sb && !listaActual) {
+      avisar("Primero crea una lista (o pide que te añadan a una) en «Gestionar».");
+      return true;
+    }
     if (soloLectura || !sb) {
       avisar("Sin conexión ahora mismo: no se puede guardar. Vuelve a intentarlo con red.");
       return true;
@@ -1320,8 +1410,7 @@
         : "Falta configurar Supabase: revisa que config.js esté subido junto a index.html y tenga tu URL y tu clave.");
       $("login-screen").hidden = true;
       $("app-shell").hidden = false;
-      data = leerCache();
-      soloLectura = true;
+      modoSinConexion();
       refrescarFuentesChips();
       render();
       return;
@@ -1336,7 +1425,7 @@
       sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
         btn.disabled = false;
         if (res.error) { mostrarLogin("No se pudo entrar: revisa el email y la contraseña."); return; }
-        iniciarApp();
+        iniciarApp(res.data && res.data.session);
       }).catch(function () {
         btn.disabled = false;
         mostrarLogin("No se pudo conectar. Revisa tu conexión e inténtalo otra vez.");
@@ -1344,7 +1433,7 @@
     });
 
     sb.auth.getSession().then(function (res) {
-      if (res.data && res.data.session) iniciarApp();
+      if (res.data && res.data.session) iniciarApp(res.data.session);
       else mostrarLogin();
     }).catch(function () { mostrarLogin(); });
   }
@@ -1481,6 +1570,13 @@
   $("logout-btn").addEventListener("click", function () {
     if (canal && sb) { sb.removeChannel(canal); canal = null; }
     if (sb) sb.auth.signOut();
+    // Al salir no se deja nada de tus listas en este dispositivo: si otra
+    // persona entra en este navegador, no debe ver tus copias guardadas.
+    listas.forEach(function (l) { try { localStorage.removeItem(CLAVE_CACHE + l.id); } catch (e) {} });
+    try { localStorage.removeItem(CLAVE_LISTAS); localStorage.removeItem(CLAVE_LISTA_ACTUAL); } catch (e) {}
+    listas = []; miembros = []; data = []; listaActual = null; miId = ""; miEmail = "";
+    if (!$("panel-listas").hidden) cerrarPanelListas(false);
+    pintarSelectorListas();
     mostrarLogin();
   });
 
@@ -1810,7 +1906,7 @@
     var fila = filaDesde(valores);
     var promesa = eraEdicion
       ? sb.from("restaurantes").update(fila).eq("id", editandoId).select().single()
-      : sb.from("restaurantes").insert(fila).select().single();
+      : sb.from("restaurantes").insert(conLista(fila)).select().single();
 
     btnGuardar.disabled = true;
     promesa.then(function (resDb) {
@@ -1841,6 +1937,7 @@
   function eliminar(item) {
     if (requiereConexion()) return;
     cerrarTodasLasConfirmaciones();
+    var listaDelBorrado = listaActual;   // «Deshacer» lo devuelve a SU lista, aunque cambies de lista antes
 
     sb.from("restaurantes").delete().eq("id", item.id).then(function (res) {
       if (res.error) { avisar("No se pudo eliminar: inténtalo de nuevo."); return; }
@@ -1852,8 +1949,10 @@
       avisar("«" + item.nombre + "» eliminado.", {
         etiqueta: "Deshacer",
         alPulsar: function () {
-          sb.from("restaurantes").insert(filaDesde(item)).select().single().then(function (r2) {
+          var fila = Object.assign({}, filaDesde(item), { lista_id: listaDelBorrado });
+          sb.from("restaurantes").insert(fila).select().single().then(function (r2) {
             if (r2.error) { avisar("No se pudo restaurar."); return; }
+            if (listaActual !== listaDelBorrado) { avisar("Restaurado en su lista."); return; }
             upsertLocal(registroDesdeFila(r2.data));
             guardarCache();
             refrescarFuentesChips();
@@ -2541,6 +2640,207 @@
   });
 
   /* ============================================================
+     16 quater. Listas, miembros y contraseña
+     ============================================================ */
+
+  var panelListas = $("panel-listas");
+
+  function soyAdmin(listaId) {
+    return miembros.some(function (m) { return m.lista_id === listaId && m.user_id === miId && m.rol === "admin"; });
+  }
+  function miembrosDe(listaId) {
+    return miembros.filter(function (m) { return m.lista_id === listaId; });
+  }
+  function nombreLista(id) {
+    for (var i = 0; i < listas.length; i++) if (listas[i].id === id) return listas[i].nombre;
+    return "";
+  }
+
+  function pintarSelectorListas() {
+    var bar = $("lista-bar"), sel = $("lista-sel");
+    if (!bar || !sel) return;
+    bar.hidden = !miId && !listas.length;
+    sel.hidden = !listas.length;
+    $("lista-sel-label").hidden = !listas.length;
+    sel.replaceChildren();
+    listas.forEach(function (l) {
+      var o = document.createElement("option");
+      o.value = l.id;
+      o.textContent = l.nombre;
+      sel.appendChild(o);
+    });
+    if (listaActual) sel.value = listaActual;
+  }
+
+  $("lista-sel").addEventListener("change", function (e) { cambiarLista(e.target.value); });
+
+  function decirListas(t, error) {
+    var m = $("pl-msg");
+    m.textContent = t || "";
+    m.className = "msg" + (error ? " msg-error" : "");
+  }
+
+  function pintarPanelListas() {
+    if (!panelListas || panelListas.hidden) return;
+    var hay = !!listaActual;
+    var admin = hay && soyAdmin(listaActual);
+
+    $("pl-actual").hidden = !hay;
+    $("pl-titulo-lista").textContent = hay ? "Lista «" + nombreLista(listaActual) + "»" : "";
+    $("pl-renombrar-bloque").hidden = !admin;
+    $("pl-anadir-bloque").hidden = !admin;
+    if (hay && document.activeElement !== $("pl-nombre")) $("pl-nombre").value = nombreLista(listaActual);
+
+    var ul = $("pl-miembros");
+    ul.replaceChildren();
+    miembrosDe(listaActual)
+      .sort(function (a, b) { return (a.user_id === miId ? -1 : 0) - (b.user_id === miId ? -1 : 0) || comparar(a.email, b.email); })
+      .forEach(function (m) {
+        var li = document.createElement("li");
+        var esYo = m.user_id === miId;
+        var t = document.createElement("span");
+        t.textContent = m.email + (esYo ? " (tú)" : "") + (m.rol === "admin" ? " · gestiona" : "");
+        li.appendChild(t);
+        if (esYo || admin) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "sede-quitar";
+          b.textContent = esYo ? "Salir" : "Quitar";
+          b.setAttribute("aria-label", esYo
+            ? "Salir de la lista " + nombreLista(listaActual)
+            : "Quitar a " + m.email + " de la lista");
+          b.addEventListener("click", function () { quitarDeLista(m); });
+          li.appendChild(b);
+        }
+        ul.appendChild(li);
+      });
+  }
+
+  function abrirPanelListas() {
+    panelListas.hidden = false;
+    $("gestionar-btn").setAttribute("aria-expanded", "true");
+    decirListas("");
+    pintarPanelListas();
+    desplazarA(panelListas, { behavior: "smooth", block: "start" });
+  }
+  function cerrarPanelListas(devolverFoco) {
+    panelListas.hidden = true;
+    $("gestionar-btn").setAttribute("aria-expanded", "false");
+    if (devolverFoco) $("gestionar-btn").focus();
+  }
+  $("gestionar-btn").addEventListener("click", function () {
+    if (panelListas.hidden) abrirPanelListas(); else cerrarPanelListas(true);
+  });
+  $("pl-cerrar").addEventListener("click", function () { cerrarPanelListas(true); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !panelListas.hidden) cerrarPanelListas(true);
+  });
+
+  var MENSAJES_GESTION = {
+    sin_permiso: "Solo quien gestiona la lista puede hacer eso.",
+    no_existe: "Esa persona aún no tiene cuenta. Créasela en Supabase → Authentication → Users y vuelve a añadirla aquí.",
+    ultimo_admin: "Eres el único que gestiona esta lista. Antes de salir, haz gestor a otra persona (vuelve a añadirla marcando «también puede gestionar»).",
+    no_es_miembro: "Esa persona ya no estaba en la lista.",
+    nombre_invalido: "El nombre tiene que tener entre 1 y 60 caracteres.",
+    rol_invalido: "Rol no válido."
+  };
+
+  /** Llama a una de las funciones de gestión del servidor. Devuelve su resultado, o null si falló. */
+  function gestionar(fn, args) {
+    if (!sb || soloLectura) { decirListas("Sin conexión: inténtalo cuando vuelva la red.", true); return Promise.resolve(null); }
+    return sb.rpc(fn, args).then(function (r) {
+      if (r.error) { decirListas("No se pudo: " + (r.error.message || "inténtalo de nuevo."), true); return null; }
+      return r.data;
+    }).catch(function () {
+      decirListas("No se pudo conectar. Revisa la conexión.", true);
+      return null;
+    });
+  }
+
+  function recargarListas(mensajeOk) {
+    return cargarListas().then(function () {
+      pintarPanelListas();
+      if (mensajeOk) decirListas(mensajeOk);
+    }).catch(function () { decirListas("Hecho, pero no se pudo refrescar: recarga la app.", true); });
+  }
+
+  $("pl-renombrar").addEventListener("click", function () {
+    var nombre = $("pl-nombre").value.trim();
+    if (!nombre) { decirListas(MENSAJES_GESTION.nombre_invalido, true); return; }
+    gestionar("renombrar_lista", { p_lista: listaActual, p_nombre: nombre }).then(function (r) {
+      if (r === null) return;
+      if (r !== "ok") { decirListas(MENSAJES_GESTION[r] || "No se pudo renombrar.", true); return; }
+      recargarListas("Nombre cambiado.");
+    });
+  });
+
+  $("pl-anadir").addEventListener("click", function () {
+    var email = $("pl-email").value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { decirListas("Escribe un email válido.", true); $("pl-email").focus(); return; }
+    var rol = $("pl-admin").checked ? "admin" : "miembro";
+    gestionar("anadir_miembro", { p_lista: listaActual, p_email: email, p_rol: rol }).then(function (r) {
+      if (r === null) return;
+      if (r !== "ok") { decirListas(MENSAJES_GESTION[r] || "No se pudo añadir.", true); return; }
+      $("pl-email").value = "";
+      $("pl-admin").checked = false;
+      recargarListas("Añadido. Ya puede entrar con su cuenta y ver «" + nombreLista(listaActual) + "».");
+    });
+  });
+
+  $("pl-crear").addEventListener("click", function () {
+    var nombre = $("pl-nueva").value.trim();
+    if (!nombre || nombre.length > 60) { decirListas(MENSAJES_GESTION.nombre_invalido, true); $("pl-nueva").focus(); return; }
+    gestionar("crear_lista", { p_nombre: nombre }).then(function (id) {
+      if (!id) return;
+      $("pl-nueva").value = "";
+      return cargarListas().then(function () {
+        listaActual = String(id);
+        return activarListaActual();
+      }).then(function () {
+        pintarPanelListas();
+        decirListas("Lista «" + nombre + "» creada, y ya la estás viendo: empieza vacía. Añade gente arriba.");
+      });
+    });
+  });
+
+  function quitarDeLista(m) {
+    var esYo = m.user_id === miId;
+    var nombre = nombreLista(listaActual);
+    var total = miembrosDe(listaActual).length;
+    var pregunta = !esYo ? "¿Quitar a " + m.email + " de «" + nombre + "»? Dejará de verla."
+      : total === 1 ? "Eres la última persona en «" + nombre + "». Si sales, la lista y sus " + data.length +
+                      " restaurantes se borran para siempre. ¿Salir?"
+      : "¿Salir de «" + nombre + "»? Dejarás de verla hasta que alguien te vuelva a añadir.";
+    if (!window.confirm(pregunta)) return;
+
+    var listaSalida = listaActual;
+    gestionar("quitar_miembro", { p_lista: listaSalida, p_user: m.user_id }).then(function (r) {
+      if (r === null) return;
+      if (r !== "ok") { decirListas(MENSAJES_GESTION[r] || "No se pudo.", true); return; }
+      if (!esYo) { recargarListas("Quitado de la lista."); return; }
+      // Te has ido: se pasa a otra de tus listas (o a ninguna).
+      try { localStorage.removeItem(CLAVE_CACHE + listaSalida); } catch (e) {}
+      return cargarListas().then(activarListaActual).then(function () {
+        pintarPanelListas();
+        decirListas("Has salido de «" + nombre + "».");
+      });
+    });
+  }
+
+  $("pl-pass-btn").addEventListener("click", function () {
+    var p1 = $("pl-pass1").value, p2 = $("pl-pass2").value;
+    if (p1.length < 8) { decirListas("La contraseña tiene que tener al menos 8 caracteres.", true); $("pl-pass1").focus(); return; }
+    if (p1 !== p2) { decirListas("Las dos contraseñas no coinciden.", true); $("pl-pass2").focus(); return; }
+    if (!sb || soloLectura) { decirListas("Sin conexión: inténtalo cuando vuelva la red.", true); return; }
+    sb.auth.updateUser({ password: p1 }).then(function (r) {
+      if (r.error) { decirListas("No se pudo cambiar: " + (r.error.message || "inténtalo de nuevo."), true); return; }
+      $("pl-pass1").value = "";
+      $("pl-pass2").value = "";
+      decirListas("Contraseña cambiada.");
+    }).catch(function () { decirListas("No se pudo conectar. Revisa la conexión.", true); });
+  });
+
+  /* ============================================================
      17. Copia de seguridad: exportar / restaurar (contra Supabase)
      ============================================================ */
 
@@ -2579,7 +2879,7 @@
         var existente = bruto.id && porId[bruto.id];
         return existente
           ? sb.from("restaurantes").update(filaDesde(v)).eq("id", existente.id).select().single()
-          : sb.from("restaurantes").insert(filaDesde(v)).select().single();
+          : sb.from("restaurantes").insert(conLista(filaDesde(v))).select().single();
       });
 
       Promise.all(operaciones).then(function (resultados) {
