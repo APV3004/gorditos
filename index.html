@@ -609,6 +609,8 @@
   .popup .card-link { padding: 0 11px; font-size: 12.5px; }
 
   .card-dist { color: var(--accent-strong); font-weight: 600; }
+  .marcador-aprox { fill-opacity: 0.55; stroke-dasharray: 3 3; }
+  .popup-aprox { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--warn-fg); background: var(--warn-bg); padding: 5px 8px; border-radius: 7px; }
 
   /* En oscuro, el callejero de OpenStreetMap se invierte para no deslumbrar */
   :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
@@ -1123,15 +1125,18 @@
     if (g.nf) return { dir: dir, nf: true };
     var lat = Number(g.lat), lng = Number(g.lng);
     if (!isFinite(lat) || !isFinite(lng)) return null;
-    return { lat: lat, lng: lng, dir: dir };
+    var geo = { lat: lat, lng: lng, dir: dir };
+    if (g.aprox === "calle" || g.aprox === "nombre") geo.aprox = g.aprox;
+    return geo;
   }
 
-  function geoVigente(geo, direccion) {
-    return !!(geo && direccion && geo.dir === direccion);
+  // «clave»: la dirección, o «@nombre|zona» si se situó por el nombre.
+  function geoVigente(geo, clave) {
+    return !!(geo && clave && geo.dir === clave);
   }
 
-  function geoUtil(geo, direccion) {
-    return geoVigente(geo, direccion) && !geo.nf;
+  function geoUtil(geo, clave) {
+    return geoVigente(geo, clave) && !geo.nf;
   }
 
   /**
@@ -1334,6 +1339,7 @@
         avisoSinListas();
         refrescarFuentesChips();
         render();
+        procesarGeo();       // en segundo plano: cuando abras el mapa, ya estará todo situado
       })
       .catch(function () {
         // Sin red ahora mismo: la última copia vista, sin permitir escribir.
@@ -1353,8 +1359,7 @@
     if (!panel.hidden) cerrarPanel(false);
     cerrarTodasLasConfirmaciones();
     ultimoAzar = null;
-    encuadradoConPuntos = false;
-    firmaAjuste = null;
+    reiniciarEncuadre();
     pintarSelectorListas();
     pintarPanelListas();
     mostrarBanner(null);
@@ -1366,6 +1371,7 @@
       avisoSinListas();
       refrescarFuentesChips();
       render();
+      procesarGeo();
     }).catch(function () {});
   }
 
@@ -1901,7 +1907,9 @@
     if (eraEdicion) {
       var original = null;
       for (var k = 0; k < data.length; k++) if (data[k].id === editandoId) { original = data[k]; break; }
-      if (original && geoVigente(original.geo, valores.direccion)) valores.geo = original.geo;
+      // Mismas coordenadas si no cambia lo que se buscó (dirección, o nombre y zona si se situó por el nombre).
+      if (original && claveGeo(original.nombre, original.direccion, original.zona, "") ===
+                      claveGeo(valores.nombre, valores.direccion, valores.zona, "")) valores.geo = original.geo;
     }
     var fila = filaDesde(valores);
     var promesa = eraEdicion
@@ -2201,7 +2209,6 @@
     btnLimpiar.hidden = !hayFiltros();
 
     aplicarVista();
-    if (state.vista === "mapa" || state.sort === "cerca") procesarGeo();
 
     if (state.vista === "mapa") {
       lista.replaceChildren();
@@ -2240,14 +2247,22 @@
 
   var MADRID = [40.4168, -3.7038];
   var BBOX_MADRID = { latMin: 39.85, latMax: 41.2, lngMin: -4.6, lngMax: -3.0 };  // Comunidad de Madrid, con margen
-  var GEO_PAUSA_MS = 1100;          // Nominatim pide como mucho 1 petición por segundo
+  var VIEWBOX_CIUDAD = "-3.90,40.58,-3.50,40.30";   // ciudad de Madrid (lon,lat NO · lon,lat SE) para buscar por nombre
+  var NOMINATIM = "https://nominatim.openstreetmap.org/search";
+  // Nominatim exige como mucho 1 petición por segundo. (El gancho de
+  // abajo solo lo usan las pruebas automáticas para no esperar de verdad.)
+  var GEO_PAUSA_MS = typeof window.__GORDITOS_PAUSA_GEO_TEST === "number" ? window.__GORDITOS_PAUSA_GEO_TEST : 1100;
+  var TIPOS_COMIDA = ["restaurant", "cafe", "bar", "pub", "fast_food", "food_court", "ice_cream", "biergarten"];
 
   var mapa = null, capaRest = null, marcadorYo = null, circuloYo = null;
   var marcadoresPorId = Object.create(null);
-  var firmaAjuste = null, encuadradoConPuntos = false;
   var ultimosItems = [];
   var miPos = null, posRender = null, vigilancia = null;
   var ubicacionDenegada = false, esperandoCentrar = false;
+
+  // Encuadre: se ajusta según van llegando puntos, hasta que TÚ muevas el mapa.
+  var firmaAjuste = null, puntosEncuadrados = 0, usuarioMovioMapa = false, moviendoYo = false;
+  function reiniciarEncuadre() { firmaAjuste = null; puntosEncuadrados = 0; usuarioMovioMapa = false; }
 
   function distanciaM(a, b) {
     var R = 6371000, rad = Math.PI / 180;
@@ -2263,6 +2278,22 @@
     return "a " + (m / 1000).toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km";
   }
 
+  function zonaLimpia(z) {
+    var v = texto(z);
+    if (/^Varias zonas/i.test(v) || /^Sin (confirmar|especificar)/i.test(v)) return "";
+    return v.replace(/\([^)]*\)/g, " ").split("/")[0].replace(/\s+/g, " ").trim();
+  }
+
+  /**
+   * Qué se busca para situar un punto: su dirección si la tiene; si no,
+   * el nombre del restaurante (y la zona, para elegir el local bueno).
+   * Las coordenadas guardadas llevan esta clave: si cambia (nueva
+   * dirección, otro nombre), se vuelven a buscar solas.
+   */
+  function claveGeo(nombre, direccion, zona, sede) {
+    return direccion ? direccion : "@" + nombre + "|" + zonaLimpia(zona) + (sede ? "|" + sede : "");
+  }
+
   /**
    * Los puntos físicos de un restaurante: sus sedes si las tiene, o él
    * mismo. Con un filtro de zona puesto, solo las sedes de esa zona
@@ -2271,111 +2302,217 @@
   function puntosDe(d, respetarZona) {
     var sedes = d.sedes || [];
     if (!sedes.length) {
-      return [{ nombreSede: "", direccion: d.direccion, geo: d.geo, carta: d.carta, reserva: d.reserva }];
+      return [{ sede: -1, nombreSede: "", direccion: d.direccion, zona: d.zona, geo: d.geo, carta: d.carta, reserva: d.reserva,
+                clave: claveGeo(d.nombre, d.direccion, d.zona, "") }];
     }
-    var elegidas = sedes;
-    if (respetarZona && state.zona !== "Todas") {
-      var f = sedes.filter(function (s) { return grupoZona(s.zona || d.zona) === state.zona; });
-      if (f.length) elegidas = f;
-    }
-    return elegidas.map(function (s) {
-      return { nombreSede: sedes.length > 1 ? s.nombre : "", direccion: s.direccion, geo: s.geo, carta: s.carta, reserva: s.reserva };
+    var puntos = sedes.map(function (s, i) {
+      var zona = s.zona || d.zona;
+      return { sede: i, nombreSede: sedes.length > 1 ? s.nombre : "", direccion: s.direccion, zona: zona, geo: s.geo,
+               carta: s.carta, reserva: s.reserva, clave: claveGeo(d.nombre, s.direccion, zona, s.nombre) };
     });
+    if (respetarZona && state.zona !== "Todas") {
+      var f = puntos.filter(function (p) { return grupoZona(p.zona) === state.zona; });
+      if (f.length) return f;
+    }
+    return puntos;
   }
 
   function distanciaMin(d) {
     if (!miPos) return Infinity;
     var min = Infinity;
     puntosDe(d, false).forEach(function (p) {
-      if (geoUtil(p.geo, p.direccion)) min = Math.min(min, distanciaM(miPos, p.geo));
+      if (geoUtil(p.geo, p.clave)) min = Math.min(min, distanciaM(miPos, p.geo));
     });
     return min;
   }
 
-  /* ---- Direcciones → coordenadas (una sola vez, y se guardan) ---- */
+  /* ---- Direcciones y nombres → coordenadas ---- */
 
-  function geocodificar(dir) {
-    if (typeof fetch !== "function") return Promise.resolve(null);
-    var consulta = /madrid/i.test(dir) ? dir : dir + ", Madrid";
-    var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es" +
-              "&accept-language=es&q=" + encodeURIComponent(consulta);
-    return fetch(url, { headers: { "Accept": "application/json" } })
-      .then(function (r) {
-        if (!r.ok) throw new Error("http " + r.status);
-        return r.json();
-      })
-      .then(function (arr) {
-        var p = Array.isArray(arr) ? arr[0] : null;
-        var lat = p ? Number(p.lat) : NaN, lng = p ? Number(p.lon) : NaN;
-        // Un resultado fuera de Madrid es un falso positivo (misma calle en
-        // otra ciudad): mejor "no encontrada" que un pin en el sitio equivocado.
-        var dentro = isFinite(lat) && isFinite(lng) &&
-                     lat >= BBOX_MADRID.latMin && lat <= BBOX_MADRID.latMax &&
-                     lng >= BBOX_MADRID.lngMin && lng <= BBOX_MADRID.lngMax;
-        return dentro ? { lat: lat, lng: lng, dir: dir } : { dir: dir, nf: true };
-      })
-      .catch(function () { return null; });   // error de red: no se guarda nada, se reintenta otro día
+  // «C/ Gaztambide, 56» → «Calle Gaztambide, 56»: el buscador entiende mejor lo largo.
+  function expandirDireccion(dir) {
+    var s = " " + texto(dir) + " ";
+    var reglas = [
+      [/\s(?:c\/|c\.\/|cl\.|cll\.|c\.)\s*/gi, " Calle "],
+      [/\s(?:avda\.?|avd\.|av\.)\s*/gi, " Avenida "],
+      [/\s(?:pza\.?|plza\.?|pl\.)\s*/gi, " Plaza "],
+      [/\s(?:gta\.?|glta\.?)\s*/gi, " Glorieta "],
+      [/\s(?:p\.?\s?[º°]\.?|pso\.)\s*/gi, " Paseo "],
+      [/\s(?:ctra\.?)\s*/gi, " Carretera "],
+      [/\s(?:rda\.)\s*/gi, " Ronda "],
+      [/\s(?:trav\.|tv\.)\s*/gi, " Travesía "],
+      [/\bn\.?\s?[º°]\.?\s*/gi, ""],
+      // Coletillas de piso o local, solo como palabra propia («lc» no debe cortar «Alcalá»)
+      [/[,\s]+(?:bajo|bajos|local|lc|piso|planta|esquina|esq)\b.*$/i, ""],
+      [/[,\s]+\d+\s?[º°ª].*$/, ""]                       // «…, 2º izq.»: el piso no ayuda a encontrar el portal
+    ];
+    reglas.forEach(function (r) { s = s.replace(r[0], r[1]); });
+    return s.replace(/\s+/g, " ").replace(/\s+,/g, ",").trim();
   }
 
-  var geoEnMarcha = false;
+  function calleSinNumero(dirExpandida) {
+    return dirExpandida.replace(/[,\s]*\d.*$/, "").trim();
+  }
+
+  function dentroDeMadrid(lat, lng) {
+    return isFinite(lat) && isFinite(lng) &&
+           lat >= BBOX_MADRID.latMin && lat <= BBOX_MADRID.latMax &&
+           lng >= BBOX_MADRID.lngMin && lng <= BBOX_MADRID.lngMax;
+  }
+
+  function nombreLimpio(s) { return plano(s).replace(/[^a-z0-9]+/g, " ").trim(); }
+  function nombreCoincide(a, b) {
+    a = nombreLimpio(a); b = nombreLimpio(b);
+    if (!a || !b) return false;
+    // Por palabras enteras: «Fass» no debe casar con «Fassbinder».
+    return (" " + a + " ").indexOf(" " + b + " ") !== -1 || (" " + b + " ").indexOf(" " + a + " ") !== -1;
+  }
+
+  // Todas las peticiones pasan por aquí: respeta el ritmo de Nominatim
+  // aunque se pidan varias a la vez.
+  var ultimaPeticionGeo = 0;
+  function pedirNominatim(params) {
+    if (typeof fetch !== "function") return Promise.reject(new Error("sin fetch"));
+    var espera = Math.max(0, ultimaPeticionGeo + GEO_PAUSA_MS - Date.now());
+    ultimaPeticionGeo = Date.now() + espera;
+    return new Promise(function (r) { setTimeout(r, espera); }).then(function () {
+      var qs = Object.keys(params).map(function (k) { return k + "=" + encodeURIComponent(params[k]); }).join("&");
+      return fetch(NOMINATIM + "?format=jsonv2&countrycodes=es&accept-language=es&" + qs, { headers: { "Accept": "application/json" } });
+    }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }).then(function (arr) { return Array.isArray(arr) ? arr : []; });
+  }
+
+  /**
+   * Busca un punto por pasos, del más preciso al menos:
+   *   1. su dirección exacta;
+   *   2. el nombre del restaurante, solo dentro de Madrid, y solo si lo
+   *      que sale es un local de comida con ese mismo nombre;
+   *   3. la calle sin número (pin aproximado).
+   * Devuelve las coordenadas, { nf: true } si no hay manera, o null si
+   * falló la red (entonces no se guarda nada y se reintenta otro día).
+   */
+  function buscarCoordenadas(t) {
+    var pasos = [];
+    var exp = t.direccion ? expandirDireccion(t.direccion) : "";
+    if (exp) {
+      pasos.push({ params: { q: /madrid/i.test(exp) ? exp : exp + ", Madrid", limit: 1, viewbox: VIEWBOX_CIUDAD }, aprox: "" });
+    }
+    if (t.nombre && t.nombre !== "Sin nombre") {
+      pasos.push({ params: { q: t.nombre, limit: 10, viewbox: VIEWBOX_CIUDAD, bounded: 1 }, aprox: "nombre", porNombre: true });
+    }
+    var calle = exp ? calleSinNumero(exp) : "";
+    if (calle && calle !== exp) {
+      pasos.push({ params: { q: calle + ", Madrid", limit: 1, viewbox: VIEWBOX_CIUDAD }, aprox: "calle" });
+    }
+
+    function elegir(paso, resultados) {
+      var validos = resultados.filter(function (r) {
+        if (!dentroDeMadrid(Number(r.lat), Number(r.lon))) return false;
+        if (!paso.porNombre) return true;
+        var tipo = String(r.type || ""), cat = String(r.category || r["class"] || "");
+        return cat === "amenity" && TIPOS_COMIDA.indexOf(tipo) !== -1 && nombreCoincide(r.name, t.nombre);
+      });
+      if (!validos.length) return null;
+      if (paso.porNombre && validos.length > 1) {
+        // Cadenas: se prefiere el local cuya dirección mencione la zona.
+        var z = nombreLimpio(zonaLimpia(t.zona));
+        var enZona = z && validos.filter(function (r) { return nombreLimpio(r.display_name).indexOf(z) !== -1; })[0];
+        if (enZona) return enZona;
+      }
+      return validos[0];
+    }
+
+    return (function probar(i) {
+      if (i >= pasos.length) return Promise.resolve({ dir: t.clave, nf: true });
+      var paso = pasos[i];
+      return pedirNominatim(paso.params).then(function (res) {
+        var r = elegir(paso, res);
+        if (!r) return probar(i + 1);
+        var geo = { lat: Number(r.lat), lng: Number(r.lon), dir: t.clave };
+        if (paso.aprox) geo.aprox = paso.aprox;
+        return geo;
+      });
+    })(0).catch(function () { return null; });
+  }
+
+  var geoEnMarcha = false, geoPendientesTotal = 0, geoHechas = 0;
   var geoIntentadas = Object.create(null);
+  var geoSinGuardar = false;       // falta la columna «geo» en Supabase: se sitúa, pero solo en memoria
 
   function tareasGeo() {
-    var tareas = [];
+    var conDireccion = [], porNombre = [];
     data.forEach(function (d) {
-      if (d.sedes && d.sedes.length) {
-        d.sedes.forEach(function (s, i) {
-          if (s.direccion && !geoVigente(s.geo, s.direccion)) tareas.push({ id: d.id, sede: i, dir: s.direccion });
-        });
-      } else if (d.direccion && !geoVigente(d.geo, d.direccion)) {
-        tareas.push({ id: d.id, sede: -1, dir: d.direccion });
-      }
+      puntosDe(d, false).forEach(function (p) {
+        if (geoVigente(p.geo, p.clave)) return;
+        if (geoIntentadas[d.id + "|" + p.sede + "|" + p.clave]) return;
+        var t = { id: d.id, sede: p.sede, clave: p.clave, direccion: p.direccion, nombre: d.nombre, zona: p.zona };
+        (p.direccion ? conDireccion : porNombre).push(t);
+      });
     });
-    return tareas.filter(function (t) { return !geoIntentadas[t.id + "|" + t.sede + "|" + t.dir]; });
+    return conDireccion.concat(porNombre);     // primero lo más fiable
   }
 
-  /** Cola con pausa entre peticiones, para respetar el límite de Nominatim. */
   function procesarGeo() {
     if (geoEnMarcha || soloLectura || !sb) return;
     var tareas = tareasGeo();
     if (!tareas.length) return;
     geoEnMarcha = true;
+    geoPendientesTotal = tareas.length;
+    geoHechas = 0;
     actualizarNotaMapa();
 
     (function siguiente(i) {
       if (i >= tareas.length) {
         geoEnMarcha = false;
         actualizarNotaMapa();
-        procesarGeo();              // por si se añadió algo mientras tanto
+        procesarGeo();                           // por si se añadió algo mientras tanto
         return;
       }
       var t = tareas[i];
-      geoIntentadas[t.id + "|" + t.sede + "|" + t.dir] = true;
-      geocodificar(t.dir)
+      geoIntentadas[t.id + "|" + t.sede + "|" + t.clave] = true;
+      buscarCoordenadas(t)
         .then(function (geo) { return geo ? guardarGeo(t, geo) : null; })
         .catch(function () {})
-        .then(function () { setTimeout(function () { siguiente(i + 1); }, GEO_PAUSA_MS); });
+        .then(function () { geoHechas++; actualizarNotaMapa(); siguiente(i + 1); });
     })(0);
+  }
+
+  function aplicarGeoLocal(d, t, geo) {
+    if (t.sede === -1) d.geo = geo;
+    else if (d.sedes && d.sedes[t.sede]) d.sedes[t.sede].geo = geo;
   }
 
   function guardarGeo(t, geo) {
     var d = null;
     for (var i = 0; i < data.length; i++) if (data[i].id === t.id) { d = data[i]; break; }
     if (!d) return null;
+    // ¿Sigue siendo lo mismo lo que se buscó? (dirección o nombre pueden haber cambiado)
+    var actual = puntosDe(d, false).filter(function (p) { return p.sede === t.sede; })[0];
+    if (!actual || actual.clave !== t.clave) return null;
+
+    if (geoSinGuardar) { aplicarGeoLocal(d, t, geo); render(); return null; }
 
     var cambio;
     if (t.sede === -1) {
-      if (d.direccion !== t.dir) return null;          // la cambiaron mientras se buscaba
       cambio = { geo: geo };
     } else {
-      var sedes = (d.sedes || []).map(function (s) { return Object.assign({}, s); });
-      if (!sedes[t.sede] || sedes[t.sede].direccion !== t.dir) return null;
+      var sedes = d.sedes.map(function (s) { return Object.assign({}, s); });
       sedes[t.sede].geo = geo;
       cambio = { sedes: sedes };
     }
 
     return sb.from("restaurantes").update(cambio).eq("id", d.id).select().single().then(function (res) {
-      if (res.error) return;
+      if (res.error) {
+        var e = res.error, texto_ = String(e.message || "");
+        if (e.code === "PGRST204" || e.code === "42703" || /column/i.test(texto_) && /geo/i.test(texto_)) {
+          geoSinGuardar = true;
+          mostrarBanner("El mapa funciona, pero no puede guardar las ubicaciones: falta ejecutar supabase-migracion-mapa.sql en Supabase. Hasta entonces se vuelven a buscar cada vez que abres la app.");
+        }
+        aplicarGeoLocal(d, t, geo);             // que se vea ya, aunque no se haya podido guardar
+        render();
+        return;
+      }
       upsertLocal(registroDesdeFila(res.data));
       guardarCache();
       render();
@@ -2406,10 +2543,9 @@
     pintarYo();
     if (esperandoCentrar && mapa) {
       esperandoCentrar = false;
-      mapa.setView([miPos.lat, miPos.lng], 15);
+      moverMapa(function () { mapa.setView([miPos.lat, miPos.lng], 15); });
     }
-    // Solo se repinta si te has movido algo apreciable: el GPS manda
-    // lecturas cada pocos segundos y rehacer la lista con cada una sobra.
+    // Solo se repinta si te has movido algo apreciable.
     if (!posRender || distanciaM(posRender, miPos) > 40) {
       posRender = miPos;
       render();
@@ -2429,6 +2565,12 @@
 
   /* ---- Mapa ---- */
 
+  function moverMapa(fn) {
+    moviendoYo = true;
+    fn();
+    setTimeout(function () { moviendoYo = false; }, 800);
+  }
+
   function asegurarMapa() {
     if (mapa) return true;
     var L = window.L;
@@ -2439,6 +2581,10 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
     }).addTo(mapa);
     capaRest = L.layerGroup().addTo(mapa);
+    if (typeof mapa.on === "function") {
+      mapa.on("dragstart", function () { usuarioMovioMapa = true; });
+      mapa.on("zoomstart", function () { if (!moviendoYo) usuarioMovioMapa = true; });
+    }
     return true;
   }
 
@@ -2474,11 +2620,20 @@
     sub.textContent = partes.join(" · ");
     caja.appendChild(sub);
 
+    if (p.geo.aprox) {
+      var aviso = document.createElement("p");
+      aviso.className = "popup-aprox";
+      aviso.textContent = p.geo.aprox === "calle"
+        ? "Ubicación aproximada: no se encontró el número, solo la calle."
+        : "Situado por su nombre: si no es aquí, ponle la dirección.";
+      caja.appendChild(aviso);
+    }
+
     var enlaces = document.createElement("div");
     enlaces.className = "card-links";
     var etiqueta = d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : "");
-    construirPildoras(etiqueta, p.carta, p.reserva, urlMapa({ nombre: d.nombre, zona: "", direccion: p.direccion }))
-      .forEach(function (x) { enlaces.appendChild(x); });
+    var destino = p.direccion ? { nombre: d.nombre, zona: "", direccion: p.direccion } : { nombre: d.nombre, zona: p.zona, direccion: "" };
+    construirPildoras(etiqueta, p.carta, p.reserva, urlMapa(destino)).forEach(function (x) { enlaces.appendChild(x); });
     caja.appendChild(enlaces);
     return caja;
   }
@@ -2494,9 +2649,10 @@
 
     items.forEach(function (d) {
       puntosDe(d, true).forEach(function (p) {
-        if (!geoUtil(p.geo, p.direccion)) return;
+        if (!geoUtil(p.geo, p.clave)) return;
         var ll = [p.geo.lat, p.geo.lng];
-        var m = L.circleMarker(ll, { radius: 9, weight: 2, fillOpacity: 0.95, className: "marcador-rest" });
+        var m = L.circleMarker(ll, { radius: 9, weight: 2, fillOpacity: 0.95,
+                                     className: "marcador-rest" + (p.geo.aprox ? " marcador-aprox" : "") });
         m.bindPopup(crearPopup(d, p));
         m.addTo(capaRest);
         if (!marcadoresPorId[d.id]) marcadoresPorId[d.id] = { marcador: m, ll: ll };
@@ -2506,17 +2662,15 @@
 
     pintarYo();
 
-    // Encuadre: al abrir el mapa y al cambiar filtros, no con cada cambio
-    // que llegue en tiempo real (el mapa no debe saltar mientras lo miras).
+    // Cambiar de filtro vuelve a encuadrar. Mientras llegan puntos nuevos
+    // (búsqueda en curso) también, salvo que tú hayas movido el mapa.
     var firma = [state.zona, state.tipo, state.precio, state.search].join("|");
-    if (puntos.length && (!encuadradoConPuntos || firma !== firmaAjuste)) {
+    if (firma !== firmaAjuste) { firmaAjuste = firma; puntosEncuadrados = 0; usuarioMovioMapa = false; }
+    if (puntos.length && !usuarioMovioMapa && puntos.length > puntosEncuadrados) {
       var limites = L.latLngBounds(puntos.slice());
-      if (miPos && !encuadradoConPuntos && distanciaM(miPos, { lat: MADRID[0], lng: MADRID[1] }) < 30000) {
-        limites.extend([miPos.lat, miPos.lng]);
-      }
-      mapa.fitBounds(limites, { padding: [30, 30], maxZoom: 16 });
-      encuadradoConPuntos = true;
-      firmaAjuste = firma;
+      if (miPos && distanciaM(miPos, { lat: MADRID[0], lng: MADRID[1] }) < 30000) limites.extend([miPos.lat, miPos.lng]);
+      moverMapa(function () { mapa.fitBounds(limites, { padding: [30, 30], maxZoom: 16 }); });
+      puntosEncuadrados = puntos.length;
     }
 
     actualizarNotaMapa();
@@ -2533,21 +2687,28 @@
     } else if (!items.length) {
       frases.push(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía.");
     } else {
-      var enMapa = 0, sinDir = 0, pendientes = 0, noHalladas = [];
+      var enMapa = 0, aprox = 0, pendientes = 0, noHallados = [];
       items.forEach(function (d) {
         var ps = puntosDe(d, true);
-        if (ps.some(function (p) { return geoUtil(p.geo, p.direccion); })) enMapa++;
-        if (!ps.some(function (p) { return p.direccion; })) sinDir++;
+        var utiles = ps.filter(function (p) { return geoUtil(p.geo, p.clave); });
+        if (utiles.length) enMapa++;
+        if (utiles.some(function (p) { return p.geo.aprox; })) aprox++;
         ps.forEach(function (p) {
-          if (!p.direccion) return;
-          if (!geoVigente(p.geo, p.direccion)) pendientes++;
-          else if (p.geo.nf) noHalladas.push(d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : ""));
+          if (!geoVigente(p.geo, p.clave)) pendientes++;
+          else if (p.geo.nf) noHallados.push(d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : ""));
         });
       });
-      frases.push(enMapa + (enMapa === 1 ? " restaurante en el mapa." : " restaurantes en el mapa."));
-      if (sinDir) frases.push(sinDir + " sin dirección: no salen hasta que se la pongas.");
-      if (pendientes) frases.push(geoEnMarcha ? "Situando " + pendientes + " direcciones…" : pendientes + " direcciones pendientes de situar.");
-      if (noHalladas.length) frases.push("No se encontró la dirección de " + noHalladas.join(", ") + ": revísala.");
+      frases.push(enMapa + " de " + items.length + " en el mapa.");
+      if (geoEnMarcha && pendientes) {
+        frases.push("Buscando ubicaciones: " + Math.min(geoHechas + 1, geoPendientesTotal) + " de " + geoPendientesTotal + "…");
+      } else if (pendientes) {
+        frases.push(pendientes + " sin situar todavía (se reintentará con conexión).");
+      }
+      if (aprox) frases.push(aprox + " con ubicación aproximada: ponles la dirección para afinarla.");
+      if (noHallados.length) {
+        var muestra = noHallados.slice(0, 6).join(", ") + (noHallados.length > 6 ? " y " + (noHallados.length - 6) + " más" : "");
+        frases.push("No se encontraron: " + muestra + ". Ponles la dirección en Editar.");
+      }
     }
 
     if (ubicacionDenegada) frases.push("Sin permiso de ubicación: actívalo en los ajustes del navegador para ver lo que tienes cerca.");
@@ -2566,6 +2727,7 @@
   function cambiarVista(v) {
     if (state.vista === v) return;
     state.vista = v;
+    if (v === "mapa") reiniciarEncuadre();       // al abrir el mapa, siempre encuadrado en todo
     guardarFiltros();
     render();
     // Leaflet calcula su tamaño al crearse: si el contenedor estuvo oculto,
@@ -2578,7 +2740,7 @@
 
   $("centrar-btn").addEventListener("click", function () {
     if (!navigator.geolocation) { avisar("Este navegador no da la ubicación."); return; }
-    if (miPos && mapa) { mapa.setView([miPos.lat, miPos.lng], 15); return; }
+    if (miPos && mapa) { moverMapa(function () { mapa.setView([miPos.lat, miPos.lng], 15); }); return; }
     ubicacionDenegada = false;
     esperandoCentrar = true;
     avisar("Buscando tu ubicación…");
@@ -2631,7 +2793,7 @@
     cerrarTodasLasConfirmaciones();
     if (enMapa) {
       var m = marcadoresPorId[elegido.id];
-      mapa.setView(m.ll, Math.max(mapa.getZoom(), 15));
+      moverMapa(function () { mapa.setView(m.ll, Math.max(mapa.getZoom(), 15)); });
       m.marcador.openPopup();
     } else {
       destacar(elegido);
