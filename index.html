@@ -1451,21 +1451,33 @@
   var etiquetaPrecio = { 1: "€", 2: "€€", 3: "€€€" };
   var nombrePrecio = { 1: "económico", 2: "precio medio", 3: "caro" };
 
-  var state = { search: "", zona: "Todas", tipo: "Todos", precio: "Todos", sort: "nombre", vista: "lista" };
+  // Filtros múltiples: una lista de valores por grupo; vacía = sin filtrar.
+  // Dentro de un grupo cuenta cualquiera («Chamberí o Malasaña»); entre
+  // grupos, todos a la vez («…y además Italiana o Pizza»).
+  var state = { search: "", zonas: [], tipos: [], precios: [], sort: "nombre", vista: "lista" };
+
+  function enFiltro(seleccion, valor) {
+    return !seleccion.length || seleccion.indexOf(valor) !== -1;
+  }
 
   (function restaurarFiltros() {
     var g = parsearJson(leerCrudo(CLAVE_FILTROS));
     if (!g || typeof g !== "object") return;
-    if (typeof g.zona === "string") state.zona = g.zona;
-    if (typeof g.tipo === "string") state.tipo = g.tipo;
-    if (typeof g.precio === "string") state.precio = g.precio;
+    // Acepta el formato nuevo (listas) y el antiguo (un solo valor, o «Todas»).
+    function lista(nuevo, viejo, todos) {
+      if (Array.isArray(nuevo)) return nuevo.filter(function (v) { return typeof v === "string" && v; });
+      return typeof viejo === "string" && viejo && viejo !== todos ? [viejo] : [];
+    }
+    state.zonas = lista(g.zonas, g.zona, "Todas");
+    state.tipos = lista(g.tipos, g.tipo, "Todos");
+    state.precios = lista(g.precios, g.precio, "Todos");
     if (typeof g.sort === "string") state.sort = g.sort;
     if (g.vista === "mapa" || g.vista === "lista") state.vista = g.vista;
   })();
 
   function guardarFiltros() {
     escribirCrudo(CLAVE_FILTROS, JSON.stringify({
-      zona: state.zona, tipo: state.tipo, precio: state.precio, sort: state.sort, vista: state.vista
+      zonas: state.zonas, tipos: state.tipos, precios: state.precios, sort: state.sort, vista: state.vista
     }));
   }
 
@@ -1619,41 +1631,70 @@
 
   var firmasChips = {};
 
-  function construirChips(contenedorId, valores, clave) {
+  /**
+   * Una fila de chips de selección múltiple. El primero («Todas»/«Todos»)
+   * está marcado cuando no hay nada elegido, y tocarlo limpia el grupo.
+   */
+  function construirChips(contenedorId, etiquetaId, todos, valores, clave) {
     var contenedor = $(contenedorId);
-    var firma = valores.join("\u0000") + "|" + state[clave];
-    if (valores.indexOf(state[clave]) === -1) {
-      state[clave] = valores[0];
-      firma = valores.join("\u0000") + "|" + state[clave];
-    }
+    // Si algo elegido ya no existe (se borró el último de esa zona), se olvida.
+    state[clave] = state[clave].filter(function (v) { return valores.indexOf(v) !== -1; });
+
+    var firma = valores.join("\u0000") + "|" + state[clave].join("\u0000");
+    actualizarEtiquetaFiltro(etiquetaId, clave);
     if (firmasChips[contenedorId] === firma) return;
     firmasChips[contenedorId] = firma;
 
     var scroll = contenedor.scrollLeft;
     var frag = document.createDocumentFragment();
-    valores.forEach(function (v) {
+
+    function marcar() {
+      var hijos = contenedor.children;
+      for (var i = 0; i < hijos.length; i++) {
+        var v = hijos[i].dataset.valor;
+        var activo = v === "" ? !state[clave].length : state[clave].indexOf(v) !== -1;
+        hijos[i].setAttribute("aria-pressed", activo ? "true" : "false");
+      }
+      firmasChips[contenedorId] = valores.join("\u0000") + "|" + state[clave].join("\u0000");
+      actualizarEtiquetaFiltro(etiquetaId, clave);
+    }
+
+    [""].concat(valores).forEach(function (v) {
       var chip = document.createElement("button");
       chip.className = "chip";
       chip.type = "button";
-      chip.textContent = v;
-      chip.setAttribute("aria-pressed", state[clave] === v ? "true" : "false");
+      chip.dataset.valor = v;
+      chip.textContent = v || todos;
       chip.addEventListener("click", function () {
-        state[clave] = v;
-        var hermanos = contenedor.children;
-        for (var i = 0; i < hermanos.length; i++) hermanos[i].setAttribute("aria-pressed", "false");
-        chip.setAttribute("aria-pressed", "true");
-        firmasChips[contenedorId] = valores.join("\u0000") + "|" + v;
+        if (!v) {
+          state[clave] = [];
+        } else {
+          var pos = state[clave].indexOf(v);
+          if (pos === -1) state[clave].push(v); else state[clave].splice(pos, 1);
+        }
+        marcar();
         guardarFiltros();
         render();
       });
       frag.appendChild(chip);
     });
     contenedor.replaceChildren(frag);
+    marcar();
     contenedor.scrollLeft = scroll;
   }
 
+  // «Zona · 2»: se ve de un vistazo cuántos hay marcados aunque la fila
+  // de chips esté desplazada y no se vean.
+  function actualizarEtiquetaFiltro(etiquetaId, clave) {
+    var el = $(etiquetaId);
+    if (!el) return;
+    if (!el.dataset.base) el.dataset.base = el.textContent;
+    var n = state[clave].length;
+    el.textContent = el.dataset.base + (n ? " · " + n + (n === 1 ? " elegida" : " elegidas") : "");
+  }
+
   function refrescarFuentesChips() {
-    var zonas = ["Todas"], tipos = ["Todos"];
+    var zonas = [], tipos = [];
     var vistasZ = Object.create(null), vistosT = Object.create(null);
     data.forEach(function (d) {
       zonasDe(d).forEach(function (z) {
@@ -1662,13 +1703,13 @@
       var t = d.tipo || "Sin especificar";
       if (!vistosT[t]) { vistosT[t] = true; tipos.push(t); }
     });
-    zonas = [zonas[0]].concat(zonas.slice(1).sort(comparar));
-    tipos = [tipos[0]].concat(tipos.slice(1).sort(comparar));
-    construirChips("zona-chips", zonas, "zona");
-    construirChips("tipo-chips", tipos, "tipo");
-    construirChips("precio-chips", ["Todos", "€", "€€", "€€€"], "precio");
-    rellenarDatalist("zonas-sugeridas", zonas.slice(1));
-    rellenarDatalist("tipos-sugeridos", tipos.slice(1));
+    zonas.sort(comparar);
+    tipos.sort(comparar);
+    construirChips("zona-chips", "lbl-zona", "Todas", zonas, "zonas");
+    construirChips("tipo-chips", "lbl-tipo", "Todos", tipos, "tipos");
+    construirChips("precio-chips", "lbl-precio", "Todos", ["€", "€€", "€€€"], "precios");
+    rellenarDatalist("zonas-sugeridas", zonas);
+    rellenarDatalist("tipos-sugeridos", tipos);
   }
 
   function rellenarDatalist(id, valores) {
@@ -1685,11 +1726,11 @@
   }
 
   function hayFiltros() {
-    return state.zona !== "Todas" || state.tipo !== "Todos" || state.precio !== "Todos" || state.search !== "";
+    return state.zonas.length > 0 || state.tipos.length > 0 || state.precios.length > 0 || state.search !== "";
   }
 
   $("clear-filters").addEventListener("click", function () {
-    state.zona = "Todas"; state.tipo = "Todos"; state.precio = "Todos"; state.search = "";
+    state.zonas = []; state.tipos = []; state.precios = []; state.search = "";
     $("search").value = "";
     firmasChips = {};
     guardarFiltros();
@@ -2005,9 +2046,9 @@
       });
       if (heno.indexOf(state.search) === -1) return false;
     }
-    if (state.zona !== "Todas" && zonasDe(d).indexOf(state.zona) === -1) return false;
-    if (state.tipo !== "Todos" && (d.tipo || "Sin especificar") !== state.tipo) return false;
-    if (state.precio !== "Todos" && etiquetaPrecio[d.precio] !== state.precio) return false;
+    if (state.zonas.length && !zonasDe(d).some(function (z) { return state.zonas.indexOf(z) !== -1; })) return false;
+    if (!enFiltro(state.tipos, d.tipo || "Sin especificar")) return false;
+    if (!enFiltro(state.precios, etiquetaPrecio[d.precio])) return false;
     return true;
   }
 
@@ -2104,8 +2145,8 @@
       // Si hay un filtro de zona puesto, solo se enseña el local que
       // coincide con esa zona — no los demás, que ahora mismo no tocan.
       var sedesAMostrar = sedes;
-      if (state.zona !== "Todas") {
-        var filtradas = sedes.filter(function (s) { return grupoZona(s.zona || d.zona) === state.zona; });
+      if (state.zonas.length) {
+        var filtradas = sedes.filter(function (s) { return state.zonas.indexOf(grupoZona(s.zona || d.zona)) !== -1; });
         if (filtradas.length) sedesAMostrar = filtradas;
       }
 
@@ -2310,8 +2351,8 @@
       return { sede: i, nombreSede: sedes.length > 1 ? s.nombre : "", direccion: s.direccion, zona: zona, geo: s.geo,
                carta: s.carta, reserva: s.reserva, clave: claveGeo(d.nombre, s.direccion, zona, s.nombre) };
     });
-    if (respetarZona && state.zona !== "Todas") {
-      var f = puntos.filter(function (p) { return grupoZona(p.zona) === state.zona; });
+    if (respetarZona && state.zonas.length) {
+      var f = puntos.filter(function (p) { return state.zonas.indexOf(grupoZona(p.zona)) !== -1; });
       if (f.length) return f;
     }
     return puntos;
@@ -2664,7 +2705,7 @@
 
     // Cambiar de filtro vuelve a encuadrar. Mientras llegan puntos nuevos
     // (búsqueda en curso) también, salvo que tú hayas movido el mapa.
-    var firma = [state.zona, state.tipo, state.precio, state.search].join("|");
+    var firma = [state.zonas.join(","), state.tipos.join(","), state.precios.join(","), state.search].join("|");
     if (firma !== firmaAjuste) { firmaAjuste = firma; puntosEncuadrados = 0; usuarioMovioMapa = false; }
     if (puntos.length && !usuarioMovioMapa && puntos.length > puntosEncuadrados) {
       var limites = L.latLngBounds(puntos.slice());
