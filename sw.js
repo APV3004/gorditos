@@ -11,7 +11,7 @@
    Al publicar cambios sube CACHE una versión: al activarse borra las
    cachés antiguas.                                                  */
 
-var CACHE = "gorditos-v6";
+var CACHE = "gorditos-v7";
 
 /* Solo lo que se puede nombrar de antemano. La página en sí no está
    aquí a propósito: se cachea sola en la primera visita, bajo la ruta
