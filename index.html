@@ -567,7 +567,23 @@
     text-decoration: underline; text-underline-offset: 3px; flex: 0 0 auto;
   }
 
-  .sedes-group { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .sedes-group { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+  .sedes-toggle {
+    margin-top: 11px; width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    min-height: 44px; padding: 8px 14px;
+    border: 1px solid var(--line-input); border-radius: 12px; background: transparent;
+    color: var(--ink); font-size: 13.5px; font-weight: 600; text-align: left; cursor: pointer;
+  }
+  .sedes-toggle:active { background: var(--chip-bg); }
+  .sedes-toggle::after {                       /* flecha que gira al desplegar */
+    content: "▾"; color: var(--ink-soft); font-size: 12px; order: 3; transition: transform 0.15s ease;
+  }
+  .sedes-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
+  .sedes-pista { color: var(--ink-soft); font-weight: 400; font-size: 12.5px; flex: 1; text-align: right; }
+  .sedes-pista:empty { display: none; }
+  .sede-dist { font-size: 12.5px; }
 
   /* ---- Lista / Mapa ---- */
   .result-acciones { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px 14px; }
@@ -1122,10 +1138,13 @@
     if (!g || typeof g !== "object") return null;
     var dir = texto(g.dir);
     if (!dir) return null;
-    if (g.nf) return { dir: dir, nf: true };
+    var extra = {};
+    if (isFinite(Number(g.v)) && Number(g.v) > 0) extra.v = Number(g.v);
+    if (isFinite(Number(g.t)) && Number(g.t) > 0) extra.t = Number(g.t);
+    if (g.nf) return Object.assign({ dir: dir, nf: true }, extra);
     var lat = Number(g.lat), lng = Number(g.lng);
     if (!isFinite(lat) || !isFinite(lng)) return null;
-    var geo = { lat: lat, lng: lng, dir: dir };
+    var geo = Object.assign({ lat: lat, lng: lng, dir: dir }, extra);
     if (g.aprox === "calle" || g.aprox === "nombre") geo.aprox = g.aprox;
     return geo;
   }
@@ -1484,6 +1503,7 @@
   var editandoId = null;
   var pendienteConfirmarDuplicado = false;
   var idsExpandidosBorrado = Object.create(null);
+  var idsSedesAbiertas = Object.create(null);
 
   /* ============================================================
      9. Referencias del DOM
@@ -2140,34 +2160,100 @@
 
     var sedes = d.sedes || [];
 
-    if (sedes.length > 1) {
-      // Varios locales: una fila de píldoras por sede, con su propio nombre.
-      // Si hay un filtro de zona puesto, solo se enseña el local que
-      // coincide con esa zona — no los demás, que ahora mismo no tocan.
-      var sedesAMostrar = sedes;
-      if (state.zonas.length) {
-        var filtradas = sedes.filter(function (s) { return state.zonas.indexOf(grupoZona(s.zona || d.zona)) !== -1; });
-        if (filtradas.length) sedesAMostrar = filtradas;
-      }
+    // Si hay un filtro de zona puesto, solo se enseñan los locales de esa
+    // zona — los demás ahora mismo no tocan.
+    var sedesAMostrar = sedes;
+    if (sedes.length > 1 && state.zonas.length) {
+      var filtradas = sedes.filter(function (s) { return state.zonas.indexOf(grupoZona(s.zona || d.zona)) !== -1; });
+      if (filtradas.length) sedesAMostrar = filtradas;
+    }
 
+    // Con tu ubicación conocida, el local más cercano va primero.
+    var distanciaSede = function (s) {
+      var clave = claveGeo(d.nombre, s.direccion, s.zona || d.zona, s.nombre);
+      return (miPos && geoUtil(s.geo, clave)) ? distanciaM(miPos, s.geo) : Infinity;
+    };
+    if (miPos && sedesAMostrar.length > 1) {
+      sedesAMostrar = sedesAMostrar.slice().sort(function (a, b) {
+        var da = distanciaSede(a), db = distanciaSede(b);
+        return da === db ? comparar(a.nombre, b.nombre) : da - db;
+      });
+    }
+
+    function bloqueSede(s) {
+      var bloque = document.createElement("div");
+      bloque.className = "sede-block";
+      var nombreSede = document.createElement("p");
+      nombreSede.className = "sede-nombre";
+      nombreSede.textContent = s.nombre;
+      var dSede = formatoDistancia(distanciaSede(s));
+      if (dSede) {
+        var dist = document.createElement("span");
+        dist.className = "card-dist sede-dist";
+        dist.textContent = dSede;
+        nombreSede.appendChild(document.createTextNode(" "));
+        nombreSede.appendChild(dist);
+      }
+      bloque.appendChild(nombreSede);
+      var enlacesSede = document.createElement("div");
+      enlacesSede.className = "card-links";
+      // El nombre del local ya suele decir el barrio («Lateral Bilbao»), así
+      // que no se repite la zona en la búsqueda del mapa.
+      var mapaSede = urlMapa({ nombre: d.nombre + " " + s.nombre, zona: "", direccion: s.direccion });
+      construirPildoras(d.nombre + " (" + s.nombre + ")", s.carta, s.reserva, mapaSede)
+        .forEach(function (p) { enlacesSede.appendChild(p); });
+      bloque.appendChild(enlacesSede);
+      return bloque;
+    }
+
+    if (sedesAMostrar.length > 1) {
+      // Varios locales: plegados, para que una cadena de 13 no ocupe media
+      // pantalla. El botón dice cuántos hay y, si se sabe, cuál pilla cerca.
       var grupo = document.createElement("div");
       grupo.className = "sedes-group";
-      sedesAMostrar.forEach(function (s) {
-        var bloque = document.createElement("div");
-        bloque.className = "sede-block";
-        var nombreSede = document.createElement("p");
-        nombreSede.className = "sede-nombre";
-        nombreSede.textContent = s.nombre;
-        bloque.appendChild(nombreSede);
-        var enlacesSede = document.createElement("div");
-        enlacesSede.className = "card-links";
-        var mapaSede = urlMapa({ nombre: d.nombre + " " + s.nombre, zona: "", direccion: s.direccion });
-        construirPildoras(d.nombre + " (" + s.nombre + ")", s.carta, s.reserva, mapaSede)
-          .forEach(function (p) { enlacesSede.appendChild(p); });
-        bloque.appendChild(enlacesSede);
-        grupo.appendChild(bloque);
+      grupo.id = "sedes-" + d.id;
+      sedesAMostrar.forEach(function (s) { grupo.appendChild(bloqueSede(s)); });
+
+      var abierto = !!idsSedesAbiertas[d.id];
+      grupo.hidden = !abierto;
+
+      var toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "sedes-toggle";
+      toggle.setAttribute("aria-controls", grupo.id);
+
+      var etiqueta = document.createElement("span");
+      var pista = document.createElement("span");
+      pista.className = "sedes-pista";
+      var masCercano = sedesAMostrar[0];
+      var dCercano = formatoDistancia(distanciaSede(masCercano));
+
+      var pintarToggle = function () {
+        etiqueta.textContent = (abierto ? "Ocultar los " : "Ver los ") + sedesAMostrar.length + " locales";
+        pista.textContent = !abierto && dCercano ? "el más cercano, " + masCercano.nombre + " " + dCercano : "";
+        toggle.setAttribute("aria-expanded", abierto ? "true" : "false");
+        toggle.setAttribute("aria-label", (abierto ? "Ocultar los " : "Ver los ") + sedesAMostrar.length +
+          " locales de " + d.nombre);
+      };
+      pintarToggle();
+
+      toggle.appendChild(etiqueta);
+      toggle.appendChild(pista);
+      toggle.addEventListener("click", function () {
+        abierto = !abierto;
+        if (abierto) idsSedesAbiertas[d.id] = true; else delete idsSedesAbiertas[d.id];
+        grupo.hidden = !abierto;
+        pintarToggle();
       });
+
+      li.appendChild(toggle);
       li.appendChild(grupo);
+    } else if (sedesAMostrar.length === 1 && sedes.length > 1) {
+      // El filtro ha dejado un solo local: se enseña directamente, sin plegar.
+      var unico = document.createElement("div");
+      unico.className = "sedes-group";
+      unico.appendChild(bloqueSede(sedesAMostrar[0]));
+      li.appendChild(unico);
     } else {
       // Sin sedes, o una sola (que si la hay, manda sobre los campos sueltos):
       // se comporta exactamente igual que un restaurante normal.
@@ -2369,29 +2455,91 @@
 
   /* ---- Direcciones y nombres → coordenadas ---- */
 
-  // «C/ Gaztambide, 56» → «Calle Gaztambide, 56»: el buscador entiende mejor lo largo.
-  function expandirDireccion(dir) {
-    var s = " " + texto(dir) + " ";
-    var reglas = [
-      [/\s(?:c\/|c\.\/|cl\.|cll\.|c\.)\s*/gi, " Calle "],
-      [/\s(?:avda\.?|avd\.|av\.)\s*/gi, " Avenida "],
-      [/\s(?:pza\.?|plza\.?|pl\.)\s*/gi, " Plaza "],
-      [/\s(?:gta\.?|glta\.?)\s*/gi, " Glorieta "],
-      [/\s(?:p\.?\s?[º°]\.?|pso\.)\s*/gi, " Paseo "],
-      [/\s(?:ctra\.?)\s*/gi, " Carretera "],
-      [/\s(?:rda\.)\s*/gi, " Ronda "],
-      [/\s(?:trav\.|tv\.)\s*/gi, " Travesía "],
-      [/\bn\.?\s?[º°]\.?\s*/gi, ""],
-      // Coletillas de piso o local, solo como palabra propia («lc» no debe cortar «Alcalá»)
-      [/[,\s]+(?:bajo|bajos|local|lc|piso|planta|esquina|esq)\b.*$/i, ""],
-      [/[,\s]+\d+\s?[º°ª].*$/, ""]                       // «…, 2º izq.»: el piso no ayuda a encontrar el portal
-    ];
-    reglas.forEach(function (r) { s = s.replace(r[0], r[1]); });
-    return s.replace(/\s+/g, " ").replace(/\s+,/g, ",").trim();
+  // Sube cuando cambia la forma de buscar: lo situado con una versión
+  // anterior se revisa solo (sin quitarlo del mapa mientras tanto).
+  var GEO_VERSION = 2;
+  var NF_REINTENTO_MS = 30 * 24 * 3600 * 1000;    // «no encontrada» se reintenta al mes
+
+  function geoCaducada(geo) {
+    if (!geo) return true;
+    if ((geo.v || 1) < GEO_VERSION) return true;
+    return !!geo.nf && (!geo.t || Date.now() - geo.t > NF_REINTENTO_MS);
   }
 
-  function calleSinNumero(dirExpandida) {
-    return dirExpandida.replace(/[,\s]*\d.*$/, "").trim();
+  var ABREVIATURAS = [
+    [/(^|[\s,])(?:c\/|c\.\/|cl\.|cll\.|c\.)\s*/gi, "$1Calle "],
+    [/(^|[\s,])(?:avda\.?|avd\.|av\.)\s*/gi, "$1Avenida "],
+    [/(^|[\s,])(?:pza\.?|plza\.?|pl\.)\s*/gi, "$1Plaza "],
+    [/(^|[\s,])(?:gta\.?|glta\.?)\s*/gi, "$1Glorieta "],
+    [/(^|[\s,])(?:p\.?\s?[º°]\.?|pso\.)\s*/gi, "$1Paseo "],
+    [/(^|[\s,])ctra\.?\s*/gi, "$1Carretera "],
+    [/(^|[\s,])rda\.\s*/gi, "$1Ronda "],
+    [/(^|[\s,])(?:trav\.|tv\.)\s*/gi, "$1Travesía "],
+    [/(^|[\s,])gral\.?\s+/gi, "$1General "],
+    [/(^|[\s,])sta\.?\s+/gi, "$1Santa "],
+    [/(^|[\s,])sto\.?\s+/gi, "$1Santo "],
+    [/(^|[\s,])[sS]\.\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1San "],
+    [/(^|[\s,])fco\.?\s+/gi, "$1Francisco "],
+    [/(^|[\s,])ppe\.?\s+/gi, "$1Príncipe "],
+    [/(^|[\s,])(?:prta|pta)\.?\s+/gi, "$1Puerta "],
+    [/(^|[\s,])dra\.?\s+/gi, "$1Doctora "],
+    [/(^|[\s,])dr\.?\s+/gi, "$1Doctor "],
+    [/(^|[\s,])mtro\.?\s+/gi, "$1Maestro "],
+    [/(^|[\s,])hnos\.?\s+/gi, "$1Hermanos "],
+    [/(^|[\s,])ntra\.?\s+sra\.?\s+/gi, "$1Nuestra Señora "],
+    [/(^|[\s,])pque\.?\s+/gi, "$1Parque "]
+  ];
+  var MUNICIPIOS = ["pozuelo de alarcon", "pozuelo", "majadahonda", "alcobendas", "la moraleja", "las rozas",
+    "boadilla del monte", "san sebastian de los reyes", "tres cantos", "getafe", "leganes", "alcorcon",
+    "mostoles", "fuenlabrada", "rivas-vaciamadrid", "rivas"];
+  var SIN_PESO = ["calle", "avenida", "plaza", "paseo", "glorieta", "carretera", "ronda", "travesia", "callejon", "parque",
+    "camino", "pasaje", "costanilla", "cuesta", "de", "del", "la", "las", "el", "los", "y", "madrid"];
+
+  /** Limpia una dirección escrita a mano y prepara lo que se le pregunta al buscador. */
+  function prepararDireccion(dir, zona) {
+    var s = texto(dir);
+    s = s.replace(/[,\s]+(?:s\/n|s\.\s?n\.?|sin n[uú]mero)(?=[\s,.]|$)\.?/gi, "");        // «s/n»
+    s = s.replace(/\s*[–—]\s*/g, ", ");                                            // «7 – Madrid»
+    s = s.replace(/\([^)]*\)?/g, " ").replace(/\)/g, " ");                          // «(Pez tortilla Cara B)»
+    s = s.replace(/(^|[\s,])(?:c\.\s?c\.|cco|cc|centro comercial)\b[^,]*/gi, "$1");  // centros comerciales
+    s = s.replace(/[,\s]+(?:bajo|bajos|local|lc|piso|planta|esquina|esq)\b.*$/i, ""); // piso, local, esquina…
+    ABREVIATURAS.forEach(function (r) { s = s.replace(r[0], r[1]); });
+    s = s.replace(/\bn\.?\s?[º°]\.?\s*/gi, "");                                      // «nº 25»
+    s = s.replace(/[,\s]+\d+\s?[º°ª].*$/, "");                                       // «2º izq.»
+    s = s.replace(/\b(Calle|Avenida|Plaza|Paseo|Glorieta)\s+\1\b/gi, "$1");           // «C/ Calle …»
+    s = s.replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ").replace(/^[,\s]+|[,\s]+$/g, "").replace(/(, )+/g, ", ");
+
+    // Municipio: el que va tras el código postal, o la zona si es un municipio. Si no, Madrid.
+    // Si la dirección lo dice («28023 Madrid», «28222 Majadahonda»), manda eso; si no, se
+    // deduce de la zona cuando la zona es un municipio (y entonces se prueba también Madrid).
+    var municipio = "Madrid", municipioDeducido = false;
+    var trasCp = /\b\d{5}\s+([^,]+)/.exec(s);
+    if (trasCp) municipio = plano(trasCp[1]).trim() === "madrid" ? "Madrid" : trasCp[1].trim();
+    else if (MUNICIPIOS.indexOf(plano(zona).trim()) !== -1) { municipio = texto(zona); municipioDeducido = true; }
+
+    // Núcleo: la calle y su número, sin barrio, código postal ni segunda calle de esquina.
+    var partes = s.replace(/\b\d{5}\b.*$/, "").split(",").map(texto).filter(Boolean);
+    var calle = partes[0] || "", numero = "";
+    var pegado = /^(.*?\D)\s+(\d+[a-zA-Z]?)(?:-\d+)?$/.exec(calle);                // «Avenida Felipe II 16»
+    if (pegado) { calle = pegado[1].trim(); numero = pegado[2]; }
+    else {
+      for (var i = 1; i < Math.min(partes.length, 3); i++) {
+        var n = /^(\d+[a-zA-Z]?)(?:[-\s].*)?$/.exec(partes[i]);
+        if (n) { numero = n[1]; break; }
+      }
+    }
+    var claves = plano(calle).replace(/[^a-z0-9]+/g, " ").split(" ")
+      .filter(function (w) { return w.length >= 3 && SIN_PESO.indexOf(w) === -1 && !/^\d+$/.test(w); });
+
+    return {
+      limpia: s,
+      nucleo: calle ? calle + (numero ? ", " + numero : "") + ", " + municipio : "",
+      completa: /madrid/i.test(s) ? s : s + ", " + municipio,
+      soloCalle: calle ? calle + ", " + municipio : "",
+      nucleoMadrid: municipioDeducido && calle ? calle + (numero ? ", " + numero : "") + ", Madrid" : "",
+      numero: numero,
+      claves: claves
+    };
   }
 
   function dentroDeMadrid(lat, lng) {
@@ -2406,6 +2554,14 @@
     if (!a || !b) return false;
     // Por palabras enteras: «Fass» no debe casar con «Fassbinder».
     return (" " + a + " ").indexOf(" " + b + " ") !== -1 || (" " + b + " ").indexOf(" " + a + " ") !== -1;
+  }
+
+  /** ¿El resultado está en la calle que se pidió? Todas sus palabras clave (una de margen si hay 3 o más). */
+  function coincideCalle(r, claves) {
+    if (!claves.length) return true;
+    var dn = " " + nombreLimpio(String(r.display_name || "").replace(/,\s*Espa[ñn]a\s*$/i, "")) + " ";
+    var faltan = claves.filter(function (c) { return dn.indexOf(" " + c + " ") === -1; }).length;
+    return faltan === 0 || (claves.length >= 3 && faltan === 1);
   }
 
   // Todas las peticiones pasan por aquí: respeta el ritmo de Nominatim
@@ -2425,38 +2581,39 @@
   }
 
   /**
-   * Busca un punto por pasos, del más preciso al menos:
-   *   1. su dirección exacta;
-   *   2. el nombre del restaurante, solo dentro de Madrid, y solo si lo
-   *      que sale es un local de comida con ese mismo nombre;
-   *   3. la calle sin número (pin aproximado).
+   * Busca un punto por pasos, del más preciso al menos, y solo acepta un
+   * resultado si de verdad está en la calle que se pidió:
+   *   1. calle y número, sin barrio ni código postal (en su municipio;
+   *      si el municipio se dedujo de la zona, también en Madrid);
+   *   2. el nombre del restaurante, solo en Madrid, solo si es un local
+   *      de comida con ese nombre (y, si hay dirección, en esa calle);
+   *   3. la calle sin número: pin aproximado.
    * Devuelve las coordenadas, { nf: true } si no hay manera, o null si
    * falló la red (entonces no se guarda nada y se reintenta otro día).
    */
   function buscarCoordenadas(t) {
+    var prep = t.direccion ? prepararDireccion(t.direccion, t.zona) : null;
+    var claves = prep ? prep.claves : [];
     var pasos = [];
-    var exp = t.direccion ? expandirDireccion(t.direccion) : "";
-    if (exp) {
-      pasos.push({ params: { q: /madrid/i.test(exp) ? exp : exp + ", Madrid", limit: 1, viewbox: VIEWBOX_CIUDAD }, aprox: "" });
-    }
-    if (t.nombre && t.nombre !== "Sin nombre") {
-      pasos.push({ params: { q: t.nombre, limit: 10, viewbox: VIEWBOX_CIUDAD, bounded: 1 }, aprox: "nombre", porNombre: true });
-    }
-    var calle = exp ? calleSinNumero(exp) : "";
-    if (calle && calle !== exp) {
-      pasos.push({ params: { q: calle + ", Madrid", limit: 1, viewbox: VIEWBOX_CIUDAD }, aprox: "calle" });
-    }
+    if (prep && prep.nucleo) pasos.push({ q: prep.nucleo, conNumero: !!prep.numero });
+    if (prep && prep.nucleoMadrid) pasos.push({ q: prep.nucleoMadrid, conNumero: !!prep.numero });
+    if (t.nombre && t.nombre !== "Sin nombre") pasos.push({ q: t.nombre, porNombre: true });
+    if (prep && prep.soloCalle && prep.numero) pasos.push({ q: prep.soloCalle, aprox: "calle" });
 
     function elegir(paso, resultados) {
       var validos = resultados.filter(function (r) {
         if (!dentroDeMadrid(Number(r.lat), Number(r.lon))) return false;
-        if (!paso.porNombre) return true;
+        if (!paso.porNombre) return prep ? coincideCalle(r, claves) : true;
         var tipo = String(r.type || ""), cat = String(r.category || r["class"] || "");
         return cat === "amenity" && TIPOS_COMIDA.indexOf(tipo) !== -1 && nombreCoincide(r.name, t.nombre);
       });
       if (!validos.length) return null;
       if (paso.porNombre && validos.length > 1) {
-        // Cadenas: se prefiere el local cuya dirección mencione la zona.
+        // Varios locales con el mismo nombre (una cadena): se prefiere el de
+        // la calle indicada; si no, el de la zona. La calle aquí orienta, no
+        // descarta: si el número está mal, el sitio se encuentra igualmente.
+        var enCalle = prep && validos.filter(function (r) { return coincideCalle(r, claves); })[0];
+        if (enCalle) return enCalle;
         var z = nombreLimpio(zonaLimpia(t.zona));
         var enZona = z && validos.filter(function (r) { return nombreLimpio(r.display_name).indexOf(z) !== -1; })[0];
         if (enZona) return enZona;
@@ -2465,33 +2622,40 @@
     }
 
     return (function probar(i) {
-      if (i >= pasos.length) return Promise.resolve({ dir: t.clave, nf: true });
+      if (i >= pasos.length) return Promise.resolve({ dir: t.clave, nf: true, v: GEO_VERSION, t: Date.now() });
       var paso = pasos[i];
-      return pedirNominatim(paso.params).then(function (res) {
+      var params = { q: paso.q, limit: paso.porNombre ? 10 : 3, viewbox: VIEWBOX_CIUDAD };
+      if (paso.porNombre) params.bounded = 1;
+      return pedirNominatim(params).then(function (res) {
         var r = elegir(paso, res);
         if (!r) return probar(i + 1);
-        var geo = { lat: Number(r.lat), lng: Number(r.lon), dir: t.clave };
-        if (paso.aprox) geo.aprox = paso.aprox;
+        var geo = { lat: Number(r.lat), lng: Number(r.lon), dir: t.clave, v: GEO_VERSION };
+        var cat = String(r.category || r["class"] || "");
+        var aprox = paso.aprox || (paso.porNombre ? "nombre" : (paso.conNumero && cat === "highway" ? "calle" : ""));
+        if (aprox) geo.aprox = aprox;
         return geo;
       });
     })(0).catch(function () { return null; });
   }
 
-  var geoEnMarcha = false, geoPendientesTotal = 0, geoHechas = 0;
+  var geoEnMarcha = false, geoPendientesTotal = 0, geoHechas = 0, geoRevisando = false;
   var geoIntentadas = Object.create(null);
   var geoSinGuardar = false;       // falta la columna «geo» en Supabase: se sitúa, pero solo en memoria
 
   function tareasGeo() {
-    var conDireccion = [], porNombre = [];
+    var conDireccion = [], porNombre = [], revisiones = [];
     data.forEach(function (d) {
       puntosDe(d, false).forEach(function (p) {
-        if (geoVigente(p.geo, p.clave)) return;
+        var vigente = geoVigente(p.geo, p.clave);
+        if (vigente && !geoCaducada(p.geo)) return;
         if (geoIntentadas[d.id + "|" + p.sede + "|" + p.clave]) return;
-        var t = { id: d.id, sede: p.sede, clave: p.clave, direccion: p.direccion, nombre: d.nombre, zona: p.zona };
-        (p.direccion ? conDireccion : porNombre).push(t);
+        var t = { id: d.id, sede: p.sede, clave: p.clave, direccion: p.direccion, nombre: d.nombre, zona: p.zona,
+                  revision: vigente && !p.geo.nf };
+        (t.revision ? revisiones : p.direccion ? conDireccion : porNombre).push(t);
       });
     });
-    return conDireccion.concat(porNombre);     // primero lo más fiable
+    // Primero lo que no sale en el mapa; al final, revisar lo que ya sale.
+    return conDireccion.concat(porNombre, revisiones);
   }
 
   function procesarGeo() {
@@ -2501,6 +2665,7 @@
     geoEnMarcha = true;
     geoPendientesTotal = tareas.length;
     geoHechas = 0;
+    geoRevisando = tareas.some(function (t) { return t.revision; });
     actualizarNotaMapa();
 
     (function siguiente(i) {
@@ -2531,6 +2696,11 @@
     // ¿Sigue siendo lo mismo lo que se buscó? (dirección o nombre pueden haber cambiado)
     var actual = puntosDe(d, false).filter(function (p) { return p.sede === t.sede; })[0];
     if (!actual || actual.clave !== t.clave) return null;
+    // Revisión de un pin antiguo que el buscador nuevo no encuentra: mejor
+    // conservarlo (marcado como revisado) que dejar el restaurante sin mapa.
+    if (geo.nf && geoUtil(actual.geo, actual.clave)) {
+      geo = Object.assign({}, actual.geo, { v: GEO_VERSION });
+    }
 
     if (geoSinGuardar) { aplicarGeoLocal(d, t, geo); render(); return null; }
 
@@ -2728,27 +2898,33 @@
     } else if (!items.length) {
       frases.push(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía.");
     } else {
-      var enMapa = 0, aprox = 0, pendientes = 0, noHallados = [];
+      var enMapa = 0, aprox = 0, pendientes = 0, dirNoHallada = [], sinDirNoHallado = [];
       items.forEach(function (d) {
         var ps = puntosDe(d, true);
         var utiles = ps.filter(function (p) { return geoUtil(p.geo, p.clave); });
         if (utiles.length) enMapa++;
         if (utiles.some(function (p) { return p.geo.aprox; })) aprox++;
         ps.forEach(function (p) {
+          var etiqueta = d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : "");
           if (!geoVigente(p.geo, p.clave)) pendientes++;
-          else if (p.geo.nf) noHallados.push(d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : ""));
+          else if (p.geo.nf) (p.direccion ? dirNoHallada : sinDirNoHallado).push(etiqueta);
         });
       });
       frases.push(enMapa + " de " + items.length + " en el mapa.");
-      if (geoEnMarcha && pendientes) {
-        frases.push("Buscando ubicaciones: " + Math.min(geoHechas + 1, geoPendientesTotal) + " de " + geoPendientesTotal + "…");
+      if (geoEnMarcha) {
+        frases.push((geoRevisando ? "Revisando ubicaciones con el buscador mejorado (solo esta vez): " : "Buscando ubicaciones: ") +
+          Math.min(geoHechas + 1, geoPendientesTotal) + " de " + geoPendientesTotal + "…");
       } else if (pendientes) {
         frases.push(pendientes + " sin situar todavía (se reintentará con conexión).");
       }
       if (aprox) frases.push(aprox + " con ubicación aproximada: ponles la dirección para afinarla.");
-      if (noHallados.length) {
-        var muestra = noHallados.slice(0, 6).join(", ") + (noHallados.length > 6 ? " y " + (noHallados.length - 6) + " más" : "");
-        frases.push("No se encontraron: " + muestra + ". Ponles la dirección en Editar.");
+      var resumir = function (l) { return l.slice(0, 8).join(", ") + (l.length > 8 ? " y " + (l.length - 8) + " más" : ""); };
+      if (dirNoHallada.length) {
+        frases.push("No se pudo situar la dirección de: " + resumir(dirNoHallada) +
+          ". Revisa cómo está escrita: una sola calle con su número, sin paréntesis ni nombres de centros comerciales.");
+      }
+      if (sinDirNoHallado.length) {
+        frases.push("Sin dirección y no encontrados por su nombre: " + resumir(sinDirNoHallado) + ". Ponles la dirección en Editar.");
       }
     }
 
