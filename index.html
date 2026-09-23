@@ -320,7 +320,17 @@
   input.search::-webkit-search-cancel-button { -webkit-appearance: none; }
 
   .filter-block { display: flex; flex-direction: column; gap: 8px; }
+  .filter-head { display: flex; align-items: center; gap: 4px; min-height: 18px; }
   .filter-label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .filter-clear {
+    /* Zona de toque de 44 px sin que la fila crezca: el margen negativo
+       compensa el alto del botón. */
+    width: 44px; height: 44px; margin: -13px 0 -13px -6px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; color: var(--ink-soft);
+    font-size: 15px; line-height: 1; cursor: pointer; border-radius: 999px;
+  }
+  .filter-clear:active { background: var(--chip-bg); }
 
   .chip-row {
     display: flex;
@@ -561,11 +571,15 @@
     background: var(--paper); border: 1px solid var(--line); border-radius: 9px;
     padding: 9px 11px; font-size: 14px;
   }
-  .sede-list .sede-quitar {
-    background: none; border: none; color: var(--danger); font-weight: 600;
-    font-size: 13px; padding: 8px 4px; min-height: 36px; cursor: pointer;
-    text-decoration: underline; text-underline-offset: 3px; flex: 0 0 auto;
+  .sede-list li.editandose { border-color: var(--accent); box-shadow: 0 0 0 2px var(--focus-ring); }
+  .sede-list .sede-acciones { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .sede-list .sede-quitar, .sede-list .sede-editar {
+    background: none; border: none; font-weight: 600;
+    font-size: 13px; padding: 8px 2px; min-height: 40px; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
   }
+  .sede-list .sede-quitar { color: var(--danger); }
+  .sede-list .sede-editar { color: var(--ink-soft); }
 
   .sedes-group { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -879,7 +893,10 @@
           <input type="text" id="f-sede-reserva" placeholder="Ej. 915 00 00 00" maxlength="500"
                  autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
-        <button class="btn btn-secondary" id="add-sede-btn" type="button">＋ Añadir este local</button>
+        <div class="tools-row">
+          <button class="btn btn-secondary" id="add-sede-btn" type="button">＋ Añadir este local</button>
+          <button class="btn btn-secondary" id="cancel-sede-btn" type="button" hidden>Cancelar</button>
+        </div>
       </div>
     </details>
 
@@ -905,17 +922,26 @@
     </div>
 
     <div class="filter-block">
-      <span class="filter-label" id="lbl-zona">Zona</span>
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-zona">Zona</span>
+        <button class="filter-clear" id="clear-zonas" type="button" hidden aria-label="Quitar los filtros de zona">✕</button>
+      </div>
       <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
     </div>
 
     <div class="filter-block">
-      <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
+        <button class="filter-clear" id="clear-tipos" type="button" hidden aria-label="Quitar los filtros de tipo de cocina">✕</button>
+      </div>
       <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
     </div>
 
     <div class="filter-block">
-      <span class="filter-label" id="lbl-precio">Precio</span>
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-precio">Precio</span>
+        <button class="filter-clear" id="clear-precios" type="button" hidden aria-label="Quitar los filtros de precio">✕</button>
+      </div>
       <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
     </div>
 
@@ -1711,7 +1737,24 @@
     if (!el.dataset.base) el.dataset.base = el.textContent;
     var n = state[clave].length;
     el.textContent = el.dataset.base + (n ? " · " + n + (n === 1 ? " elegida" : " elegidas") : "");
+    var x = $("clear-" + clave);
+    if (x) x.hidden = !n;          // la ✕ solo aparece si hay algo que quitar
   }
+
+  // ✕ de cada grupo: limpia solo ese, sin tocar los demás ni la búsqueda.
+  [["zonas", "zona-chips", "lbl-zona"], ["tipos", "tipo-chips", "lbl-tipo"], ["precios", "precio-chips", "lbl-precio"]]
+    .forEach(function (g) {
+      var boton = $("clear-" + g[0]);
+      if (!boton) return;
+      boton.addEventListener("click", function () {
+        if (!state[g[0]].length) return;
+        state[g[0]] = [];
+        delete firmasChips[g[1]];            // fuerza a repintar los chips ya sin marcar
+        guardarFiltros();
+        refrescarFuentesChips();
+        render();
+      });
+    });
 
   function refrescarFuentesChips() {
     var zonas = [], tipos = [];
@@ -1791,14 +1834,29 @@
      ============================================================ */
 
   var sedesEnEdicion = [];
+  var sedeEditandoIdx = null;      // índice del local que se está modificando, o null si se está añadiendo
 
   function renderSedeList() {
     sedeListEl.replaceChildren();
     sedesEnEdicion.forEach(function (s, i) {
       var li = document.createElement("li");
+      if (sedeEditandoIdx === i) li.className = "editandose";
+
       var nombre = document.createElement("span");
       var detalle = [s.zona, s.direccion].filter(Boolean).join(" — ");
       nombre.textContent = s.nombre + (detalle ? " — " + detalle : "");
+      li.appendChild(nombre);
+
+      var acciones = document.createElement("div");
+      acciones.className = "sede-acciones";
+
+      var editar = document.createElement("button");
+      editar.type = "button";
+      editar.className = "sede-editar";
+      editar.textContent = "Editar";
+      editar.setAttribute("aria-label", "Editar el local " + s.nombre);
+      editar.addEventListener("click", function () { empezarEdicionSede(i); });
+
       var quitar = document.createElement("button");
       quitar.type = "button";
       quitar.className = "sede-quitar";
@@ -1806,13 +1864,47 @@
       quitar.setAttribute("aria-label", "Quitar el local " + s.nombre);
       quitar.addEventListener("click", function () {
         sedesEnEdicion.splice(i, 1);
+        // Si se quita el que se estaba modificando (o uno de antes), el
+        // formulario de abajo deja de apuntar a la fila correcta.
+        if (sedeEditandoIdx === i) cancelarEdicionSede();
+        else if (sedeEditandoIdx !== null && sedeEditandoIdx > i) sedeEditandoIdx -= 1;
         renderSedeList();
       });
-      li.appendChild(nombre);
-      li.appendChild(quitar);
+
+      acciones.appendChild(editar);
+      acciones.appendChild(quitar);
+      li.appendChild(acciones);
       sedeListEl.appendChild(li);
     });
   }
+
+  function empezarEdicionSede(i) {
+    var s = sedesEnEdicion[i];
+    if (!s) return;
+    sedeEditandoIdx = i;
+    fSedeNombre.value = s.nombre;
+    fSedeZona.value = s.zona || "";
+    fSedeDireccion.value = s.direccion || "";
+    fSedeCarta.value = s.carta || "";
+    fSedeReserva.value = s.reserva || "";
+    $("add-sede-btn").textContent = "Guardar este local";
+    $("cancel-sede-btn").hidden = false;
+    renderSedeList();
+    desplazarA(fSedeNombre, { block: "center", behavior: "smooth" });
+    try { fSedeNombre.focus({ preventScroll: true }); } catch (e) { fSedeNombre.focus(); }
+  }
+
+  function cancelarEdicionSede() {
+    sedeEditandoIdx = null;
+    limpiarCamposSede();
+    $("add-sede-btn").textContent = "＋ Añadir este local";
+    $("cancel-sede-btn").hidden = true;
+  }
+
+  $("cancel-sede-btn").addEventListener("click", function () {
+    cancelarEdicionSede();
+    renderSedeList();
+  });
 
   function limpiarCamposSede() {
     fSedeNombre.value = "";
@@ -1825,11 +1917,23 @@
   $("add-sede-btn").addEventListener("click", function () {
     var nombre = fSedeNombre.value.trim();
     if (!nombre) { fSedeNombre.focus(); return; }
-    sedesEnEdicion.push(normalizarSede({
+    var nueva = normalizarSede({
       nombre: nombre, zona: fSedeZona.value.trim(), direccion: fSedeDireccion.value.trim(),
       carta: fSedeCarta.value, reserva: fSedeReserva.value
-    }));
-    limpiarCamposSede();
+    });
+
+    if (sedeEditandoIdx !== null && sedesEnEdicion[sedeEditandoIdx]) {
+      var antigua = sedesEnEdicion[sedeEditandoIdx];
+      var nombreRest = fNombre.value.trim();
+      // Si no cambia lo que se buscó en el mapa, se conservan las coordenadas.
+      if (claveGeo(nombreRest, antigua.direccion, antigua.zona, antigua.nombre) ===
+          claveGeo(nombreRest, nueva.direccion, nueva.zona, nueva.nombre)) nueva.geo = antigua.geo;
+      sedesEnEdicion[sedeEditandoIdx] = nueva;
+      cancelarEdicionSede();
+    } else {
+      sedesEnEdicion.push(nueva);
+      limpiarCamposSede();
+    }
     renderSedeList();
     fSedeNombre.focus();
   });
@@ -1866,7 +1970,7 @@
       sedesEnEdicion = [];
       btnGuardar.textContent = "Guardar";
     }
-    limpiarCamposSede();
+    cancelarEdicionSede();
     renderSedeList();
     sedesDetails.open = sedesEnEdicion.length > 0;
     limpiarAvisosFormulario();
@@ -1884,7 +1988,7 @@
     panel.hidden = true;
     editandoId = null;
     sedesEnEdicion = [];
-    limpiarCamposSede();
+    cancelarEdicionSede();
     renderSedeList();
     sedesDetails.open = false;
     limpiarAvisosFormulario();
