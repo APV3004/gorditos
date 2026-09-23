@@ -642,11 +642,7 @@
   .marcador-aprox { fill-opacity: 0.55; stroke-dasharray: 3 3; }
   .popup-aprox { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--warn-fg); background: var(--warn-bg); padding: 5px 8px; border-radius: 7px; }
 
-  /* En oscuro, el callejero de OpenStreetMap se invierte para no deslumbrar */
-  :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
-  }
+  /* El mapa oscuro ya viene oscuro (CARTO Dark Matter): sin filtros raros. */
   .sede-block {
     border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px;
   }
@@ -1623,6 +1619,7 @@
         metaManual.media = "all";
         metaManual.content = (t === "dark") ? "#171712" : "#F1EEE2";
       }
+      if (typeof actualizarTeselas === "function") actualizarTeselas();
       btn.textContent = "Tema: " + nombres[t];
       btn.setAttribute("aria-label", "Cambiar tema. Ahora: " + nombres[t]);
       escribirCrudo(CLAVE_TEMA, t);
@@ -2485,7 +2482,40 @@
   var GEO_PAUSA_MS = typeof window.__GORDITOS_PAUSA_GEO_TEST === "number" ? window.__GORDITOS_PAUSA_GEO_TEST : 1100;
   var TIPOS_COMIDA = ["restaurant", "cafe", "bar", "pub", "fast_food", "food_court", "ice_cream", "biergarten"];
 
-  var mapa = null, capaRest = null, marcadorYo = null, circuloYo = null;
+  var mapa = null, capaRest = null, capaTeselas = null, marcadorYo = null, circuloYo = null;
+
+  // Mapas de CARTO: uno claro y otro oscuro de verdad, en vez de invertir
+  // los colores del claro por CSS (que dejaba los parques de color raro).
+  var TESELAS = {
+    claro: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    oscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+  };
+  var ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+
+  function temaOscuro() {
+    var t = document.documentElement.getAttribute("data-theme");
+    if (t === "dark") return true;
+    if (t === "light") return false;
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+
+  function ponerTeselas() {
+    if (!mapa || !window.L) return;
+    var url = temaOscuro() ? TESELAS.oscuro : TESELAS.claro;
+    if (capaTeselas && capaTeselas._urlGorditos === url) return;
+    if (capaTeselas && typeof mapa.removeLayer === "function") mapa.removeLayer(capaTeselas);
+    capaTeselas = window.L.tileLayer(url, { maxZoom: 20, subdomains: "abcd", attribution: ATRIBUCION });
+    capaTeselas._urlGorditos = url;
+    capaTeselas.addTo(mapa);
+  }
+
+  // Al cambiar el tema (botón o ajuste del sistema) cambian las imágenes.
+  function actualizarTeselas() { ponerTeselas(); }
+  if (window.matchMedia) {
+    var consultaOscuro = window.matchMedia("(prefers-color-scheme: dark)");
+    if (consultaOscuro.addEventListener) consultaOscuro.addEventListener("change", actualizarTeselas);
+    else if (consultaOscuro.addListener) consultaOscuro.addListener(actualizarTeselas);
+  }
   var marcadoresPorId = Object.create(null);
   var ultimosItems = [];
   var miPos = null, posRender = null, vigilancia = null;
@@ -2561,7 +2591,7 @@
 
   // Sube cuando cambia la forma de buscar: lo situado con una versión
   // anterior se revisa solo (sin quitarlo del mapa mientras tanto).
-  var GEO_VERSION = 2;
+  var GEO_VERSION = 3;
   var NF_REINTENTO_MS = 30 * 24 * 3600 * 1000;    // «no encontrada» se reintenta al mes
 
   function geoCaducada(geo) {
@@ -2676,11 +2706,63 @@
   // Todas las peticiones pasan por aquí: respeta el ritmo de Nominatim
   // aunque se pidan varias a la vez.
   var ultimaPeticionGeo = 0;
-  function pedirNominatim(params) {
-    if (typeof fetch !== "function") return Promise.reject(new Error("sin fetch"));
+  function esperarTurno() {
     var espera = Math.max(0, ultimaPeticionGeo + GEO_PAUSA_MS - Date.now());
     ultimaPeticionGeo = Date.now() + espera;
-    return new Promise(function (r) { setTimeout(r, espera); }).then(function () {
+    return new Promise(function (r) { setTimeout(r, espera); });
+  }
+
+  /* ---- CartoCiudad (IGN): el callejero oficial, con los portales del
+     Catastro y Correos. Se usa primero para las direcciones; si el
+     navegador no deja llamarlo, se sigue con OpenStreetMap y ya está. ---- */
+
+  var CARTOCIUDAD = "https://www.cartociudad.es/geocoder/api/geocoder/find";
+  var TIPOS_CC = ["portal", "callejero", "carretera", "punto kilometrico"];
+  var ccDisponible = true, ccFallos = 0;
+
+  function pedirCartoCiudad(q) {
+    if (!ccDisponible || typeof fetch !== "function") return Promise.resolve(null);
+    return esperarTurno().then(function () {
+      return fetch(CARTOCIUDAD + "?q=" + encodeURIComponent(q), { headers: { "Accept": "application/json" } });
+    }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }).then(function (j) {
+      ccFallos = 0;
+      return j;
+    }).catch(function () {
+      ccFallos += 1;
+      // Si el navegador bloquea las llamadas (CORS), fallan todas por igual:
+      // tras dos seguidas se deja de intentar durante esta sesión.
+      if (ccFallos >= 2) ccDisponible = false;
+      return null;
+    });
+  }
+
+  /**
+   * Traduce la respuesta de CartoCiudad. Su campo «state» dice con qué
+   * exactitud ha respondido: 1 portal exacto; 2 y 3, el par o impar más
+   * cercano de esa misma calle; 5 y 10, sin portales (queda aproximado).
+   */
+  function geoDesdeCartoCiudad(r, t, prep) {
+    if (!r || typeof r !== "object") return null;
+    var lat = Number(r.lat), lng = Number(r.lng);
+    if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return null;
+    if (!dentroDeMadrid(lat, lng)) return null;
+
+    var tipo = plano(r.type || "");
+    if (TIPOS_CC.indexOf(tipo) === -1) return null;                  // municipio, provincia…: demasiado grueso
+    if (prep && !coincideCalle({ display_name: r.address || "" }, prep.claves)) return null;
+
+    var estado = Number(r.state);
+    var geo = { lat: lat, lng: lng, dir: t.clave, v: GEO_VERSION };
+    if (estado === 5 || estado === 10 || (tipo === "callejero" && prep && prep.numero)) geo.aprox = "calle";
+    return geo;
+  }
+
+  function pedirNominatim(params) {
+    if (typeof fetch !== "function") return Promise.reject(new Error("sin fetch"));
+    return esperarTurno().then(function () {
       var qs = Object.keys(params).map(function (k) { return k + "=" + encodeURIComponent(params[k]); }).join("&");
       return fetch(NOMINATIM + "?format=jsonv2&countrycodes=es&accept-language=es&" + qs, { headers: { "Accept": "application/json" } });
     }).then(function (r) {
@@ -2692,11 +2774,14 @@
   /**
    * Busca un punto por pasos, del más preciso al menos, y solo acepta un
    * resultado si de verdad está en la calle que se pidió:
-   *   1. calle y número, sin barrio ni código postal (en su municipio;
-   *      si el municipio se dedujo de la zona, también en Madrid);
-   *   2. el nombre del restaurante, solo en Madrid, solo si es un local
-   *      de comida con ese nombre (y, si hay dirección, en esa calle);
-   *   3. la calle sin número: pin aproximado.
+   *   1. la dirección en CartoCiudad (IGN), que tiene los portales
+   *      oficiales del Catastro y Correos;
+   *   2. la misma dirección en OpenStreetMap, en texto y en campos sueltos;
+   *   3. el nombre del restaurante, solo en Madrid, solo si es un local
+   *      de comida con ese nombre;
+   *   4. la calle sin número: pin aproximado.
+   * Si CartoCiudad solo sabe la calle, se guarda como respaldo y se sigue
+   * buscando el portal exacto en OpenStreetMap antes de conformarse.
    * Devuelve las coordenadas, { nf: true } si no hay manera, o null si
    * falló la red (entonces no se guarda nada y se reintenta otro día).
    */
@@ -2704,6 +2789,8 @@
     var prep = t.direccion ? prepararDireccion(t.direccion, t.zona) : null;
     var claves = prep ? prep.claves : [];
     var pasos = [];
+    if (prep && prep.nucleo) pasos.push({ q: prep.nucleo, motor: "cc" });
+    if (prep && prep.nucleoMadrid) pasos.push({ q: prep.nucleoMadrid, motor: "cc" });
     if (prep && prep.nucleo) pasos.push({ q: prep.nucleo, conNumero: !!prep.numero });
     if (prep && prep.nucleoMadrid) pasos.push({ q: prep.nucleoMadrid, conNumero: !!prep.numero });
     // Con el portal y la ciudad por separado, el buscador acierta en
@@ -2737,9 +2824,23 @@
       return validos[0];
     }
 
+    var respaldo = null;      // lo mejor que se tenga si nada resulta exacto
+
     return (function probar(i) {
-      if (i >= pasos.length) return Promise.resolve({ dir: t.clave, nf: true, v: GEO_VERSION, t: Date.now() });
+      if (i >= pasos.length) {
+        return Promise.resolve(respaldo || { dir: t.clave, nf: true, v: GEO_VERSION, t: Date.now() });
+      }
       var paso = pasos[i];
+
+      if (paso.motor === "cc") {
+        return pedirCartoCiudad(paso.q).then(function (res) {
+          var geo = geoDesdeCartoCiudad(res, t, prep);
+          if (!geo) return probar(i + 1);
+          if (geo.aprox && !respaldo) respaldo = geo;       // solo sabe la calle: se sigue buscando el portal
+          return geo.aprox ? probar(i + 1) : geo;
+        });
+      }
+
       var params = Object.assign({ limit: paso.porNombre ? 10 : 3, viewbox: VIEWBOX_CIUDAD },
                                  paso.params || { q: paso.q });
       if (paso.porNombre) params.bounded = 1;
@@ -2750,6 +2851,7 @@
         var cat = String(r.category || r["class"] || "");
         var aprox = paso.aprox || (paso.porNombre ? "nombre" : (paso.conNumero && cat === "highway" ? "calle" : ""));
         if (aprox) geo.aprox = aprox;
+        if (aprox && !respaldo) { respaldo = geo; return probar(i + 1); }
         return geo;
       });
     })(0).catch(function () { return null; });
@@ -2904,10 +3006,7 @@
     var L = window.L;
     if (!L || typeof L.map !== "function") return false;
     mapa = L.map("map", { zoomControl: true }).setView(MADRID, 12);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-    }).addTo(mapa);
+    ponerTeselas();
     capaRest = L.layerGroup().addTo(mapa);
     if (typeof mapa.on === "function") {
       mapa.on("dragstart", function () { usuarioMovioMapa = true; });
