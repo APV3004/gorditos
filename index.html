@@ -2603,7 +2603,7 @@
   function prepararDireccion(dir, zona) {
     var s = texto(dir);
     s = s.replace(/[,\s]+(?:s\/n|s\.\s?n\.?|sin n[uú]mero)(?=[\s,.]|$)\.?/gi, "");        // «s/n»
-    s = s.replace(/\s*[–—]\s*/g, ", ");                                            // «7 – Madrid»
+    s = s.replace(/\s+[-–—]\s+/g, ", ").replace(/\s*[–—]\s*/g, ", ");                 // «7 – Madrid», «Moncloa - Aravaca»
     s = s.replace(/\([^)]*\)?/g, " ").replace(/\)/g, " ");                          // «(Pez tortilla Cara B)»
     s = s.replace(/(^|[\s,])(?:c\.\s?c\.|cco|cc|centro comercial)\b[^,]*/gi, "$1");  // centros comerciales
     s = s.replace(/[,\s]+(?:bajo|bajos|local|lc|piso|planta|esquina|esq)\b.*$/i, ""); // piso, local, esquina…
@@ -2635,8 +2635,13 @@
     var claves = plano(calle).replace(/[^a-z0-9]+/g, " ").split(" ")
       .filter(function (w) { return w.length >= 3 && SIN_PESO.indexOf(w) === -1 && !/^\d+$/.test(w); });
 
+    var cp = (/\b(\d{5})\b/.exec(s) || [])[1] || "";
+
     return {
       limpia: s,
+      calle: calle,
+      cp: cp,
+      municipio: municipio,
       nucleo: calle ? calle + (numero ? ", " + numero : "") + ", " + municipio : "",
       completa: /madrid/i.test(s) ? s : s + ", " + municipio,
       soloCalle: calle ? calle + ", " + municipio : "",
@@ -2701,6 +2706,13 @@
     var pasos = [];
     if (prep && prep.nucleo) pasos.push({ q: prep.nucleo, conNumero: !!prep.numero });
     if (prep && prep.nucleoMadrid) pasos.push({ q: prep.nucleoMadrid, conNumero: !!prep.numero });
+    // Con el portal y la ciudad por separado, el buscador acierta en
+    // direcciones españolas donde el texto seguido no le vale.
+    if (prep && prep.numero && prep.calle) {
+      var estructurada = { street: prep.numero + " " + prep.calle, city: prep.municipio };
+      if (prep.cp) estructurada.postalcode = prep.cp;
+      pasos.push({ params: estructurada, conNumero: true });
+    }
     if (t.nombre && t.nombre !== "Sin nombre") pasos.push({ q: t.nombre, porNombre: true });
     if (prep && prep.soloCalle && prep.numero) pasos.push({ q: prep.soloCalle, aprox: "calle" });
 
@@ -2728,7 +2740,8 @@
     return (function probar(i) {
       if (i >= pasos.length) return Promise.resolve({ dir: t.clave, nf: true, v: GEO_VERSION, t: Date.now() });
       var paso = pasos[i];
-      var params = { q: paso.q, limit: paso.porNombre ? 10 : 3, viewbox: VIEWBOX_CIUDAD };
+      var params = Object.assign({ limit: paso.porNombre ? 10 : 3, viewbox: VIEWBOX_CIUDAD },
+                                 paso.params || { q: paso.q });
       if (paso.porNombre) params.bounded = 1;
       return pedirNominatim(params).then(function (res) {
         var r = elegir(paso, res);
@@ -3002,12 +3015,13 @@
     } else if (!items.length) {
       frases.push(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía.");
     } else {
-      var enMapa = 0, aprox = 0, pendientes = 0, dirNoHallada = [], sinDirNoHallado = [];
+      var enMapa = 0, aproxCalle = 0, aproxNombre = 0, pendientes = 0, dirNoHallada = [], sinDirNoHallado = [];
       items.forEach(function (d) {
         var ps = puntosDe(d, true);
         var utiles = ps.filter(function (p) { return geoUtil(p.geo, p.clave); });
         if (utiles.length) enMapa++;
-        if (utiles.some(function (p) { return p.geo.aprox; })) aprox++;
+        if (utiles.some(function (p) { return p.geo.aprox === "calle"; })) aproxCalle++;
+        if (utiles.some(function (p) { return p.geo.aprox === "nombre"; })) aproxNombre++;
         ps.forEach(function (p) {
           var etiqueta = d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : "");
           if (!geoVigente(p.geo, p.clave)) pendientes++;
@@ -3021,7 +3035,14 @@
       } else if (pendientes) {
         frases.push(pendientes + " sin situar todavía (se reintentará con conexión).");
       }
-      if (aprox) frases.push(aprox + " con ubicación aproximada: ponles la dirección para afinarla.");
+      if (aproxCalle) {
+        frases.push(aproxCalle + (aproxCalle === 1 ? " está" : " están") +
+          " en su calle pero sin el portal exacto: el mapa no tiene ese número.");
+      }
+      if (aproxNombre) {
+        frases.push(aproxNombre + (aproxNombre === 1 ? " se ha situado" : " se han situado") +
+          " por su nombre: comprueba que el pin sea el sitio.");
+      }
       var resumir = function (l) { return l.slice(0, 8).join(", ") + (l.length > 8 ? " y " + (l.length - 8) + " más" : ""); };
       if (dirNoHallada.length) {
         frases.push("No se pudo situar la dirección de: " + resumir(dirNoHallada) +
