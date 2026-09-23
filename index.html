@@ -642,7 +642,10 @@
   .marcador-aprox { fill-opacity: 0.55; stroke-dasharray: 3 3; }
   .popup-aprox { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--warn-fg); background: var(--warn-bg); padding: 5px 8px; border-radius: 7px; }
 
-  /* El mapa oscuro ya viene oscuro (CARTO Dark Matter): sin filtros raros. */
+  /* Sin clave de CARTO se usa OpenStreetMap, que solo tiene versión clara:
+     en tema oscuro se invierte. Con clave, el mapa oscuro ya viene oscuro
+     y esta clase no se pone. */
+  .mapa.osm-oscuro .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
   .sede-block {
     border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px;
   }
@@ -1023,6 +1026,7 @@
   // la "API URL" con /rest/v1 al final, o una barra final de más.
   var SUPABASE_URL = texto(CONFIG.supabaseUrl).replace(/\/rest\/v1\/?$/i, "").replace(/\/+$/, "");
   var SUPABASE_ANON_KEY = texto(CONFIG.supabaseAnonKey);
+  var CARTO_KEY = texto(CONFIG.cartoApiKey);     // opcional: mapas de CARTO (ver config.js)
 
   var SUPABASE_CONFIGURADO = /^https:\/\/[^\s]+$/.test(SUPABASE_URL) &&
                               SUPABASE_URL.indexOf("TU-PROYECTO") === -1 &&
@@ -2484,13 +2488,20 @@
 
   var mapa = null, capaRest = null, capaTeselas = null, marcadorYo = null, circuloYo = null;
 
-  // Mapas de CARTO: uno claro y otro oscuro de verdad, en vez de invertir
-  // los colores del claro por CSS (que dejaba los parques de color raro).
+  /* Mapas base. Por defecto, OpenStreetMap: no necesita clave ni cuenta de
+     nadie, así que no se puede romper solo. Para el tema oscuro se invierten
+     sus colores por CSS, que es un apaño pero no depende de terceros.
+     Si pones una clave de CARTO en config.js, se usan sus mapas, que tienen
+     un claro y un oscuro de verdad. Ojo: CARTO exige clave desde agosto de
+     2026 y está retirando estos mapas de imagen, así que puede volver a
+     romperse; por eso no es lo predeterminado. */
   var TESELAS = {
-    claro: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    oscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    osm: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    cartoClaro: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=",
+    cartoOscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key="
   };
-  var ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+  var ATRIB_OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  var ATRIB_CARTO = ATRIB_OSM + ' · &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
 
   function temaOscuro() {
     var t = document.documentElement.getAttribute("data-theme");
@@ -2501,10 +2512,21 @@
 
   function ponerTeselas() {
     if (!mapa || !window.L) return;
-    var url = temaOscuro() ? TESELAS.oscuro : TESELAS.claro;
+    var oscuro = temaOscuro();
+    var conCarto = !!CARTO_KEY;
+    var url = conCarto
+      ? (oscuro ? TESELAS.cartoOscuro : TESELAS.cartoClaro) + encodeURIComponent(CARTO_KEY)
+      : TESELAS.osm;
+
+    // Sin CARTO, el oscuro se consigue invirtiendo el mapa claro.
+    var contenedor = $("map");
+    if (contenedor) contenedor.classList.toggle("osm-oscuro", !conCarto && oscuro);
+
     if (capaTeselas && capaTeselas._urlGorditos === url) return;
     if (capaTeselas && typeof mapa.removeLayer === "function") mapa.removeLayer(capaTeselas);
-    capaTeselas = window.L.tileLayer(url, { maxZoom: 20, subdomains: "abcd", attribution: ATRIBUCION });
+    capaTeselas = window.L.tileLayer(url, conCarto
+      ? { maxZoom: 20, subdomains: "abcd", attribution: ATRIB_CARTO }
+      : { maxZoom: 19, attribution: ATRIB_OSM });
     capaTeselas._urlGorditos = url;
     capaTeselas.addTo(mapa);
   }
