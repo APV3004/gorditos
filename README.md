@@ -114,3 +114,44 @@ solo ve las listas de las que es miembro: lo garantiza la base de datos
 - **Contraseña:** cada uno la cambia en «Gestionar» → Tu contraseña.
 - Al pulsar «Salir», se borran de ese dispositivo las copias guardadas
   de tus listas.
+
+## Horarios de apertura
+
+Se sacan de OpenStreetMap (servicio Overpass): para cada local ya
+situado en el mapa, se busca un local de comida con ese mismo nombre a
+menos de 80 m y se toma su horario publicado. Se guarda en Supabase y
+se refresca cada mes. Necesita la columna `horario`
+(`supabase-migracion-horarios.sql`).
+
+- Si un horario no se entiende (meses, festivos concretos, texto
+  libre), no se dice si está abierto: mejor callar que acertar mal.
+- «Abierto ahora» quita los cerrados, pero no los que no publican
+  horario: de esos no se sabe.
+
+## Marcas: «Quiero ir» y «Ya he ido»
+
+Cada persona marca por su cuenta. Los demás miembros de la lista ven
+tus marcas («Quiere ir: adrian») pero solo tú puedes cambiarlas: lo
+garantizan las políticas de `supabase-migracion-marcas.sql`, no la app.
+Sin esa migración, los botones y el filtro simplemente no aparecen.
+
+## Asistente (rellenar desde un enlace y buscar con una frase)
+
+Usa Gemini a través de una función de Supabase, para que la clave no
+esté en config.js (que es público).
+
+1. **Clave:** en Google AI Studio (aistudio.google.com) → «Get API key».
+2. **La función:** Supabase → Edge Functions → «Deploy a new function» →
+   «Via Editor». Nómbrala exactamente `asistente`, borra el ejemplo y
+   pega `supabase/functions/asistente/index.ts`. Despliega. Deja activada
+   la verificación de JWT: así solo la usan quienes han iniciado sesión.
+3. **Secretos** (Edge Functions → Secrets):
+   - `GEMINI_API_KEY`: tu clave.
+   - `GEMINI_MODEL` (opcional): el modelo, si quieres otro distinto del
+     que viene por defecto. Google cambia los nombres a menudo; si la
+     app dice que Gemini «no reconoce el modelo», pon aquí uno actual
+     de la lista de AI Studio. No hace falta volver a desplegar.
+
+Nada de lo que propone se guarda solo: rellena el formulario o los
+filtros, y tú confirmas. Si la función no está desplegada, la app lo
+dice y todo lo demás sigue funcionando igual.
