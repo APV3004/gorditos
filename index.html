@@ -639,6 +639,22 @@
   .popup .card-link { padding: 0 11px; font-size: 12.5px; }
 
   .card-dist { color: var(--accent-strong); font-weight: 600; }
+  .card-horario { font-weight: 600; }
+
+  /* Marcas personales */
+  .card-marcas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .marca-btn {
+    min-height: 40px; padding: 0 13px; border-radius: 999px;
+    border: 1px solid var(--line-input); background: transparent; color: var(--ink-soft);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .marca-btn[aria-pressed="true"].quiero { background: var(--flag-bg); color: var(--flag-fg); border-color: var(--accent); }
+  .marca-btn[aria-pressed="true"].visitado { background: var(--chip-active-bg); color: var(--chip-active-fg); border-color: var(--chip-active-bg); }
+  .card-otros { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  .card-horario.abierto { color: var(--green); }
+  .card-horario.cerrado { color: var(--ink-soft); font-weight: 400; }
+  .msg-ia { background: var(--flag-bg); color: var(--flag-fg); padding: 9px 11px; border-radius: 8px; }
+  #abierto-chip { flex: 0 0 auto; }
   .marcador-aprox { fill-opacity: 0.55; stroke-dasharray: 3 3; }
   .popup-aprox { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--warn-fg); background: var(--warn-bg); padding: 5px 8px; border-radius: 7px; }
 
@@ -799,6 +815,16 @@
   <form class="panel" id="panel" novalidate aria-labelledby="panel-title" hidden>
     <h2 id="panel-title">Añadir restaurante</h2>
 
+    <div class="field" id="ia-enlace-bloque">
+      <label for="f-enlace">Pegar un enlace <span class="hint">— mejor la web del restaurante</span></label>
+      <div class="fila-inline">
+        <input type="url" id="f-enlace" placeholder="Ej. https://sottosopra.es" inputmode="url"
+               autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="500">
+        <button class="btn btn-secondary" id="ia-extraer-btn" type="button">Rellenar</button>
+      </div>
+    </div>
+    <p class="msg" id="ia-msg" aria-live="polite" hidden></p>
+
     <div class="field">
       <label for="f-nombre">Nombre</label>
       <input type="text" id="f-nombre" placeholder="Ej. Casa Dani"
@@ -914,10 +940,14 @@
   <div class="controls">
     <div class="search-row">
       <label class="sr-only" for="search">Buscar restaurante</label>
-      <input type="search" class="search" id="search"
-             placeholder="Buscar nombre, cocina o zona…"
-             autocapitalize="none" autocorrect="off" spellcheck="false"
-             enterkeyhint="search" maxlength="60">
+      <div class="fila-inline">
+        <input type="search" class="search" id="search"
+               placeholder="Buscar, o escribe una frase…"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="search" maxlength="120">
+        <button class="btn btn-secondary" id="ia-buscar-btn" type="button"
+                title="Convierte lo que has escrito en filtros">Interpretar</button>
+      </div>
     </div>
 
     <div class="filter-block">
@@ -944,6 +974,14 @@
       <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
     </div>
 
+    <div class="filter-block" id="marcas-bloque" hidden>
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-marcas">Mis marcas</span>
+        <button class="filter-clear" id="clear-marcas" type="button" hidden aria-label="Quitar los filtros de mis marcas">✕</button>
+      </div>
+      <div class="chip-row" id="marca-chips" role="group" aria-labelledby="lbl-marcas"></div>
+    </div>
+
     <div class="sort-row">
       <label for="sort">Ordenar por</label>
       <select id="sort">
@@ -954,6 +992,7 @@
         <option value="recientes">Añadidos recientemente</option>
         <option value="cerca">Más cerca de mí</option>
       </select>
+      <button class="chip" id="abierto-chip" type="button" aria-pressed="false">Abierto ahora</button>
       <button class="dado-btn" id="random-btn" type="button">Sorpréndeme</button>
     </div>
   </div>
@@ -1042,6 +1081,7 @@
   var CLAVE_CACHE = "gorditos-cache-v5-";          // + id de lista: última copia vista de cada lista
   var CLAVE_LISTAS = "gorditos-listas-v1";         // tus listas y sus miembros, para poder abrir sin red
   var CLAVE_LISTA_ACTUAL = "gorditos-lista-actual-v1";
+  var CLAVE_MARCAS = "gorditos-marcas-v1-";          // + id de lista: marcas vistas por última vez
   var CLAVE_FILTROS = "gorditos-filtros-v1";
   var CLAVE_TEMA = "gorditos-tema-v1";
 
@@ -1150,6 +1190,7 @@
       reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva || o.reservas || o.telefono)),
       direccion: texto(o.direccion),
       geo: normalizarGeo(o.geo),
+      horario: normalizarHorario(o.horario),
       sedes: normalizarSedes(o.sedes)
     };
   }
@@ -1176,6 +1217,18 @@
   }
 
   // «clave»: la dirección, o «@nombre|zona» si se situó por el nombre.
+  /** Horario tal como lo publica OpenStreetMap, con la fecha en que se miró. */
+  function normalizarHorario(h) {
+    if (!h || typeof h !== "object") return null;
+    var t = Number(h.t);
+    var salida = { t: isFinite(t) && t > 0 ? t : 0 };
+    if (h.nf) { salida.nf = true; return salida; }
+    var oh = texto(h.oh);
+    if (!oh) return null;
+    salida.oh = oh.slice(0, 300);
+    return salida;
+  }
+
   function geoVigente(geo, clave) {
     return !!(geo && clave && geo.dir === clave);
   }
@@ -1199,7 +1252,8 @@
       direccion: texto(o.direccion),
       carta: an.vacia ? "" : an.href,
       reserva: res.vacia ? "" : (res.tipo === "url" && res.valida ? res.href : texto(o.reserva)),
-      geo: normalizarGeo(o.geo)
+      geo: normalizarGeo(o.geo),
+      horario: normalizarHorario(o.horario)
     };
   }
 
@@ -1214,6 +1268,7 @@
       nombre: valores.nombre, tipo: valores.tipo, zona: valores.zona, precio: valores.precio,
       flag: valores.flag, carta: valores.carta, reserva: valores.reserva, direccion: valores.direccion,
       geo: valores.geo || null,
+      horario: valores.horario || null,
       sedes: valores.sedes || []
     };
   }
@@ -1245,6 +1300,12 @@
   var miembros = [];           // [{ lista_id, user_id, rol, email }] de esas listas
   var listaActual = null;
   var miId = "", miEmail = "";
+
+  // Marcas personales («quiero ir» / «ya he ido») de los restaurantes de
+  // la lista actual: las tuyas y las de los demás miembros.
+  var marcas = [];                 // [{ restaurante_id, user_id, estado }]
+  var marcasDisponibles = false;   // falta la tabla en Supabase → no se enseñan
+  var ETIQUETA_MARCA = { quiero: "Quiero ir", visitado: "Ya he ido" };
 
   function leerCache() {
     var arr = listaActual ? parsearJson(leerCrudo(CLAVE_CACHE + listaActual)) : null;
@@ -1322,7 +1383,74 @@
       soloLectura = false;
       guardarCache();
       mostrarBanner(null);
+      return cargarMarcas(pedida);
     });
+  }
+
+  function cargarMarcas(lista) {
+    return sb.from("marcas").select("restaurante_id,user_id,estado").then(function (res) {
+      if (lista !== listaActual) return;
+      if (res.error) {                       // sin la migración: la función se esconde, no falla
+        marcasDisponibles = false;
+        marcas = [];
+        return;
+      }
+      var ids = Object.create(null);
+      data.forEach(function (d) { ids[d.id] = true; });
+      marcas = (res.data || []).filter(function (m) { return ids[m.restaurante_id]; }).map(normalizarMarca);
+      marcasDisponibles = true;
+      escribirCrudo(CLAVE_MARCAS + lista, JSON.stringify(marcas));
+    }).catch(function () { marcasDisponibles = false; marcas = []; });
+  }
+
+  function quitarMarcaLocal(restId, userId) {
+    marcas = marcas.filter(function (m) { return !(m.restaurante_id === restId && m.user_id === userId); });
+  }
+
+  function miMarca(d) {
+    var m = marcas.filter(function (x) { return x.restaurante_id === d.id && x.user_id === miId; })[0];
+    return m ? m.estado : "";
+  }
+
+  /** Marcas de los DEMÁS miembros actuales de la lista (alguien que ya se
+   *  fue de la lista no debe seguir apareciendo). */
+  function otrasMarcas(d) {
+    var nombres = Object.create(null);
+    miembros.forEach(function (m) {
+      if (m.lista_id === listaActual && m.user_id !== miId) nombres[m.user_id] = m.email.split("@")[0] || m.email;
+    });
+    return marcas.filter(function (x) { return x.restaurante_id === d.id && nombres[x.user_id]; })
+      .map(function (x) { return { quien: nombres[x.user_id], estado: x.estado }; });
+  }
+
+  /** Pulsar un botón ya marcado lo desmarca; si no, marca ese estado. */
+  function cambiarMarca(d, estado) {
+    if (requiereConexion()) return;
+    var antes = miMarca(d);
+    var nuevo = antes === estado ? "" : estado;
+    var copia = marcas.slice();
+
+    // Se ve al instante; si el servidor dice que no, se deshace.
+    quitarMarcaLocal(d.id, miId);
+    if (nuevo) marcas.push({ restaurante_id: d.id, user_id: miId, estado: nuevo });
+    render();
+
+    var peticion = nuevo
+      ? sb.from("marcas").upsert({ restaurante_id: d.id, user_id: miId, estado: nuevo }, { onConflict: "restaurante_id,user_id" })
+      : sb.from("marcas").delete().eq("restaurante_id", d.id).eq("user_id", miId);
+    peticion.then(function (r) {
+      if (r && r.error) throw r.error;
+      escribirCrudo(CLAVE_MARCAS + listaActual, JSON.stringify(marcas));
+    }).catch(function () {
+      marcas = copia;
+      render();
+      avisar("No se pudo guardar la marca. Revisa la conexión.");
+    });
+  }
+
+  function normalizarMarca(m) {
+    return { restaurante_id: texto(m.restaurante_id), user_id: texto(m.user_id),
+             estado: m.estado === "visitado" ? "visitado" : "quiero" };
   }
 
   function suscribirTiempoReal() {
@@ -1353,6 +1481,18 @@
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "restaurantes", filter: filtro }, alCambiar)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "restaurantes", filter: filtro }, alCambiar)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "restaurantes" }, alCambiar)
+      // Las marcas no tienen lista_id: las políticas ya solo mandan las de
+      // tus listas, y aquí se descartan las de restaurantes que no ves.
+      .on("postgres_changes", { event: "*", schema: "public", table: "marcas" }, function (payload) {
+        if (lista !== listaActual || !marcasDisponibles) return;
+        var fila = payload.eventType === "DELETE" ? (payload.old || {}) : (payload.new || {});
+        quitarMarcaLocal(fila.restaurante_id, fila.user_id);
+        if (payload.eventType !== "DELETE" && data.some(function (d) { return d.id === fila.restaurante_id; })) {
+          marcas.push(normalizarMarca(fila));
+        }
+        escribirCrudo(CLAVE_MARCAS + lista, JSON.stringify(marcas));
+        render();
+      })
       .subscribe();
   }
 
@@ -1361,6 +1501,9 @@
     elegirListaActual();
     pintarSelectorListas();
     data = leerCache();
+    var guardadas = listaActual ? parsearJson(leerCrudo(CLAVE_MARCAS + listaActual)) : null;
+    marcas = Array.isArray(guardadas) ? guardadas.map(normalizarMarca) : [];
+    marcasDisponibles = Array.isArray(guardadas);
     soloLectura = true;
   }
 
@@ -1385,6 +1528,7 @@
         refrescarFuentesChips();
         render();
         procesarGeo();       // en segundo plano: cuando abras el mapa, ya estará todo situado
+        procesarHorarios();
       })
       .catch(function () {
         // Sin red ahora mismo: la última copia vista, sin permitir escribir.
@@ -1401,6 +1545,8 @@
   function activarListaActual() {
     if (listaActual) escribirCrudo(CLAVE_LISTA_ACTUAL, listaActual);
     data = leerCache();
+    var guardadas = listaActual ? parsearJson(leerCrudo(CLAVE_MARCAS + listaActual)) : null;
+    marcas = Array.isArray(guardadas) ? guardadas.map(normalizarMarca) : [];
     if (!panel.hidden) cerrarPanel(false);
     cerrarTodasLasConfirmaciones();
     ultimoAzar = null;
@@ -1499,7 +1645,7 @@
   // Filtros múltiples: una lista de valores por grupo; vacía = sin filtrar.
   // Dentro de un grupo cuenta cualquiera («Chamberí o Malasaña»); entre
   // grupos, todos a la vez («…y además Italiana o Pizza»).
-  var state = { search: "", zonas: [], tipos: [], precios: [], sort: "nombre", vista: "lista" };
+  var state = { search: "", zonas: [], tipos: [], precios: [], marcas: [], sort: "nombre", vista: "lista", abiertoAhora: false };
 
   function enFiltro(seleccion, valor) {
     return !seleccion.length || seleccion.indexOf(valor) !== -1;
@@ -1516,13 +1662,16 @@
     state.zonas = lista(g.zonas, g.zona, "Todas");
     state.tipos = lista(g.tipos, g.tipo, "Todos");
     state.precios = lista(g.precios, g.precio, "Todos");
+    state.marcas = lista(g.marcas, null, "Todas");
     if (typeof g.sort === "string") state.sort = g.sort;
     if (g.vista === "mapa" || g.vista === "lista") state.vista = g.vista;
+    state.abiertoAhora = g.abiertoAhora === true;
   })();
 
   function guardarFiltros() {
     escribirCrudo(CLAVE_FILTROS, JSON.stringify({
-      zonas: state.zonas, tipos: state.tipos, precios: state.precios, sort: state.sort, vista: state.vista
+      zonas: state.zonas, tipos: state.tipos, precios: state.precios, marcas: state.marcas, sort: state.sort, vista: state.vista,
+      abiertoAhora: state.abiertoAhora
     }));
   }
 
@@ -1637,7 +1786,10 @@
     if (sb) sb.auth.signOut();
     // Al salir no se deja nada de tus listas en este dispositivo: si otra
     // persona entra en este navegador, no debe ver tus copias guardadas.
-    listas.forEach(function (l) { try { localStorage.removeItem(CLAVE_CACHE + l.id); } catch (e) {} });
+    listas.forEach(function (l) {
+      try { localStorage.removeItem(CLAVE_CACHE + l.id); localStorage.removeItem(CLAVE_MARCAS + l.id); } catch (e) {}
+    });
+    marcas = [];
     try { localStorage.removeItem(CLAVE_LISTAS); localStorage.removeItem(CLAVE_LISTA_ACTUAL); } catch (e) {}
     listas = []; miembros = []; data = []; listaActual = null; miId = ""; miEmail = "";
     if (!$("panel-listas").hidden) cerrarPanelListas(false);
@@ -1743,7 +1895,8 @@
   }
 
   // ✕ de cada grupo: limpia solo ese, sin tocar los demás ni la búsqueda.
-  [["zonas", "zona-chips", "lbl-zona"], ["tipos", "tipo-chips", "lbl-tipo"], ["precios", "precio-chips", "lbl-precio"]]
+  [["zonas", "zona-chips", "lbl-zona"], ["tipos", "tipo-chips", "lbl-tipo"], ["precios", "precio-chips", "lbl-precio"],
+   ["marcas", "marca-chips", "lbl-marcas"]]
     .forEach(function (g) {
       var boton = $("clear-" + g[0]);
       if (!boton) return;
@@ -1772,6 +1925,9 @@
     construirChips("zona-chips", "lbl-zona", "Todas", zonas, "zonas");
     construirChips("tipo-chips", "lbl-tipo", "Todos", tipos, "tipos");
     construirChips("precio-chips", "lbl-precio", "Todos", ["€", "€€", "€€€"], "precios");
+    $("marcas-bloque").hidden = !marcasDisponibles;
+    if (marcasDisponibles) construirChips("marca-chips", "lbl-marcas", "Todas", ["Quiero ir", "Ya he ido", "Sin marcar"], "marcas");
+    else state.marcas = [];
     rellenarDatalist("zonas-sugeridas", zonas);
     rellenarDatalist("tipos-sugeridos", tipos);
   }
@@ -1790,11 +1946,13 @@
   }
 
   function hayFiltros() {
-    return state.zonas.length > 0 || state.tipos.length > 0 || state.precios.length > 0 || state.search !== "";
+    return state.zonas.length > 0 || state.tipos.length > 0 || state.precios.length > 0 ||
+           state.marcas.length > 0 || state.search !== "" || state.abiertoAhora;
   }
 
   $("clear-filters").addEventListener("click", function () {
-    state.zonas = []; state.tipos = []; state.precios = []; state.search = "";
+    state.zonas = []; state.tipos = []; state.precios = []; state.marcas = []; state.search = ""; state.abiertoAhora = false;
+    $("abierto-chip").setAttribute("aria-pressed", "false");
     $("search").value = "";
     firmasChips = {};
     guardarFiltros();
@@ -1973,6 +2131,8 @@
     }
     cancelarEdicionSede();
     renderSedeList();
+    $("f-enlace").value = "";
+    decirIA("");
     sedesDetails.open = sedesEnEdicion.length > 0;
     limpiarAvisosFormulario();
     if (item) btnGuardar.textContent = "Guardar cambios";
@@ -2174,6 +2334,16 @@
     if (state.zonas.length && !zonasDe(d).some(function (z) { return state.zonas.indexOf(z) !== -1; })) return false;
     if (!enFiltro(state.tipos, d.tipo || "Sin especificar")) return false;
     if (!enFiltro(state.precios, etiquetaPrecio[d.precio])) return false;
+    if (state.marcas.length && marcasDisponibles) {
+      var mia = miMarca(d);
+      if (!enFiltro(state.marcas, mia ? ETIQUETA_MARCA[mia] : "Sin marcar")) return false;
+    }
+    if (state.abiertoAhora) {
+      // Basta con que uno de sus locales esté abierto. Los que no publican
+      // horario no se descartan: no se sabe, y esconderlos sería peor.
+      var estados = puntosDe(d, true).map(estaAbierto);
+      if (estados.some(function (e) { return e === false; }) && !estados.some(function (e) { return e === true; })) return false;
+    }
     return true;
   }
 
@@ -2245,6 +2415,16 @@
     var zonaEl = document.createElement("span");
     zonaEl.textContent = d.zona || "Sin especificar";
     meta.appendChild(tipoEl); meta.appendChild(sep); meta.appendChild(zonaEl);
+    var puntoUnico = (d.sedes && d.sedes.length) ? null : puntosDe(d, false)[0];
+    var textoH = puntoUnico ? horarioDe(puntoUnico) : "";
+    if (textoH) {
+      var sepH = sep.cloneNode(true);
+      var hEl = document.createElement("span");
+      hEl.className = "card-horario " + (estaAbierto(puntoUnico) ? "abierto" : "cerrado");
+      hEl.textContent = textoH;
+      meta.appendChild(sepH); meta.appendChild(hEl);
+    }
+
     var dist = formatoDistancia(distanciaMin(d));
     if (dist) {
       var sep2 = sep.cloneNode(true);
@@ -2298,6 +2478,13 @@
         dist.textContent = dSede;
         nombreSede.appendChild(document.createTextNode(" "));
         nombreSede.appendChild(dist);
+      }
+      var hSede = horarioDe(s);
+      if (hSede) {
+        var hs = document.createElement("span");
+        hs.className = "card-horario sede-dist " + (estaAbierto(s) ? "abierto" : "cerrado");
+        hs.textContent = " · " + hSede;
+        nombreSede.appendChild(hs);
       }
       bloque.appendChild(nombreSede);
       var enlacesSede = document.createElement("div");
@@ -2371,6 +2558,36 @@
       enlaces.className = "card-links";
       construirPildoras(d.nombre, carta, reserva, mapaHref).forEach(function (p) { enlaces.appendChild(p); });
       li.appendChild(enlaces);
+    }
+
+    if (marcasDisponibles) {
+      var otros = otrasMarcas(d);
+      if (otros.length) {
+        var porEstado = { quiero: [], visitado: [] };
+        otros.forEach(function (o) { porEstado[o.estado].push(o.quien); });
+        var frases = [];
+        if (porEstado.quiero.length) frases.push((porEstado.quiero.length === 1 ? "Quiere ir: " : "Quieren ir: ") + porEstado.quiero.join(", "));
+        if (porEstado.visitado.length) frases.push((porEstado.visitado.length === 1 ? "Ya ha ido: " : "Ya han ido: ") + porEstado.visitado.join(", "));
+        var lineaOtros = document.createElement("p");
+        lineaOtros.className = "card-otros";
+        lineaOtros.textContent = frases.join(" · ");
+        li.appendChild(lineaOtros);
+      }
+
+      var filaMarcas = document.createElement("div");
+      filaMarcas.className = "card-marcas";
+      var actual = miMarca(d);
+      ["quiero", "visitado"].forEach(function (estado) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "marca-btn " + estado;
+        b.textContent = ETIQUETA_MARCA[estado];
+        b.setAttribute("aria-pressed", actual === estado ? "true" : "false");
+        b.setAttribute("aria-label", ETIQUETA_MARCA[estado] + " a " + d.nombre);
+        b.addEventListener("click", function () { cambiarMarca(d, estado); });
+        filaMarcas.appendChild(b);
+      });
+      li.appendChild(filaMarcas);
     }
 
     var acciones = document.createElement("div");
@@ -2586,12 +2803,12 @@
     var sedes = d.sedes || [];
     if (!sedes.length) {
       return [{ sede: -1, nombreSede: "", direccion: d.direccion, zona: d.zona, geo: d.geo, carta: d.carta, reserva: d.reserva,
-                clave: claveGeo(d.nombre, d.direccion, d.zona, "") }];
+                horario: d.horario, clave: claveGeo(d.nombre, d.direccion, d.zona, "") }];
     }
     var puntos = sedes.map(function (s, i) {
       var zona = s.zona || d.zona;
       return { sede: i, nombreSede: sedes.length > 1 ? s.nombre : "", direccion: s.direccion, zona: zona, geo: s.geo,
-               carta: s.carta, reserva: s.reserva, clave: claveGeo(d.nombre, s.direccion, zona, s.nombre) };
+               carta: s.carta, reserva: s.reserva, horario: s.horario, clave: claveGeo(d.nombre, s.direccion, zona, s.nombre) };
     });
     if (respetarZona && state.zonas.length) {
       var f = puntos.filter(function (p) { return state.zonas.indexOf(grupoZona(p.zona)) !== -1; });
@@ -2607,6 +2824,175 @@
       if (geoUtil(p.geo, p.clave)) min = Math.min(min, distanciaM(miPos, p.geo));
     });
     return min;
+  }
+
+  /* ---- Horarios (formato de OpenStreetMap) ---- */
+
+  var DIAS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];   // 0 = domingo, como getDay()
+  var DIA_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+  function indiceDia(d) { return DIAS.indexOf(d); }
+
+  /**
+   * Devuelve { ok:true, franjas:[{dia, desde, hasta}] } con los minutos
+   * desde medianoche, o { ok:false } si hay algo que no se entiende.
+   * Las franjas que cruzan medianoche se parten en dos días.
+   */
+  function interpretarHorario(texto) {
+    var t = String(texto || "").trim();
+    if (!t) return { ok: false };
+    if (/24\/7/.test(t)) {
+      var todo = [];
+      for (var d = 0; d < 7; d++) todo.push({ dia: d, desde: 0, hasta: 1440 });
+      return { ok: true, franjas: todo, siempre: true };
+    }
+
+    // Cosas fuera del subconjunto: meses, semanas, días ordinales, solar, vacaciones con horario
+    if (/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|week|sunrise|sunset|dawn|dusk|easter)\b/i.test(t)) return { ok: false };
+    if (/\[[^\]]*\]/.test(t)) return { ok: false };
+
+    var franjas = [];
+    var reglas = t.split(";");
+
+    for (var i = 0; i < reglas.length; i++) {
+      var regla = reglas[i].trim();
+      if (!regla) continue;
+      if (/^(PH|SH)\b/i.test(regla)) continue;               // festivos: se ignoran, no se inventan
+      regla = regla.replace(/\b(PH|SH)\b/gi, "").trim();
+      if (!regla) continue;
+
+      // Días al principio (opcional); si no hay, vale para todos
+      var dias = [];
+      var resto = regla;
+      var mDias = /^((?:Mo|Tu|We|Th|Fr|Sa|Su)(?:\s*-\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))?(?:\s*,\s*(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:\s*-\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))?)*)\s*(.*)$/.exec(regla);
+      if (mDias) {
+        resto = mDias[2].trim();
+        var trozos = mDias[1].split(",");
+        for (var j = 0; j < trozos.length; j++) {
+          var trozo = trozos[j].trim();
+          var rango = /^(\w\w)\s*-\s*(\w\w)$/.exec(trozo);
+          if (rango) {
+            var a = indiceDia(rango[1]), b = indiceDia(rango[2]);
+            if (a === -1 || b === -1) return { ok: false };
+            for (var k = 0; k < 7; k++) {                     // recorre en círculo (Fr-Mo)
+              var d2 = (a + k) % 7;
+              dias.push(d2);
+              if (d2 === b) break;
+            }
+          } else {
+            var uno = indiceDia(trozo);
+            if (uno === -1) return { ok: false };
+            dias.push(uno);
+          }
+        }
+      } else {
+        for (var d3 = 0; d3 < 7; d3++) dias.push(d3);
+      }
+
+      // Cerrado ese día
+      if (/^(off|closed)$/i.test(resto)) {
+        dias.forEach(function (dia) {
+          franjas = franjas.filter(function (f) { return f.dia !== dia; });
+        });
+        continue;
+      }
+      if (!resto) return { ok: false };
+
+      // Franjas horarias
+      var horas = resto.split(",");
+      for (var h = 0; h < horas.length; h++) {
+        var m = /^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec(horas[h].trim());
+        if (!m) return { ok: false };
+        var desde = Number(m[1]) * 60 + Number(m[2]);
+        var hasta = Number(m[3]) * 60 + Number(m[4]);
+        if (desde > 1440 || hasta > 1440) return { ok: false };
+
+        dias.forEach(function (dia) {
+          if (hasta > desde) {
+            franjas.push({ dia: dia, desde: desde, hasta: hasta });
+          } else {
+            // Cruza medianoche: hasta el final del día y sigue al siguiente
+            franjas.push({ dia: dia, desde: desde, hasta: 1440 });
+            franjas.push({ dia: (dia + 1) % 7, desde: 0, hasta: hasta });
+          }
+        });
+      }
+    }
+
+    if (!franjas.length) return { ok: false };
+    return { ok: true, franjas: franjas };
+  }
+
+  /** Estado ahora mismo: { abierto, cierra } o { abierto:false, abre } */
+  function estadoHorario(horario, ahora) {
+    var info = interpretarHorario(horario);
+    if (!info.ok) return null;
+    var dia = ahora.getDay(), minuto = ahora.getHours() * 60 + ahora.getMinutes();
+
+    if (info.siempre) return { abierto: true, siempre: true };
+
+    var dentro = info.franjas.filter(function (f) { return f.dia === dia && minuto >= f.desde && minuto < f.hasta; })[0];
+    if (dentro) {
+      // Si otra franja empieza justo cuando acaba esta, se considera continuo
+      var cierre = dentro.hasta, avanzó = true;
+      while (avanzó) {
+        avanzó = false;
+        for (var i = 0; i < info.franjas.length; i++) {
+          var f = info.franjas[i];
+          if (f.dia === dia && f.desde === cierre && f.hasta > cierre) { cierre = f.hasta; avanzó = true; }
+        }
+      }
+      return { abierto: true, cierra: cierre, cierraDia: dia };
+    }
+
+    // Próxima apertura, mirando hasta 7 días por delante
+    for (var salto = 0; salto < 8; salto++) {
+      var d = (dia + salto) % 7;
+      var candidatas = info.franjas.filter(function (f) {
+        return f.dia === d && (salto > 0 || f.desde > minuto) && f.desde > 0;
+      }).sort(function (a, b) { return a.desde - b.desde; });
+      if (candidatas.length) return { abierto: false, abre: candidatas[0].desde, abreDia: d, abreEn: salto };
+    }
+    return { abierto: false };
+  }
+
+  function hhmm(min) {
+    var h = Math.floor(min / 60) % 24, m = min % 60;
+    return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+  }
+
+  /** Texto corto para la tarjeta. Devuelve "" si el horario no se entiende. */
+  function textoHorario(horario, ahora) {
+    var e = estadoHorario(horario, ahora || new Date());
+    if (!e) return "";
+    if (e.siempre) return "Abierto siempre";
+    if (e.abierto) return "Abierto · cierra a las " + hhmm(e.cierra);
+    if (e.abre === undefined) return "Cerrado";
+    if (e.abreEn === 0) return "Cerrado · abre a las " + hhmm(e.abre);
+    if (e.abreEn === 1) return "Cerrado · abre mañana a las " + hhmm(e.abre);
+    return "Cerrado · abre el " + DIA_LARGO[e.abreDia] + " a las " + hhmm(e.abre);
+  }
+
+  var HORARIO_REINTENTO_MS = 30 * 24 * 3600 * 1000;   // se vuelve a mirar al mes
+  var OVERPASS = "https://overpass-api.de/api/interpreter";
+  // Overpass es más pesado que un geocodificador: se le pide más despacio.
+  // (El gancho es solo para las pruebas automáticas, como en Nominatim.)
+  var OVERPASS_PAUSA_MS = typeof window.__GORDITOS_PAUSA_GEO_TEST === "number" ? window.__GORDITOS_PAUSA_GEO_TEST : 2200;
+
+  function horarioVigente(h) {
+    return !!(h && h.t && Date.now() - h.t < HORARIO_REINTENTO_MS);
+  }
+
+  /** Texto para la tarjeta, o "" si no hay horario o no se entiende. */
+  function horarioDe(p) {
+    if (!p.horario || p.horario.nf || !p.horario.oh) return "";
+    return textoHorario(p.horario.oh, new Date());
+  }
+
+  function estaAbierto(p) {
+    if (!p.horario || p.horario.nf || !p.horario.oh) return null;   // null = no se sabe
+    var e = estadoHorario(p.horario.oh, new Date());
+    return e ? !!e.abierto : null;
   }
 
   /* ---- Direcciones y nombres → coordenadas ---- */
@@ -2684,6 +3070,13 @@
         if (n) { numero = n[1]; break; }
       }
     }
+    // Sin el tipo de vía: «Callejón de Puigcerdà» → «Puigcerdà». Google y el
+    // callejero oficial discrepan a menudo (calle/callejón/travesía), y el
+    // buscador falla si se le pide un tipo que no es el suyo.
+    var sinTipo = calle.replace(
+      /^(?:calle|callej[oó]n|avenida|plaza|paseo|glorieta|carretera|ronda|traves[ií]a|camino|pasaje|costanilla|cuesta|bulevar)\s+(?:de\s+las|de\s+los|de\s+la|del|de|las|los|la|el)?\s*/i, "").trim();
+    if (sinTipo.length < 3 || plano(sinTipo) === plano(calle)) sinTipo = "";
+
     var claves = plano(calle).replace(/[^a-z0-9]+/g, " ").split(" ")
       .filter(function (w) { return w.length >= 3 && SIN_PESO.indexOf(w) === -1 && !/^\d+$/.test(w); });
 
@@ -2698,6 +3091,7 @@
       completa: /madrid/i.test(s) ? s : s + ", " + municipio,
       soloCalle: calle ? calle + ", " + municipio : "",
       nucleoMadrid: municipioDeducido && calle ? calle + (numero ? ", " + numero : "") + ", Madrid" : "",
+      nucleoSinTipo: sinTipo ? sinTipo + (numero ? ", " + numero : "") + ", " + municipio : "",
       numero: numero,
       claves: claves
     };
@@ -2728,8 +3122,8 @@
   // Todas las peticiones pasan por aquí: respeta el ritmo de Nominatim
   // aunque se pidan varias a la vez.
   var ultimaPeticionGeo = 0;
-  function esperarTurno() {
-    var espera = Math.max(0, ultimaPeticionGeo + GEO_PAUSA_MS - Date.now());
+  function esperarTurno(pausa) {
+    var espera = Math.max(0, ultimaPeticionGeo + (pausa || GEO_PAUSA_MS) - Date.now());
     ultimaPeticionGeo = Date.now() + espera;
     return new Promise(function (r) { setTimeout(r, espera); });
   }
@@ -2812,8 +3206,10 @@
     var claves = prep ? prep.claves : [];
     var pasos = [];
     if (prep && prep.nucleo) pasos.push({ q: prep.nucleo, motor: "cc" });
+    if (prep && prep.nucleoSinTipo) pasos.push({ q: prep.nucleoSinTipo, motor: "cc" });
     if (prep && prep.nucleoMadrid) pasos.push({ q: prep.nucleoMadrid, motor: "cc" });
     if (prep && prep.nucleo) pasos.push({ q: prep.nucleo, conNumero: !!prep.numero });
+    if (prep && prep.nucleoSinTipo) pasos.push({ q: prep.nucleoSinTipo, conNumero: !!prep.numero });
     if (prep && prep.nucleoMadrid) pasos.push({ q: prep.nucleoMadrid, conNumero: !!prep.numero });
     // Con el portal y la ciudad por separado, el buscador acierta en
     // direcciones españolas donde el texto seguido no le vale.
@@ -2914,6 +3310,7 @@
         geoEnMarcha = false;
         actualizarNotaMapa();
         procesarGeo();                           // por si se añadió algo mientras tanto
+        procesarHorarios();                      // y después, los horarios
         return;
       }
       var t = tareas[i];
@@ -2923,6 +3320,95 @@
         .catch(function () {})
         .then(function () { geoHechas++; actualizarNotaMapa(); siguiente(i + 1); });
     })(0);
+  }
+
+  /* ---- Horarios desde OpenStreetMap (Overpass) ---- */
+
+  var horEnMarcha = false, horIntentados = Object.create(null), horTotal = 0, horHechos = 0;
+
+  function tareasHorario() {
+    var tareas = [];
+    data.forEach(function (d) {
+      puntosDe(d, false).forEach(function (p) {
+        if (!geoUtil(p.geo, p.clave)) return;                    // sin ubicación no se puede preguntar
+        if (horarioVigente(p.horario)) return;
+        if (horIntentados[d.id + "|" + p.sede]) return;
+        tareas.push({ id: d.id, sede: p.sede, lat: p.geo.lat, lng: p.geo.lng,
+                      nombre: d.nombre, nombreSede: p.nombreSede });
+      });
+    });
+    return tareas;
+  }
+
+  /** Pregunta a Overpass por locales de comida junto a ese punto y se queda
+   *  con el que se llame igual que el restaurante. */
+  function buscarHorario(t) {
+    if (typeof fetch !== "function") return Promise.resolve(null);
+    var consulta = "[out:json][timeout:20];nwr(around:80," + t.lat + "," + t.lng + ")" +
+      '["amenity"~"^(restaurant|cafe|bar|pub|fast_food|food_court|ice_cream|biergarten)$"]["name"];out tags center 20;';
+    return esperarTurno(OVERPASS_PAUSA_MS).then(function () {
+      return fetch(OVERPASS, { method: "POST", body: "data=" + encodeURIComponent(consulta),
+                               headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+    }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }).then(function (j) {
+      var elementos = (j && j.elements) || [];
+      var conNombre = elementos.filter(function (e) {
+        return e.tags && e.tags.name && (nombreCoincide(e.tags.name, t.nombre) ||
+               (t.nombreSede && nombreCoincide(e.tags.name, t.nombre + " " + t.nombreSede)));
+      });
+      var conHorario = conNombre.filter(function (e) { return e.tags.opening_hours; })[0];
+      if (conHorario) return { oh: String(conHorario.tags.opening_hours), t: Date.now() };
+      return { nf: true, t: Date.now() };      // no está, o no publica horario
+    }).catch(function () { return null; });    // error de red: se reintenta otro día
+  }
+
+  function procesarHorarios() {
+    if (horEnMarcha || geoEnMarcha || soloLectura || !sb) return;
+    var tareas = tareasHorario();
+    if (!tareas.length) return;
+    horEnMarcha = true;
+    horTotal = tareas.length;
+    horHechos = 0;
+    actualizarNotaMapa();
+
+    (function siguiente(i) {
+      if (i >= tareas.length) { horEnMarcha = false; actualizarNotaMapa(); return; }
+      var t = tareas[i];
+      horIntentados[t.id + "|" + t.sede] = true;
+      buscarHorario(t)
+        .then(function (h) { return h ? guardarHorario(t, h) : null; })
+        .catch(function () {})
+        .then(function () { horHechos++; actualizarNotaMapa(); siguiente(i + 1); });
+    })(0);
+  }
+
+  function guardarHorario(t, horario) {
+    var d = null;
+    for (var i = 0; i < data.length; i++) if (data[i].id === t.id) { d = data[i]; break; }
+    if (!d) return null;
+
+    var cambio;
+    if (t.sede === -1) cambio = { horario: horario };
+    else {
+      if (!d.sedes || !d.sedes[t.sede]) return null;
+      var sedes = d.sedes.map(function (s) { return Object.assign({}, s); });
+      sedes[t.sede].horario = horario;
+      cambio = { sedes: sedes };
+    }
+
+    return sb.from("restaurantes").update(cambio).eq("id", d.id).select().single().then(function (res) {
+      if (res.error) {
+        if (t.sede === -1) d.horario = horario;
+        else d.sedes[t.sede].horario = horario;
+        render();
+        return;
+      }
+      upsertLocal(registroDesdeFila(res.data));
+      guardarCache();
+      render();
+    });
   }
 
   function aplicarGeoLocal(d, t, geo) {
@@ -3174,6 +3660,9 @@
       }
     }
 
+    if (!ccDisponible) {
+      frases.push("El callejero oficial del IGN no responde desde este navegador: se está usando solo OpenStreetMap, que tiene menos portales.");
+    }
     if (ubicacionDenegada) frases.push("Sin permiso de ubicación: actívalo en los ajustes del navegador para ver lo que tienes cerca.");
     nota.textContent = frases.join(" ");
   }
@@ -3234,6 +3723,18 @@
     clearTimeout(tempDestacada);
     tempDestacada = setTimeout(function () { li.classList.remove("destacada"); }, 4500);
   }
+
+  (function chipAbierto() {
+    var chip = $("abierto-chip");
+    function pintar() { chip.setAttribute("aria-pressed", state.abiertoAhora ? "true" : "false"); }
+    chip.addEventListener("click", function () {
+      state.abiertoAhora = !state.abiertoAhora;
+      pintar();
+      guardarFiltros();
+      render();
+    });
+    pintar();
+  })();
 
   $("random-btn").addEventListener("click", function () {
     var visibles = ordenar(data.filter(coincide));
@@ -3463,6 +3964,138 @@
       $("pl-pass2").value = "";
       decirListas("Contraseña cambiada.");
     }).catch(function () { decirListas("No se pudo conectar. Revisa la conexión.", true); });
+  });
+
+  /* ============================================================
+     16 quinquies. Ayuda del asistente (rellenar y buscar)
+     ============================================================
+     La clave del modelo vive en el servidor, en una Edge Function de
+     Supabase, no aquí. Nada de lo que propone se guarda solo: se
+     rellena el formulario y lo confirmas tú.                           */
+
+  function decirIA(mensaje, tipo) {
+    var el = $("ia-msg");
+    el.textContent = mensaje || "";
+    el.className = "msg" + (tipo === "error" ? " msg-error" : tipo === "aviso" ? " msg-ia" : "");
+    el.hidden = !mensaje;
+  }
+
+  function llamarAsistente(cuerpo) {
+    if (!sb || soloLectura) return Promise.reject(new Error("Sin conexión ahora mismo."));
+    if (!sb.functions || typeof sb.functions.invoke !== "function") {
+      return Promise.reject(new Error("Esta versión del cliente no puede llamar al asistente."));
+    }
+    return sb.functions.invoke("asistente", { body: cuerpo }).then(function (r) {
+      if (r.error) throw new Error("No responde el asistente. ¿Está desplegada la función «asistente» en Supabase?");
+      if (r.data && r.data.error) throw new Error(r.data.error);
+      return r.data || {};
+    });
+  }
+
+  /* ---- Rellenar el formulario desde un enlace ---- */
+
+  $("ia-extraer-btn").addEventListener("click", function () {
+    var enlace = $("f-enlace").value.trim();
+    if (!/^https?:\/\/[^\s]+\.[^\s]+/i.test(enlace)) {
+      decirIA("Pega una dirección web completa, empezando por https://", "error");
+      $("f-enlace").focus();
+      return;
+    }
+    var boton = $("ia-extraer-btn");
+    boton.disabled = true;
+    decirIA("Leyendo la página…");
+
+    llamarAsistente({ accion: "extraer", url: enlace }).then(function (r) {
+      var p = r.propuesta || {};
+      if (!p.nombre && !p.direccion && !(p.sedes || []).length) {
+        decirIA("De esa página no he sacado nada aprovechable. Prueba con la web del restaurante.", "error");
+        return;
+      }
+      // Solo se rellena lo que esté vacío: nunca se pisa lo que ya escribiste.
+      var poner = function (campo, valor) { if (valor && !campo.value.trim()) campo.value = valor; };
+      poner(fNombre, p.nombre);
+      poner(fTipo, p.tipo);
+      poner(fZona, p.zona);
+      poner(fDireccion, p.direccion);
+      poner(fCarta, p.carta);
+      poner(fReserva, p.reserva);
+      poner(fNota, p.flag);
+      if (p.precio >= 1 && p.precio <= 3) fPrecio.value = String(p.precio);
+
+      var añadidas = 0;
+      (p.sedes || []).forEach(function (s) {
+        var yaEsta = sedesEnEdicion.some(function (x) { return plano(x.nombre) === plano(s.nombre); });
+        if (yaEsta) return;
+        sedesEnEdicion.push(normalizarSede(s));
+        añadidas += 1;
+      });
+      if (añadidas) {
+        renderSedeList();
+        sedesDetails.open = true;
+      }
+
+      var dominio = "";
+      try { dominio = new URL(r.fuente || enlace).hostname.replace(/^www\./, ""); } catch (e) {}
+      decirIA("Propuesto a partir de " + (dominio || "el enlace") +
+        (añadidas ? " (" + añadidas + " locales)" : "") +
+        ". Revísalo: puede equivocarse. No se guarda nada hasta que le des a Guardar.", "aviso");
+      desplazarA(fNombre, { block: "center", behavior: "smooth" });
+    }).catch(function (e) {
+      decirIA(e.message || "No se pudo leer esa página.", "error");
+    }).then(function () {
+      boton.disabled = false;
+    });
+  });
+
+  /* ---- Convertir una frase en filtros ---- */
+
+  $("ia-buscar-btn").addEventListener("click", function () {
+    var frase = $("search").value.trim();
+    if (!frase) { $("search").focus(); return; }
+
+    var zonas = [], tipos = [];
+    data.forEach(function (d) {
+      zonasDe(d).forEach(function (z) { if (zonas.indexOf(z) === -1) zonas.push(z); });
+      var t = d.tipo || "Sin especificar";
+      if (tipos.indexOf(t) === -1) tipos.push(t);
+    });
+
+    var boton = $("ia-buscar-btn");
+    boton.disabled = true;
+    avisar("Interpretando…");
+
+    llamarAsistente({ accion: "buscar", texto: frase, zonas: zonas, tipos: tipos, marcas: marcasDisponibles }).then(function (r) {
+      var f = r.filtros || {};
+      // Solo se aplican valores que existen de verdad: el servidor ya los
+      // filtra y aquí se vuelve a comprobar.
+      state.zonas = (f.zonas || []).filter(function (z) { return zonas.indexOf(z) !== -1; });
+      state.tipos = (f.tipos || []).filter(function (t) { return tipos.indexOf(t) !== -1; });
+      state.precios = (f.precios || []).filter(function (p) { return ["€", "€€", "€€€"].indexOf(p) !== -1; });
+      state.abiertoAhora = f.abiertoAhora === true;
+      state.marcas = marcasDisponibles ? (f.marcas || []).filter(function (m) {
+        return ["Quiero ir", "Ya he ido", "Sin marcar"].indexOf(m) !== -1;
+      }) : [];
+      if (f.sort && ["nombre", "zona", "tipo", "precio", "recientes", "cerca"].indexOf(f.sort) !== -1) {
+        state.sort = f.sort;
+        $("sort").value = f.sort;
+      }
+      state.search = plano(f.texto || "");
+      $("search").value = f.texto || "";
+      $("abierto-chip").setAttribute("aria-pressed", state.abiertoAhora ? "true" : "false");
+
+      firmasChips = {};
+      guardarFiltros();
+      refrescarFuentesChips();
+      render();
+
+      var puestos = state.zonas.concat(state.tipos, state.precios, state.marcas);
+      if (state.abiertoAhora) puestos.push("abierto ahora");
+      avisar(puestos.length ? "Filtrado por " + puestos.join(", ") + "." : "No he sabido traducir eso a filtros.");
+    }).catch(function (e) {
+      avisar(e.message || "No se pudo interpretar la frase.");
+    }).then(function () {
+      boton.disabled = false;
+    });
   });
 
   /* ============================================================
