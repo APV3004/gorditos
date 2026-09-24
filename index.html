@@ -1212,7 +1212,8 @@
     var lat = Number(g.lat), lng = Number(g.lng);
     if (!isFinite(lat) || !isFinite(lng)) return null;
     var geo = Object.assign({ lat: lat, lng: lng, dir: dir }, extra);
-    if (g.aprox === "calle" || g.aprox === "nombre") geo.aprox = g.aprox;
+    if (g.aprox === "calle" || g.aprox === "nombre" || g.aprox === "dudoso") geo.aprox = g.aprox;
+    if (typeof g.en === "string" && g.en.trim()) geo.en = g.en.trim().slice(0, 120);
     return geo;
   }
 
@@ -2999,7 +3000,7 @@
 
   // Sube cuando cambia la forma de buscar: lo situado con una versión
   // anterior se revisa solo (sin quitarlo del mapa mientras tanto).
-  var GEO_VERSION = 3;
+  var GEO_VERSION = 4;
   var NF_REINTENTO_MS = 30 * 24 * 3600 * 1000;    // «no encontrada» se reintenta al mes
 
   function geoCaducada(geo) {
@@ -3077,8 +3078,7 @@
       /^(?:calle|callej[oó]n|avenida|plaza|paseo|glorieta|carretera|ronda|traves[ií]a|camino|pasaje|costanilla|cuesta|bulevar)\s+(?:de\s+las|de\s+los|de\s+la|del|de|las|los|la|el)?\s*/i, "").trim();
     if (sinTipo.length < 3 || plano(sinTipo) === plano(calle)) sinTipo = "";
 
-    var claves = plano(calle).replace(/[^a-z0-9]+/g, " ").split(" ")
-      .filter(function (w) { return w.length >= 3 && SIN_PESO.indexOf(w) === -1 && !/^\d+$/.test(w); });
+    var claves = clavesCalle(calle);
 
     var cp = (/\b(\d{5})\b/.exec(s) || [])[1] || "";
 
@@ -3111,12 +3111,54 @@
     return (" " + a + " ").indexOf(" " + b + " ") !== -1 || (" " + b + " ").indexOf(" " + a + " ") !== -1;
   }
 
-  /** ¿El resultado está en la calle que se pidió? Todas sus palabras clave (una de margen si hay 3 o más). */
-  function coincideCalle(r, claves) {
+  /** Las palabras que distinguen una calle: sin tipo de vía, artículos ni números. */
+  function clavesCalle(nombre) {
+    return plano(nombre).replace(/[^a-z0-9]+/g, " ").split(" ")
+      .filter(function (w) { return w.length >= 3 && SIN_PESO.indexOf(w) === -1 && !/^\d+$/.test(w); });
+  }
+
+  /** El nombre de la calle en la que ha caído un resultado del buscador. */
+  function calleDeResultado(r) {
+    var a = r.address || {};
+    if (typeof a === "object") {
+      var via = a.road || a.pedestrian || a.square || a.footway || a.path || a.cycleway;
+      if (via) return String(via);
+    }
+    var cat = String(r.category || r["class"] || "");
+    if (r.name && (cat === "highway" || cat === "place" || cat === "leisure")) return String(r.name);
+    // Último recurso: el primer trozo con letras de la dirección completa.
+    var trozos = String(r.display_name || (typeof r.address === "string" ? r.address : "")).split(",");
+    for (var i = 0; i < trozos.length; i++) if (/[a-zA-ZÀ-ÿ]/.test(trozos[i])) return trozos[i].trim();
+    return "";
+  }
+
+  /**
+   * ¿El resultado está EN la calle que se pidió? Se compara el nombre de
+   * la calle en los dos sentidos: que estén tus palabras y que no sobren
+   * otras. Así «Calle del Príncipe» no acepta «Calle del Príncipe Carlos»,
+   * aunque la contenga. Con 3 palabras o más se tolera una diferencia
+   * (una errata, una palabra de menos).
+   */
+  function calleCoincide(calleResultado, claves) {
     if (!claves.length) return true;
-    var dn = " " + nombreLimpio(String(r.display_name || "").replace(/,\s*Espa[ñn]a\s*$/i, "")) + " ";
-    var faltan = claves.filter(function (c) { return dn.indexOf(" " + c + " ") === -1; }).length;
-    return faltan === 0 || (claves.length >= 3 && faltan === 1);
+    var suyas = clavesCalle(calleResultado);
+    if (!suyas.length) return false;
+    var faltan = claves.filter(function (c) { return suyas.indexOf(c) === -1; }).length;
+    var sobran = suyas.filter(function (c) { return claves.indexOf(c) === -1; }).length;
+    if (faltan === 0 && sobran === 0) return true;
+    return claves.length >= 3 && faltan + sobran <= 1;
+  }
+
+  function coincideCalle(r, claves) {
+    return calleCoincide(calleDeResultado(r), claves);
+  }
+
+  /** «Calle del Príncipe, 10»: dónde ha caído de verdad, para enseñarlo en el globo. */
+  function etiquetaResultado(r) {
+    var calle = calleDeResultado(r);
+    var a = (r.address && typeof r.address === "object") ? r.address : {};
+    var numero = a.house_number || r.portalNumber || "";
+    return (calle + (numero ? ", " + numero : "")).slice(0, 120);
   }
 
   // Todas las peticiones pasan por aquí: respeta el ritmo de Nominatim
@@ -3168,10 +3210,12 @@
 
     var tipo = plano(r.type || "");
     if (TIPOS_CC.indexOf(tipo) === -1) return null;                  // municipio, provincia…: demasiado grueso
-    if (prep && !coincideCalle({ display_name: r.address || "" }, prep.claves)) return null;
+    var calleCC = String(r.address || "").split(",")[0].replace(/\s+\d.*$/, "").trim();
+    if (prep && !calleCoincide(calleCC, prep.claves)) return null;
 
     var estado = Number(r.state);
     var geo = { lat: lat, lng: lng, dir: t.clave, v: GEO_VERSION };
+    if (calleCC) geo.en = (calleCC + (r.portalNumber ? ", " + r.portalNumber : "")).slice(0, 120);
     if (estado === 5 || estado === 10 || (tipo === "callejero" && prep && prep.numero)) geo.aprox = "calle";
     return geo;
   }
@@ -3259,13 +3303,14 @@
         });
       }
 
-      var params = Object.assign({ limit: paso.porNombre ? 10 : 3, viewbox: VIEWBOX_CIUDAD },
+      var params = Object.assign({ limit: paso.porNombre ? 10 : 3, viewbox: VIEWBOX_CIUDAD, addressdetails: 1 },
                                  paso.params || { q: paso.q });
       if (paso.porNombre) params.bounded = 1;
       return pedirNominatim(params).then(function (res) {
         var r = elegir(paso, res);
         if (!r) return probar(i + 1);
         var geo = { lat: Number(r.lat), lng: Number(r.lon), dir: t.clave, v: GEO_VERSION };
+        if (!paso.porNombre) { var en = etiquetaResultado(r); if (en) geo.en = en; }
         var cat = String(r.category || r["class"] || "");
         var aprox = paso.aprox || (paso.porNombre ? "nombre" : (paso.conNumero && cat === "highway" ? "calle" : ""));
         if (aprox) geo.aprox = aprox;
@@ -3426,7 +3471,10 @@
     // Revisión de un pin antiguo que el buscador nuevo no encuentra: mejor
     // conservarlo (marcado como revisado) que dejar el restaurante sin mapa.
     if (geo.nf && geoUtil(actual.geo, actual.clave)) {
-      geo = Object.assign({}, actual.geo, { v: GEO_VERSION });
+      // No se borra (podría estar bien), pero se marca: el globo y la nota
+      // te piden comprobarlo, en vez de dar por bueno algo sin confirmar.
+      geo = Object.assign({}, actual.geo, { v: GEO_VERSION, aprox: "dudoso" });
+      delete geo.en;
     }
 
     if (geoSinGuardar) { aplicarGeoLocal(d, t, geo); render(); return null; }
@@ -3555,11 +3603,18 @@
     sub.textContent = partes.join(" · ");
     caja.appendChild(sub);
 
+    if (p.geo.en) {
+      var en = document.createElement("p");
+      en.className = "popup-sub";
+      en.textContent = "Situado en " + p.geo.en;
+      caja.appendChild(en);
+    }
+
     if (p.geo.aprox) {
       var aviso = document.createElement("p");
       aviso.className = "popup-aprox";
-      aviso.textContent = p.geo.aprox === "calle"
-        ? "Ubicación aproximada: no se encontró el número, solo la calle."
+      aviso.textContent = p.geo.aprox === "calle" ? "Ubicación aproximada: no se encontró el número, solo la calle."
+        : p.geo.aprox === "dudoso" ? "No he podido confirmar esta ubicación con la dirección escrita: comprueba que el pin esté en su sitio."
         : "Situado por su nombre: si no es aquí, ponle la dirección.";
       caja.appendChild(aviso);
     }
@@ -3622,13 +3677,16 @@
     } else if (!items.length) {
       frases.push(data.length ? "Ningún restaurante coincide con esos filtros." : "La lista está vacía.");
     } else {
-      var enMapa = 0, aproxCalle = 0, aproxNombre = 0, pendientes = 0, dirNoHallada = [], sinDirNoHallado = [];
+      var enMapa = 0, aproxCalle = 0, aproxNombre = 0, dudosos = [], pendientes = 0, dirNoHallada = [], sinDirNoHallado = [];
       items.forEach(function (d) {
         var ps = puntosDe(d, true);
         var utiles = ps.filter(function (p) { return geoUtil(p.geo, p.clave); });
         if (utiles.length) enMapa++;
         if (utiles.some(function (p) { return p.geo.aprox === "calle"; })) aproxCalle++;
         if (utiles.some(function (p) { return p.geo.aprox === "nombre"; })) aproxNombre++;
+        utiles.forEach(function (p) {
+          if (p.geo.aprox === "dudoso") dudosos.push(d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : ""));
+        });
         ps.forEach(function (p) {
           var etiqueta = d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : "");
           if (!geoVigente(p.geo, p.clave)) pendientes++;
@@ -3651,6 +3709,9 @@
           " por su nombre: comprueba que el pin sea el sitio.");
       }
       var resumir = function (l) { return l.slice(0, 8).join(", ") + (l.length > 8 ? " y " + (l.length - 8) + " más" : ""); };
+      if (dudosos.length) {
+        frases.push("Sin confirmar: " + resumir(dudosos) + ". Comprueba que su pin esté en su sitio (o revisa cómo está escrita la dirección).");
+      }
       if (dirNoHallada.length) {
         frases.push("No se pudo situar la dirección de: " + resumir(dirNoHallada) +
           ". Revisa cómo está escrita: una sola calle con su número, sin paréntesis ni nombres de centros comerciales.");
@@ -3986,7 +4047,21 @@
       return Promise.reject(new Error("Esta versión del cliente no puede llamar al asistente."));
     }
     return sb.functions.invoke("asistente", { body: cuerpo }).then(function (r) {
-      if (r.error) throw new Error("No responde el asistente. ¿Está desplegada la función «asistente» en Supabase?");
+      if (r.error) {
+        // Si la función respondió con un error propio (502…), su motivo viene
+        // en el cuerpo de la respuesta: se lee para enseñarlo tal cual.
+        var ctx = r.error.context;
+        if (ctx && typeof ctx.json === "function") {
+          return ctx.json().then(function (j) {
+            throw new Error((j && j.error) || "El asistente ha fallado (" + (ctx.status || "?") + ").");
+          }, function () {
+            throw new Error(ctx.status === 404
+              ? "No encuentro la función «asistente» en Supabase. ¿Está desplegada con ese nombre?"
+              : "El asistente ha fallado (" + (ctx.status || "?") + ").");
+          });
+        }
+        throw new Error("No responde el asistente. ¿Está desplegada la función «asistente» en Supabase?");
+      }
       if (r.data && r.data.error) throw new Error(r.data.error);
       return r.data || {};
     });
