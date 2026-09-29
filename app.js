@@ -76,7 +76,9 @@
     var v = texto(valor);
     if (!v) return { href: "", valida: true, vacia: true };
     var candidata = v;
-    if (!/^[a-z][a-z0-9+.\-]*:/i.test(candidata)) candidata = "https://" + candidata;
+    // «www.ejemplo.com:8080/carta» es host:puerto, no un esquema: se le pone https://
+    var tieneEsquema = /^[a-z][a-z0-9+.\-]*:/i.test(candidata) && !/^[^\/?#:]*:\d+(?:[\/?#]|$)/.test(candidata);
+    if (!tieneEsquema) candidata = "https://" + candidata;
     try {
       var u = new URL(candidata);
       if (u.protocol !== "http:" && u.protocol !== "https:") return { href: v, valida: false };
@@ -341,9 +343,14 @@
   function cargarMarcas(lista) {
     return sb.from("marcas").select("restaurante_id,user_id,estado").then(function (res) {
       if (lista !== listaActual) return;
-      if (res.error) {                       // sin la migración: la función se esconde, no falla
-        marcasDisponibles = false;
-        marcas = [];
+      if (res.error) {
+        // Sin la migración (tabla inexistente): la función se esconde, no falla.
+        // Cualquier otro error es pasajero: se conserva lo que había.
+        var c = String(res.error.code || "");
+        if (res.status === 404 || c === "42P01" || c === "PGRST205" || c === "PGRST200") {
+          marcasDisponibles = false;
+          marcas = [];
+        }
         return;
       }
       var ids = Object.create(null);
@@ -351,7 +358,7 @@
       marcas = (res.data || []).filter(function (m) { return ids[m.restaurante_id]; }).map(normalizarMarca);
       marcasDisponibles = true;
       escribirCrudo(CLAVE_MARCAS + lista, JSON.stringify(marcas));
-    }).catch(function () { marcasDisponibles = false; marcas = []; });
+    }).catch(function () { /* sin red ahora: se conservan las marcas que hubiera */ });
   }
 
   function quitarMarcaLocal(restId, userId) {
@@ -379,7 +386,7 @@
     if (requiereConexion()) return;
     var antes = miMarca(d);
     var nuevo = antes === estado ? "" : estado;
-    var copia = marcas.slice();
+    var lista = listaActual;
 
     // Se ve al instante; si el servidor dice que no, se deshace.
     quitarMarcaLocal(d.id, miId);
@@ -393,8 +400,12 @@
       if (r && r.error) throw r.error;
       escribirCrudo(CLAVE_MARCAS + listaActual, JSON.stringify(marcas));
     }).catch(function () {
-      marcas = copia;
-      render();
+      // Solo se deshace esta marca, y solo si seguimos en la misma lista.
+      if (lista === listaActual) {
+        quitarMarcaLocal(d.id, miId);
+        if (antes) marcas.push({ restaurante_id: d.id, user_id: miId, estado: antes });
+        render();
+      }
       avisar("No se pudo guardar la marca. Revisa la conexión.");
     });
   }
@@ -471,6 +482,8 @@
     $("login-screen").hidden = true;
     $("app-shell").hidden = false;
 
+    // Solo un fallo al CARGAR cuenta como «sin conexión»; un error de pintado
+    // no debe tirar los datos frescos por la copia guardada.
     cargarListas()
       .then(cargarTodo)
       .then(function () {
@@ -480,8 +493,7 @@
         render();
         procesarGeo();       // en segundo plano: cuando abras el mapa, ya estará todo situado
         procesarHorarios();
-      })
-      .catch(function () {
+      }, function () {
         // Sin red ahora mismo: la última copia vista, sin permitir escribir.
         modoSinConexion();
         mostrarBanner(data.length
@@ -489,7 +501,8 @@
           : "Sin conexión y sin ninguna copia guardada todavía. Conéctate al menos una vez.");
         refrescarFuentesChips();
         render();
-      });
+      })
+      .catch(function (e) { if (window.console) console.error(e); });
   }
 
   /** Enseña la lista actual: primero lo guardado (al instante), luego lo fresco. */
@@ -1038,7 +1051,10 @@
       var nombreRest = fNombre.value.trim();
       // Si no cambia lo que se buscó en el mapa, se conservan las coordenadas.
       if (claveGeo(nombreRest, antigua.direccion, antigua.zona, antigua.nombre) ===
-          claveGeo(nombreRest, nueva.direccion, nueva.zona, nueva.nombre)) nueva.geo = antigua.geo;
+          claveGeo(nombreRest, nueva.direccion, nueva.zona, nueva.nombre)) {
+        nueva.geo = antigua.geo;
+        nueva.horario = antigua.horario;
+      }
       sedesEnEdicion[sedeEditandoIdx] = nueva;
       cancelarEdicionSede();
     } else {
@@ -1187,7 +1203,10 @@
       for (var k = 0; k < data.length; k++) if (data[k].id === editandoId) { original = data[k]; break; }
       // Mismas coordenadas si no cambia lo que se buscó (dirección, o nombre y zona si se situó por el nombre).
       if (original && claveGeo(original.nombre, original.direccion, original.zona, "") ===
-                      claveGeo(valores.nombre, valores.direccion, valores.zona, "")) valores.geo = original.geo;
+                      claveGeo(valores.nombre, valores.direccion, valores.zona, "")) {
+        valores.geo = original.geo;
+        valores.horario = original.horario;     // el horario va ligado al mismo sitio
+      }
     }
     var fila = filaDesde(valores);
     var promesa = eraEdicion
@@ -1294,7 +1313,7 @@
       // Basta con que uno de sus locales esté abierto. Los que no publican
       // horario no se descartan: no se sabe, y esconderlos sería peor.
       var estados = puntosDe(d, true).map(estaAbierto);
-      if (estados.some(function (e) { return e === false; }) && !estados.some(function (e) { return e === true; })) return false;
+      if (estados.length && estados.every(function (e) { return e === false; })) return false;
     }
     return true;
   }
@@ -1841,13 +1860,12 @@
         for (var d3 = 0; d3 < 7; d3++) dias.push(d3);
       }
 
+      // Una regla posterior sustituye a las anteriores para esos días
+      // (también la parte de madrugada que venía de una franja nocturna).
+      franjas = franjas.filter(function (f) { return dias.indexOf(f.origen) === -1; });
+
       // Cerrado ese día
-      if (/^(off|closed)$/i.test(resto)) {
-        dias.forEach(function (dia) {
-          franjas = franjas.filter(function (f) { return f.dia !== dia; });
-        });
-        continue;
-      }
+      if (/^(off|closed)$/i.test(resto)) continue;
       if (!resto) return { ok: false };
 
       // Franjas horarias
@@ -1861,11 +1879,11 @@
 
         dias.forEach(function (dia) {
           if (hasta > desde) {
-            franjas.push({ dia: dia, desde: desde, hasta: hasta });
+            franjas.push({ dia: dia, desde: desde, hasta: hasta, origen: dia });
           } else {
             // Cruza medianoche: hasta el final del día y sigue al siguiente
-            franjas.push({ dia: dia, desde: desde, hasta: 1440 });
-            franjas.push({ dia: (dia + 1) % 7, desde: 0, hasta: hasta });
+            franjas.push({ dia: dia, desde: desde, hasta: 1440, origen: dia });
+            franjas.push({ dia: (dia + 1) % 7, desde: 0, hasta: hasta, origen: dia });
           }
         });
       }
@@ -1886,15 +1904,25 @@
     var dentro = info.franjas.filter(function (f) { return f.dia === dia && minuto >= f.desde && minuto < f.hasta; })[0];
     if (dentro) {
       // Si otra franja empieza justo cuando acaba esta, se considera continuo
-      var cierre = dentro.hasta, avanzó = true;
-      while (avanzó) {
-        avanzó = false;
+      // También al pasar la medianoche: «Fr 20:00-02:00» cierra a las 02:00.
+      var cierre = dentro.hasta, diaCierre = dia, saltos = 0;
+      function seguir(d, c) {
         for (var i = 0; i < info.franjas.length; i++) {
           var f = info.franjas[i];
-          if (f.dia === dia && f.desde === cierre && f.hasta > cierre) { cierre = f.hasta; avanzó = true; }
+          if (f.dia === d && f.desde === c && f.hasta > c) return f.hasta;
         }
+        return null;
       }
-      return { abierto: true, cierra: cierre, cierraDia: dia };
+      for (;;) {
+        var sig = seguir(diaCierre, cierre);
+        if (sig !== null) { cierre = sig; continue; }
+        if (cierre === 1440 && saltos < 7) {
+          var sig2 = seguir((diaCierre + 1) % 7, 0);
+          if (sig2 !== null) { diaCierre = (diaCierre + 1) % 7; cierre = sig2; saltos++; continue; }
+        }
+        break;
+      }
+      return { abierto: true, cierra: cierre, cierraDia: diaCierre };
     }
 
     // Próxima apertura, mirando hasta 7 días por delante
@@ -2310,6 +2338,8 @@
         return;
       }
       var t = tareas[i];
+      // Si ya no está cargado (cambio de lista), ni se marca ni se gasta la pausa.
+      if (!data.some(function (d) { return d.id === t.id; })) { siguiente(i + 1); return; }
       geoIntentadas[t.id + "|" + t.sede + "|" + t.clave] = true;
       buscarCoordenadas(t)
         .then(function (geo) { return geo ? guardarGeo(t, geo) : null; })
@@ -2375,6 +2405,7 @@
     (function siguiente(i) {
       if (i >= tareas.length || fallosSeguidos >= 3) { horEnMarcha = false; actualizarNotaMapa(); return; }
       var t = tareas[i];
+      if (!data.some(function (d) { return d.id === t.id; })) { siguiente(i + 1); return; }
       horIntentados[t.id + "|" + t.sede] = true;
       buscarHorario(t)
         .then(function (h) { fallosSeguidos = h ? 0 : fallosSeguidos + 1; return h ? guardarHorario(t, h) : null; })
@@ -2940,6 +2971,8 @@
       }).then(function () {
         pintarPanelListas();
         decirListas("Lista «" + nombre + "» creada, y ya la estás viendo: empieza vacía. Añade gente arriba.");
+      }).catch(function () {
+        decirListas("Lista «" + nombre + "» creada, pero no se pudo abrir: recarga la app.", true);
       });
     });
   });
@@ -3161,12 +3194,17 @@
       var porId = Object.create(null);
       data.forEach(function (d) { porId[d.id] = d; });
 
+      brutos = brutos.filter(function (b) { return b && typeof b === "object"; });
+      if (!brutos.length) { decir("La copia no tiene ningún restaurante.", true); return; }
+
       var operaciones = brutos.map(function (bruto) {
         var v = normalizarRegistro(bruto);
         var existente = bruto.id && porId[bruto.id];
-        return existente
+        var op = existente
           ? sb.from("restaurantes").update(filaDesde(v)).eq("id", existente.id).select().single()
           : sb.from("restaurantes").insert(conLista(filaDesde(v))).select().single();
+        // Un fallo de red en una fila cuenta como «fallida», no rompe el resto.
+        return Promise.resolve(op).catch(function (e) { return { error: e || true }; });
       });
 
       Promise.all(operaciones).then(function (resultados) {
@@ -3181,6 +3219,8 @@
         render();
         decir("Restaurado: " + nuevos + " nuevos, " + actualizados + " actualizados" + (fallidos ? ", " + fallidos + " fallidos" : "") + ".");
         avisar("Copia restaurada.");
+      }).catch(function () {
+        decir("No se pudo restaurar la copia. Revisa la conexión.", true);
       });
     });
   })();
