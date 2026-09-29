@@ -11,7 +11,7 @@
    Al publicar cambios sube CACHE una versión: al activarse borra las
    cachés antiguas.                                                  */
 
-var CACHE = "gorditos-v21";
+var CACHE = "gorditos-v22";
 
 /* Solo lo que se puede nombrar de antemano. La página en sí no está
    aquí a propósito: se cachea sola en la primera visita, bajo la ruta
@@ -114,8 +114,12 @@ function servirPagina(e, req) {
 function servirRecurso(e, req) {
   return caches.open(CACHE).then(function (cache) {
     return cache.match(req).then(function (guardada) {
+      // Una copia opaca (de una petición no-cors) no vale para una petición
+      // cors, p. ej. <link crossorigin integrity>: el navegador la rechaza.
+      if (guardada && guardada.type === "opaque" && req.mode !== "no-cors") guardada = null;
+
       var red = fetch(req).then(function (res) {
-        if (res && (res.ok || res.type === "opaque")) cache.put(req, res.clone());
+        if (res && (res.ok || (res.type === "opaque" && req.mode === "no-cors"))) cache.put(req, res.clone());
         return res;
       }).catch(function () { return null; });
 

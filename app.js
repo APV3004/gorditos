@@ -2369,12 +2369,15 @@
     horHechos = 0;
     actualizarNotaMapa();
 
+    // Si Overpass no responde varias veces seguidas, se para: no tiene sentido
+    // seguir llamando uno a uno. Se reintentará en la próxima carga.
+    var fallosSeguidos = 0;
     (function siguiente(i) {
-      if (i >= tareas.length) { horEnMarcha = false; actualizarNotaMapa(); return; }
+      if (i >= tareas.length || fallosSeguidos >= 3) { horEnMarcha = false; actualizarNotaMapa(); return; }
       var t = tareas[i];
       horIntentados[t.id + "|" + t.sede] = true;
       buscarHorario(t)
-        .then(function (h) { return h ? guardarHorario(t, h) : null; })
+        .then(function (h) { fallosSeguidos = h ? 0 : fallosSeguidos + 1; return h ? guardarHorario(t, h) : null; })
         .catch(function () {})
         .then(function () { horHechos++; actualizarNotaMapa(); siguiente(i + 1); });
     })(0);
