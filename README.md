@@ -8,14 +8,15 @@ real, con Supabase como backend. Funciona sin conexión en modo lectura
 
 | Archivo | Para qué |
 |---|---|
-| `restaurantes-madrid.html` | La app entera: CSS y JS incluidos |
+| `index.html` | La app: HTML y CSS |
+| `app.js` | La lógica de la app (aparte para poder aplicar una CSP estricta) |
 | `sw.js` | Service worker: arranque instantáneo, caché de la propia app |
 | `manifest.webmanifest` | Nombre, icono y modo pantalla completa |
 | `icon-512.png` | El icono |
 | `config.js` | Tu URL y tu clave de Supabase — se sube una vez y no se vuelve a tocar |
 | `supabase.sql` | Crea la tabla, la seguridad y el tiempo real — se pega una vez en el SQL Editor de Supabase |
 
-Los cuatro primeros van juntos en el mismo hosting. `supabase.sql` no se
+Los primeros van juntos en el mismo hosting. `supabase.sql` no se
 sube a ningún sitio: se pega en el panel de Supabase.
 
 ## Puesta en marcha (una vez)
