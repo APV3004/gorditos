@@ -9,8 +9,9 @@ real, con Supabase como backend. Funciona sin conexión en modo lectura
 | Archivo | Para qué |
 |---|---|
 | `index.html` | La app: HTML y CSS |
+| `restaurantes-madrid.html` | Solo redirige a `index.html`: para iconos, marcadores y enlaces viejos |
 | `app.js` | La lógica de la app (aparte para poder aplicar una CSP estricta) |
-| `sw.js` | Service worker: arranque instantáneo, caché de la propia app |
+| `sw.js` | Service worker: trae siempre la última versión y abre sin red |
 | `manifest.webmanifest` | Nombre, icono y modo pantalla completa |
 | `icon-512.png` | El icono |
 | `config.js` | Tu URL y tu clave de Supabase — se sube una vez y no se vuelve a tocar |
@@ -28,7 +29,7 @@ sube a ningún sitio: se pega en el panel de Supabase.
 4. **Project Settings → API** → copia el "Project URL" y la clave
    "anon public".
 5. Abre `config.js` y pon tu URL y tu clave. Es el único sitio donde
-   van: las actualizaciones de la app solo cambian `index.html`, así
+   van: las actualizaciones de la app solo cambian `index.html` y `app.js`, así
    que no tendrás que volver a pegarlas.
 6. Sube los archivos a tu hosting (GitHub Pages, como hasta ahora).
 
@@ -70,11 +71,23 @@ entráis los dos.
 
 ## Al publicar cambios de código
 
-Sube la versión en `sw.js`:
-```js
-var CACHE = "gorditos-v3";   // -> "gorditos-v4"
+Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
+```html
+<!-- index.html, al final -->
+<script src="app.js?v=24"></script>   <!-- -> ?v=25 -->
 ```
-Así, a quien ya la tenga instalada le sale un botón de «Actualizar».
+```js
+// sw.js
+var CACHE = "gorditos-v24";   // -> "gorditos-v25"
+```
+Cada vez que la app vuelve a primer plano mira qué versión hay
+publicada. Si es otra, se recarga sola (o, si tienes un formulario a
+medio rellenar, te sale un botón de «Actualizar»). Con red, abrir la
+app enseña siempre la última versión; sin red, la última que viste.
+
+Si cambias de versión de Supabase o Leaflet, el `integrity` del
+`<script>` tiene que ser el de ese archivo exacto: si no coincide, el
+navegador bloquea la librería y la app se queda en blanco.
 
 ## Los datos
 
