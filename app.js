@@ -3231,14 +3231,95 @@
 
   conectarAuth();
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
+  /* Actualizaciones.
+     En el iPhone, la app de la pantalla de inicio no se recarga al
+     abrirla: vuelve tal cual estaba en memoria, a veces durante días.
+     Así que, cada vez que vuelve a primer plano, se pregunta a GitHub
+     qué versión hay publicada (el ?v= de app.js en index.html). Si es otra,
+     se recarga sola cuando no hay nada a medio escribir; si lo hay, se
+     ofrece con un aviso. */
+  (function () {
+    var RE_VERSION = /<script\s+src="app\.js\?v=([^"&]+)"/;
+    var scriptApp = document.querySelector('script[src^="app.js?v="]');
+    var VERSION = "";
+    if (scriptApp) {
+      var mv = /[?&]v=([^&]+)/.exec(scriptApp.getAttribute("src"));
+      VERSION = mv ? mv[1] : "";
+    }
+    var registro = null;
+    var recargando = false;
+    var pendiente = false;
+    var ultimaComprobacion = 0;
+
+    function puedeRecargarSolo() {
+      var a = document.activeElement;
+      var escribiendo = !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+      return panel.hidden && panelListas.hidden && !escribiendo;
+    }
+
+    function recargar() {
+      if (recargando) return;
+      recargando = true;
+      location.reload();
+    }
+
+    function hayVersionNueva() {
+      if (recargando) return;
+      pendiente = true;
+      if (document.visibilityState !== "hidden" && puedeRecargarSolo()) { recargar(); return; }
+      avisar("Hay una versión nueva de la app.", { etiqueta: "Actualizar", alPulsar: recargar });
+    }
+
+    function versionPublicada() {
+      // cache: "no-store" se salta tanto la caché del navegador como el
+      // service worker, que deja pasar estas peticiones sin tocarlas.
+      var url = location.href.split("#")[0].split("?")[0];
+      return fetch(url, { cache: "no-store", credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.text() : ""; })
+        .then(function (t) {
+          var m = RE_VERSION.exec(t);
+          return m ? m[1] : "";
+        });
+    }
+
+    function comprobar() {
+      if (recargando || !navigator.onLine) return;
+      var ahora = Date.now();
+      if (ahora - ultimaComprobacion < 30000) return;
+      ultimaComprobacion = ahora;
+      if (registro) registro.update().catch(function () {});
+      if (!VERSION) return;
+      versionPublicada().then(function (v) {
+        if (v && v !== VERSION) hayVersionNueva();
+      }).catch(function () { /* sin red: ya se mirará */ });
+    }
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState !== "visible") return;
+      if (pendiente && puedeRecargarSolo()) { recargar(); return; }
+      comprobar();
+    });
+    window.addEventListener("pageshow", function (e) { if (e.persisted) comprobar(); });
+    window.addEventListener("online", comprobar);
+
+    if (!("serviceWorker" in navigator)) return;
+
+    // Si la página ya la servía un service worker, que cambie significa
+    // que se ha instalado uno nuevo. En la primera visita no: ahí solo
+    // está tomando el control por primera vez.
+    var teniaControlador = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!teniaControlador) { teniaControlador = true; return; }
+      hayVersionNueva();
     });
     navigator.serviceWorker.addEventListener("message", function (e) {
       if (!e.data || e.data.tipo !== "actualizacion") return;
-      avisar("Hay una versión nueva de la app.", { etiqueta: "Actualizar", alPulsar: function () { location.reload(); } });
+      hayVersionNueva();
     });
-  }
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+        .then(function (r) { registro = r; })
+        .catch(function () {});
+    });
+  })();
 })();
-
