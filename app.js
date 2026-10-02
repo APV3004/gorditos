@@ -175,6 +175,7 @@
     if (!h || typeof h !== "object") return null;
     var t = Number(h.t);
     var salida = { t: isFinite(t) && t > 0 ? t : 0 };
+    if (h.m) salida.m = true;              // escrito a mano: nunca lo pisa el automático
     if (h.nf) { salida.nf = true; return salida; }
     var oh = texto(h.oh);
     if (!oh) return null;
@@ -666,6 +667,10 @@
   var fSedeDireccion = $("f-sede-direccion");
   var fSedeCarta = $("f-sede-carta");
   var fSedeReserva = $("f-sede-reserva");
+  var fHorario = $("f-horario");
+  var fSedeHorario = $("f-sede-horario");
+  var msgHorario = $("f-horario-msg");
+  var msgSedeHorario = $("f-sede-horario-msg");
   var errNombre = $("f-nombre-error");
   var avisoDup = $("f-dup-warn");
   var avisoCarta = $("f-carta-warn");
@@ -1011,6 +1016,8 @@
     fSedeDireccion.value = s.direccion || "";
     fSedeCarta.value = s.carta || "";
     fSedeReserva.value = s.reserva || "";
+    fSedeHorario.value = horarioParaCampo(s.horario);
+    previaHorario(fSedeHorario, msgSedeHorario, s.horario);
     $("add-sede-btn").textContent = "Guardar este local";
     $("cancel-sede-btn").hidden = false;
     renderSedeList();
@@ -1036,11 +1043,17 @@
     fSedeDireccion.value = "";
     fSedeCarta.value = "";
     fSedeReserva.value = "";
+    fSedeHorario.value = "";
+    fSedeHorario.removeAttribute("aria-invalid");
+    decirCampo(msgSedeHorario, "");
   }
 
   $("add-sede-btn").addEventListener("click", function () {
     var nombre = fSedeNombre.value.trim();
     if (!nombre) { fSedeNombre.focus(); return; }
+    var antes = sedeEditandoIdx !== null && sedesEnEdicion[sedeEditandoIdx] ? sedesEnEdicion[sedeEditandoIdx] : null;
+    var hSede = horarioDelCampo(fSedeHorario, msgSedeHorario, antes && antes.horario);
+    if (hSede.ok === false) return;
     var nueva = normalizarSede({
       nombre: nombre, zona: fSedeZona.value.trim(), direccion: fSedeDireccion.value.trim(),
       carta: fSedeCarta.value, reserva: fSedeReserva.value
@@ -1055,14 +1068,135 @@
         nueva.geo = antigua.geo;
         nueva.horario = antigua.horario;
       }
+      if (hSede.vacio && nueva.horario && nueva.horario.m) nueva.horario = null;   // borraste el tuyo: vuelve el automático
+      if (hSede.ok) nueva.horario = hSede.horario;
       sedesEnEdicion[sedeEditandoIdx] = nueva;
       cancelarEdicionSede();
     } else {
+      if (hSede.ok) nueva.horario = hSede.horario;
       sedesEnEdicion.push(nueva);
       limpiarCamposSede();
     }
     renderSedeList();
     fSedeNombre.focus();
+  });
+
+  /* ---- Horario en el formulario ---- */
+
+  var horarioPanelActual = null;   // el horario que tenía el restaurante al abrir el panel
+
+  function decirCampo(el, mensaje, tipo) {
+    el.textContent = mensaje || "";
+    el.className = "msg" + (tipo === "error" ? " msg-error" : tipo === "aviso" ? " msg-ia" : "");
+    el.hidden = !mensaje;
+  }
+
+  /** Enseña debajo del campo cómo se ha entendido lo escrito. */
+  function previaHorario(campo, msgEl, actual) {
+    var r = textoAHorario(campo.value);
+    if (r.vacio) {
+      if (actual && actual.oh && !actual.m) {
+        decirCampo(msgEl, "Ahora sale de OpenStreetMap: " + osmATexto(actual.oh) + ". Si no es correcto, escribe aquí el bueno.");
+      } else if (actual && actual.nf) {
+        decirCampo(msgEl, "OpenStreetMap no tiene su horario: escríbelo tú o búscalo en su web.");
+      } else {
+        decirCampo(msgEl, "");
+      }
+      campo.removeAttribute("aria-invalid");
+      return r;
+    }
+    if (!r.ok) {
+      decirCampo(msgEl, "No lo entiendo. Escríbelo así: L-V 13-16, 20-23:30; S-D 13-24; lunes cerrado", "error");
+      return r;
+    }
+    campo.removeAttribute("aria-invalid");
+    var ahora = textoHorario(r.oh, new Date());
+    decirCampo(msgEl, "Entendido: " + osmATexto(r.oh) + (ahora ? ". Ahora mismo: " + ahora : "") + ".");
+    return r;
+  }
+
+  /** { vacio } | { ok:false } | { ok:true, horario } listo para guardar. */
+  function horarioDelCampo(campo, msgEl, actual) {
+    var r = previaHorario(campo, msgEl, actual);
+    if (r.vacio) return { vacio: true };
+    if (!r.ok) {
+      campo.setAttribute("aria-invalid", "true");
+      desplazarA(campo, { block: "center", behavior: "smooth" });
+      try { campo.focus({ preventScroll: true }); } catch (e) { campo.focus(); }
+      return { ok: false };
+    }
+    // Si no ha cambiado, se conserva tal cual (con su fecha).
+    if (actual && actual.m && actual.oh === r.oh) return { ok: true, horario: actual };
+    return { ok: true, horario: { oh: r.oh, m: true, t: Date.now() } };
+  }
+
+  function horarioParaCampo(h) {
+    return h && h.m && h.oh ? osmATexto(h.oh) : "";
+  }
+
+  /** Webs donde buscar el horario: sin repetir y solo direcciones web válidas. */
+  function websDe(valores) {
+    var urls = [];
+    valores.forEach(function (v) {
+      v = texto(v);
+      if (!v) return;
+      var res = analizarReserva(v);
+      if (res.tipo !== "url" || !res.valida) return;
+      if (urls.indexOf(res.href) === -1) urls.push(res.href);
+    });
+    return urls.slice(0, 4);
+  }
+
+  function buscarHorarioEnWeb(o) {
+    if (!o.urls.length) {
+      decirCampo(o.msgEl, "Para buscarlo necesito su web: pon la carta o la reserva (o pega el enlace arriba del todo).", "error");
+      return;
+    }
+    o.boton.disabled = true;
+    decirCampo(o.msgEl, "Leyendo su web…");
+    llamarAsistente({ accion: "horario", nombre: o.nombre, local: o.local, direccion: o.direccion, urls: o.urls })
+      .then(function (r) {
+        var oh = texto(r.horario);
+        if (!oh || !interpretarHorario(oh).ok) {
+          decirCampo(o.msgEl, "No he encontrado el horario en su web" + (r.nota ? " (" + r.nota + ")" : "") +
+            ". Puedes escribirlo tú.", "error");
+          return;
+        }
+        o.campo.value = osmATexto(oh);
+        var ahora = textoHorario(oh, new Date());
+        var dominio = "";
+        try { dominio = new URL(r.fuente || o.urls[0]).hostname.replace(/^www\./, ""); } catch (e) {}
+        decirCampo(o.msgEl, "Sacado de " + (dominio || "su web") + ": " + osmATexto(oh) +
+          (ahora ? ". Ahora mismo: " + ahora : "") + ". Revísalo: puede equivocarse. Se guarda al darle a Guardar.", "aviso");
+      })
+      .catch(function (e) {
+        var msg = (e && e.message) || "No se pudo leer su web.";
+        if (/Acción desconocida/.test(msg)) msg = "Falta actualizar la función «asistente» en Supabase con el index.ts nuevo.";
+        decirCampo(o.msgEl, msg, "error");
+      })
+      .then(function () { o.boton.disabled = false; });
+  }
+
+  fHorario.addEventListener("input", function () { previaHorario(fHorario, msgHorario, horarioPanelActual); });
+  fSedeHorario.addEventListener("input", function () {
+    var actual = sedeEditandoIdx !== null && sedesEnEdicion[sedeEditandoIdx] ? sedesEnEdicion[sedeEditandoIdx].horario : null;
+    previaHorario(fSedeHorario, msgSedeHorario, actual);
+  });
+
+  $("f-horario-web").addEventListener("click", function () {
+    buscarHorarioEnWeb({
+      boton: $("f-horario-web"), campo: fHorario, msgEl: msgHorario,
+      nombre: fNombre.value.trim(), local: "", direccion: fDireccion.value.trim(),
+      urls: websDe([$("f-enlace").value, fCarta.value, fReserva.value])
+    });
+  });
+
+  $("f-sede-horario-web").addEventListener("click", function () {
+    buscarHorarioEnWeb({
+      boton: $("f-sede-horario-web"), campo: fSedeHorario, msgEl: msgSedeHorario,
+      nombre: fNombre.value.trim(), local: fSedeNombre.value.trim(), direccion: fSedeDireccion.value.trim(),
+      urls: websDe([fSedeCarta.value, fSedeReserva.value, $("f-enlace").value, fCarta.value, fReserva.value])
+    });
   });
 
   function limpiarAvisosFormulario() {
@@ -1088,6 +1222,8 @@
       fDireccion.value = item.direccion || "";
       fNota.value = item.flag || "";
       sedesEnEdicion = (item.sedes || []).map(function (s) { return Object.assign({}, s); });
+      horarioPanelActual = item.horario || null;
+      fHorario.value = horarioParaCampo(item.horario);
       btnGuardar.textContent = "Guardar cambios";
     } else {
       editandoId = null;
@@ -1095,8 +1231,12 @@
       panel.reset();
       fPrecio.value = "2";
       sedesEnEdicion = [];
+      horarioPanelActual = null;
+      fHorario.value = "";
       btnGuardar.textContent = "Guardar";
     }
+    fHorario.removeAttribute("aria-invalid");
+    previaHorario(fHorario, msgHorario, horarioPanelActual);
     cancelarEdicionSede();
     renderSedeList();
     $("f-enlace").value = "";
@@ -1188,6 +1328,9 @@
       return;
     }
 
+    var hRest = horarioDelCampo(fHorario, msgHorario, horarioPanelActual);
+    if (hRest.ok === false) return;
+
     var an = analizarUrl(fCarta.value);
     var res = analizarReserva(fReserva.value);
     var valores = normalizarRegistro({
@@ -1208,6 +1351,8 @@
         valores.horario = original.horario;     // el horario va ligado al mismo sitio
       }
     }
+    if (hRest.ok) valores.horario = hRest.horario;                                         // el tuyo manda
+    else if (valores.horario && valores.horario.m) valores.horario = null;                // lo borraste: vuelve el automático
     var fila = filaDesde(valores);
     var promesa = eraEdicion
       ? sb.from("restaurantes").update(fila).eq("id", editandoId).select().single()
@@ -1893,6 +2038,103 @@
     return { ok: true, franjas: franjas };
   }
 
+  /* ---- Horario escrito a mano, en español ----
+     Se acepta lo natural: «L-V 13-16, 20-23:30; S-D 13-24; lunes cerrado»,
+     «de lunes a viernes de 13:00 a 16:00», «todos los días 12-24»… y
+     también el formato de OpenStreetMap tal cual. Se guarda siempre en
+     formato OpenStreetMap, que es lo que entiende el resto de la app. */
+
+  var DIA_ES = {
+    l: "Mo", lu: "Mo", lun: "Mo", lunes: "Mo", mo: "Mo",
+    m: "Tu", ma: "Tu", mar: "Tu", martes: "Tu", tu: "Tu",
+    x: "We", mi: "We", mie: "We", miercoles: "We", we: "We",
+    j: "Th", ju: "Th", jue: "Th", jueves: "Th", th: "Th",
+    v: "Fr", vi: "Fr", vie: "Fr", viernes: "Fr", fr: "Fr",
+    s: "Sa", sa: "Sa", sab: "Sa", sabado: "Sa", sabados: "Sa",
+    d: "Su", "do": "Su", dom: "Su", domingo: "Su", domingos: "Su", su: "Su"
+  };
+
+  function horaEs(t) {
+    var m = /^(\d{1,2})(?:[:.h](\d{2}))?h?$/.exec(t);
+    if (!m) return null;
+    var h = Number(m[1]), mi = m[2] ? Number(m[2]) : 0;
+    if (h > 24 || mi > 59 || (h === 24 && mi > 0)) return null;
+    return (h < 10 ? "0" : "") + h + ":" + (mi < 10 ? "0" : "") + mi;
+  }
+
+  /** Lo escrito → { vacio } | { ok:true, oh } | { ok:false } */
+  function textoAHorario(txt) {
+    var bruto = String(txt || "").trim();
+    if (!bruto) return { vacio: true };
+    if (/^24\/7$/.test(bruto)) return { ok: true, oh: "24/7" };
+    // ¿Viene ya en formato OpenStreetMap? Si no se entiende así, se prueba en español.
+    if (/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/.test(bruto) && interpretarHorario(bruto).ok) return { ok: true, oh: bruto };
+
+    var t = bruto.toLowerCase();
+    if (t.normalize) t = t.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    t = t.replace(/[–—]/g, "-")
+         .replace(/\b(todos los dias|todos|cada dia|a diario|diario|toda la semana)\b/g, " l-d ")
+         .replace(/\b(cerrados?|cierra|closed|descansa|descanso)\b/g, " off ")
+         .replace(/\b24 ?(h|horas)\b/g, " 00:00-24:00 ")
+         .replace(/\b(de|del|desde|las|los|el)\b/g, " ")
+         .replace(/\s+(a|al|hasta)\s+/g, "-")
+         .replace(/\s+y\s+/g, ",")
+         .replace(/\s*-\s*/g, "-")
+         .replace(/\s*,\s*/g, ",")
+         .replace(/[ \t]+/g, " ");
+
+    var abiertas = [], cerradas = [];
+    var reglas = t.split(/;|\n|\.\s+(?=[a-z])/);
+    for (var i = 0; i < reglas.length; i++) {
+      var r = reglas[i].replace(/\.$/, "").trim();
+      if (!r) continue;
+      if (/^festivos?\b/.test(r)) continue;                  // festivos: no se guardan
+
+      var dias = "Mo-Su", resto = r;
+      var m = /^([a-z]+(?:[-,][a-z]+)*)\s*:?\s*(.*)$/.exec(r);
+      if (m) {
+        var trozos = m[1].split(","), partes = [], todosDias = true;
+        for (var j = 0; j < trozos.length && todosDias; j++) {
+          var rango = trozos[j].split("-");
+          if (rango.length > 2) { todosDias = false; break; }
+          var a = DIA_ES[rango[0]], b = rango.length === 2 ? DIA_ES[rango[1]] : null;
+          if (!a || (rango.length === 2 && !b)) { todosDias = false; break; }
+          partes.push(b ? a + "-" + b : a);
+        }
+        if (todosDias) { dias = partes.join(","); resto = m[2].trim(); }
+      }
+
+      if (resto === "off") { cerradas.push(dias + " off"); continue; }
+      if (!resto) return { ok: false };
+      var franjas = resto.split(",");
+      var salida = [];
+      for (var k = 0; k < franjas.length; k++) {
+        var ab = franjas[k].trim().split("-");
+        if (ab.length !== 2) return { ok: false };
+        var desde = horaEs(ab[0]), hasta = horaEs(ab[1]);
+        if (!desde || !hasta) return { ok: false };
+        if (hasta === "00:00") hasta = "24:00";
+        salida.push(desde + "-" + hasta);
+      }
+      abiertas.push(dias + " " + salida.join(","));
+    }
+    // Los días cerrados van al final: en este formato, la última regla manda.
+    var oh = abiertas.concat(cerradas).join("; ");
+    return interpretarHorario(oh).ok ? { ok: true, oh: oh } : { ok: false };
+  }
+
+  /** Formato OpenStreetMap → como se escribe en español (para editarlo). */
+  function osmATexto(oh) {
+    var MAPA = { Mo: "L", Tu: "M", We: "X", Th: "J", Fr: "V", Sa: "S", Su: "D" };
+    return String(oh || "").split(";").map(function (r) { return r.trim(); })
+      .filter(function (r) { return r && !/^(PH|SH)\b/i.test(r); })
+      .map(function (r) {
+        return r.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, function (x) { return MAPA[x]; })
+                .replace(/\b(off|closed)\b/gi, "cerrado")
+                .replace(/,(?=\d)/g, ", ");
+      }).join("; ");
+  }
+
   /** Estado ahora mismo: { abierto, cierra } o { abierto:false, abre } */
   function estadoHorario(horario, ahora) {
     var info = interpretarHorario(horario);
@@ -1960,6 +2202,7 @@
   var OVERPASS_PAUSA_MS = typeof window.__GORDITOS_PAUSA_GEO_TEST === "number" ? window.__GORDITOS_PAUSA_GEO_TEST : 2200;
 
   function horarioVigente(h) {
+    if (h && h.m) return true;               // el tuyo no caduca
     return !!(h && h.t && Date.now() - h.t < HORARIO_REINTENTO_MS);
   }
 
@@ -3083,12 +3326,19 @@
       poner(fReserva, p.reserva);
       poner(fNota, p.flag);
       if (p.precio >= 1 && p.precio <= 3) fPrecio.value = String(p.precio);
+      if (p.horario && !fHorario.value.trim() && interpretarHorario(p.horario).ok) {
+        fHorario.value = osmATexto(p.horario);
+        previaHorario(fHorario, msgHorario, horarioPanelActual);
+      }
 
       var añadidas = 0;
       (p.sedes || []).forEach(function (s) {
         var yaEsta = sedesEnEdicion.some(function (x) { return plano(x.nombre) === plano(s.nombre); });
         if (yaEsta) return;
-        sedesEnEdicion.push(normalizarSede(s));
+        var sede = normalizarSede(s);
+        // El horario de su web cuenta como tuyo: lo has revisado al guardar.
+        if (typeof s.horario === "string" && interpretarHorario(s.horario).ok) sede.horario = { oh: s.horario, m: true, t: Date.now() };
+        sedesEnEdicion.push(sede);
         añadidas += 1;
       });
       if (añadidas) {
