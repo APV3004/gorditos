@@ -237,6 +237,9 @@
   .fila-inline { display: flex; gap: 8px; }
   .fila-inline input { flex: 1; min-width: 0; }
   .fila-inline .btn { flex: 0 0 auto; }
+  /* Campo a lo ancho y el botón debajo: en el móvil no cabe al lado */
+  .fila-apilada { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .fila-apilada .btn { min-height: 44px; font-size: 14px; }
   .check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; margin: 0 0 8px; }
   .check input { width: 20px; height: 20px; accent-color: var(--green); flex: 0 0 auto; }
 
@@ -720,6 +723,7 @@
   <div class="login-screen" id="login-screen" hidden>
     <p class="kicker">Gorditos</p>
     <h1 style="margin-bottom:6px;">Entrar</h1>
+    <p class="sub" style="margin-bottom:20px;">Lista compartida — solo vosotros dos.</p>
     <form id="login-form" novalidate>
       <div class="field">
         <label for="login-email">Email</label>
@@ -887,10 +891,21 @@
              enterkeyhint="done" maxlength="160">
     </div>
 
+    <div class="field">
+      <label for="f-horario">Horario <span class="hint">— opcional; si lo dejas vacío se busca solo</span></label>
+      <div class="fila-apilada">
+        <input type="text" id="f-horario" placeholder="Ej. M-D 13-16, 20-23:30; lunes cerrado"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="200" aria-describedby="f-horario-msg">
+        <button class="btn btn-secondary" id="f-horario-web" type="button">Buscar en su web</button>
+      </div>
+    </div>
+    <p class="msg" id="f-horario-msg" aria-live="polite" hidden></p>
+
     <details class="tools" id="sedes-details">
       <summary>Varios locales <span class="hint">— opcional, solo si tiene más de uno</span></summary>
       <div class="tools-body">
-        <p class="hint" style="margin:0 0 2px;">Si añades más de un local, la tarjeta muestra uno por cada zona que coincida con el filtro que tengas puesto (o todos, si no filtras). Con uno solo, va directo, sin preguntar. Los datos de arriba (carta, reserva, dirección) se ignoran si hay locales aquí.</p>
+        <p class="hint" style="margin:0 0 2px;">Si añades más de un local, la tarjeta muestra uno por cada zona que coincida con el filtro que tengas puesto (o todos, si no filtras). Con uno solo, va directo, sin preguntar. Los datos de arriba (carta, reserva, dirección, horario) se ignoran si hay locales aquí.</p>
 
         <ul class="sede-list" id="sede-list"></ul>
 
@@ -919,6 +934,15 @@
           <input type="text" id="f-sede-reserva" placeholder="Ej. 915 00 00 00" maxlength="500"
                  autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
+        <div class="field">
+          <label for="f-sede-horario">Horario <span class="hint">— opcional; si lo dejas vacío se busca solo</span></label>
+          <div class="fila-apilada">
+            <input type="text" id="f-sede-horario" placeholder="Ej. L-V 13-16, 20-23:30" maxlength="200"
+                   autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="f-sede-horario-msg">
+            <button class="btn btn-secondary" id="f-sede-horario-web" type="button">Buscar en su web</button>
+          </div>
+        </div>
+        <p class="msg" id="f-sede-horario-msg" aria-live="polite" hidden></p>
         <div class="tools-row">
           <button class="btn btn-secondary" id="add-sede-btn" type="button">＋ Añadir este local</button>
           <button class="btn btn-secondary" id="cancel-sede-btn" type="button" hidden>Cancelar</button>
@@ -1051,6 +1075,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=24"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>
