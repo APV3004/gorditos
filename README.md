@@ -131,7 +131,25 @@ solo ve las listas de las que es miembro: lo garantiza la base de datos
 
 ## Horarios de apertura
 
-Se sacan de OpenStreetMap (servicio Overpass): para cada local ya
+**El tuyo manda.** En el formulario (y en el de cada local) hay un campo
+«Horario». Se escribe como lo dirías:
+
+    L-V 13-16, 20-23:30; S-D 13-24; lunes cerrado
+    de martes a domingo de 13:00 a 16:00 y de 20:00 a 23:30
+    todos los días 12-24
+
+Debajo te dice cómo lo ha entendido («Entendido: …») y si ahora está
+abierto. Si no lo entiende, no deja guardar. Lo que escribes tú no lo
+pisa nunca el horario automático; si borras el campo, vuelve el automático.
+
+**«Buscar en su web»** lee la web del restaurante (la de la carta, la de
+reservas o el enlace que hayas pegado arriba, y su portada) con Gemini y
+rellena el campo para que lo revises. No guarda nada hasta que le das a
+Guardar. «Rellenar» desde un enlace también trae el horario si la página
+lo dice. Gratis con la clave de Gemini que ya tienes; necesita la función
+`asistente` actualizada (ver abajo).
+
+**Automático:** si no escribes nada, se sacan de OpenStreetMap (servicio Overpass): para cada local ya
 situado en el mapa, se busca un local de comida con ese mismo nombre a
 menos de 80 m y se toma su horario publicado. Se guarda en Supabase y
 se refresca cada mes. Necesita la columna `horario`
@@ -169,3 +187,9 @@ esté en config.js (que es público).
 Nada de lo que propone se guarda solo: rellena el formulario o los
 filtros, y tú confirmas. Si la función no está desplegada, la app lo
 dice y todo lo demás sigue funcionando igual.
+
+### Actualizar la función `asistente`
+
+Cada vez que cambie `supabase/functions/asistente/index.ts`: Supabase →
+Edge Functions → `asistente` → Code → borra todo, pega el nuevo → Deploy.
+Los secretos (`GEMINI_API_KEY`…) se quedan como están.
