@@ -58,6 +58,18 @@
 
   var menosMovimiento = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 
+  // Lo que se despliega al pulsar baja un poco desde quien lo abre, con la
+  // misma curva que los paneles. Solo se llama desde el clic: si fuera CSS
+  // de entrada, se repetiría cada vez que la lista se vuelve a pintar.
+  function aparecer(el) {
+    if (!el || typeof el.animate !== "function") return;
+    var quieto = menosMovimiento && menosMovimiento.matches;
+    el.animate(quieto
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: "translateY(-6px)" }, { opacity: 1, transform: "none" }],
+      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+  }
+
   function desplazarA(el, opciones) {
     if (!el || typeof el.scrollIntoView !== "function") return;
     if (opciones && menosMovimiento && menosMovimiento.matches) opciones.behavior = "auto";
@@ -757,7 +769,7 @@
         metaLight.media = "not all";
         metaDark.media = "not all";
         metaManual.media = "all";
-        metaManual.content = (t === "dark") ? "#171712" : "#F1EEE2";
+        metaManual.content = (t === "dark") ? "#000000" : "#F2F2F7";
       }
       if (typeof actualizarTeselas === "function") actualizarTeselas();
       btn.textContent = "Tema: " + nombres[t];
@@ -1669,6 +1681,7 @@
         abierto = !abierto;
         if (abierto) idsSedesAbiertas[d.id] = true; else delete idsSedesAbiertas[d.id];
         grupo.hidden = !abierto;
+        if (abierto) aparecer(grupo);
         pintarToggle();
       });
 
@@ -1759,6 +1772,7 @@
       if (!abierto) {
         idsExpandidosBorrado[d.id] = true;
         confirmacion.hidden = false;
+        aparecer(confirmacion);
         btnBorrar.setAttribute("aria-expanded", "true");
         si.focus();
       } else {
@@ -1805,7 +1819,6 @@
       vacio.hidden = false;
       vacio.replaceChildren();
       var p = document.createElement("p");
-      p.style.margin = "0";
       if (data.length === 0) {
         p.textContent = "La lista está vacía. Añade el primer sitio al que quieras volver.";
         var b = document.createElement("button");
