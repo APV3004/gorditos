@@ -160,8 +160,15 @@
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: contain;
-    /* el cambio claro ↔ oscuro no es un fogonazo */
-    transition: background-color var(--dur-ui) ease, color var(--dur-ui) ease;
+  }
+  /* El cambio claro ↔ oscuro no es un fogonazo: fundido de toda la
+     pantalla con View Transitions; sin ellas, al menos el fondo y el texto */
+  ::view-transition-old(root), ::view-transition-new(root) {
+    animation-duration: 0.35s;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  @supports not (view-transition-name: none) {
+    body { transition: background-color var(--dur-ui) ease, color var(--dur-ui) ease; }
   }
 
   button, input, select, textarea { font-family: inherit; }
@@ -196,6 +203,7 @@
   }
 
   h1 {
+    transform-origin: left bottom;
     font-weight: 700;
     font-size: var(--t-large);
     line-height: 1.1;
@@ -237,19 +245,11 @@
   /* ---- Selector de lista y panel de gestión ---- */
   .lista-bar { display: flex; align-items: center; gap: var(--s3); margin: calc(var(--s1) * -1) 0 var(--s4); }
   .lista-bar label { font-size: var(--t-subhead); color: var(--label-2); white-space: nowrap; }
-  .pl-sub { font-weight: 600; font-size: var(--t-body); margin: var(--s5) 0 var(--s2); }
-  .pl-etiqueta { margin: var(--s3) 0 var(--s2); }
-  .pl-anadir { margin-top: var(--s3); }
-  .nota-campo { margin: var(--s2) 0 0; }
   .nota-intro { margin: 0 var(--s4) var(--s1); }
-  .msg-pie { margin: var(--s4) 0 0; }
   .fila-inline { display: flex; gap: var(--s2); }
   .fila-inline input { flex: 1; min-width: 0; }
   .fila-inline .btn { flex: 0 0 auto; }
   /* Campo a lo ancho y el botón debajo: en el móvil no cabe al lado */
-  .fila-apilada { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); }
-  .check { display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); font-size: var(--t-subhead); margin: 0 0 var(--s2); }
-  .check input { width: 1.25rem; height: 1.25rem; accent-color: var(--tint-solid); flex: 0 0 auto; }
 
   .login-screen { max-width: 340px; margin: 15vh auto 0; padding: 0 var(--s1); }
   .login-screen h1 { margin: 0 0 var(--s2); }
@@ -287,6 +287,7 @@
     user-select: none; -webkit-user-select: none;
   }
   .hoja.arrastrando .hoja-cabeza { cursor: grabbing; }
+  .hoja.con-teclado { border-radius: 20px; }
   .hoja-asa {
     position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
     width: 36px; height: 5px; border-radius: 3px; background: var(--label-3);
@@ -394,10 +395,6 @@
     }
   }
 
-  .btn-destructivo {
-    width: 100%; margin-top: var(--s8);
-    background: var(--surface); color: var(--red); font-size: var(--t-body);
-  }
 
   .field { display: flex; flex-direction: column; gap: var(--s1); margin-bottom: var(--s3); }
   .field label { font-size: var(--t-footnote); color: var(--label-2); font-weight: 500; letter-spacing: 0.01em; }
@@ -406,7 +403,6 @@
   .field input,
   .field select,
   input.search,
-  select#sort,
   select#lista-sel,
   textarea {
     font-size: var(--t-body);
@@ -422,7 +418,7 @@
     appearance: none;
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .field select, select#sort, select#lista-sel {
+  .field select, select#lista-sel {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7.5 9.5 4.5-4.5 4.5 4.5M7.5 14.5l4.5 4.5 4.5-4.5'/%3E%3C/svg%3E");
     background-position: right 10px center;
     background-size: 16px 16px;
@@ -430,7 +426,7 @@
     padding-right: var(--s8);
   }
   select#lista-sel { flex: 1; min-width: 0; width: auto; }
-  .field input:focus, .field select:focus, input.search:focus, select#sort:focus,
+  .field input:focus, .field select:focus, input.search:focus,
   select#lista-sel:focus, textarea:focus {
     background-color: var(--surface);
     border-color: var(--tint);
@@ -439,9 +435,6 @@
   .field input[aria-invalid="true"] { border-color: var(--red); }
   ::placeholder { color: var(--label-3); opacity: 1; }
 
-  .field-row { display: flex; gap: var(--s3); }
-  .field-row .field { flex: 1; min-width: 0; }
-  .field-row .field.precio { flex: 0 0 7.25rem; }
 
 
   .btn {
@@ -529,9 +522,30 @@
   }
   .chip[aria-pressed="true"] { background: var(--tint-solid); color: #FFFFFF; }
 
-  .sort-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s3); }
-  .sort-row label { font-size: var(--t-subhead); color: var(--label-2); white-space: nowrap; }
-  select#sort { width: auto; flex: 1 1 8rem; }
+  /* Fila de acciones rápidas: Filtros, Abierto ahora, Sorpréndeme */
+  .acciones-rapidas { align-items: center; }
+  .filtros-btn, .chip-accion { display: inline-flex; align-items: center; gap: 0.375rem; }
+  .filtros-btn svg { width: 1.125rem; height: 1.125rem; flex: none; color: var(--tint); }
+  .filtros-btn.activo { background: var(--tint-fill); color: var(--tint); }
+  .insignia {
+    min-width: 1.25rem; height: 1.25rem; padding: 0 0.375rem; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--tint-solid); color: #FFFFFF;
+    font-size: var(--t-caption); font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+
+  /* Dentro de la hoja de filtros, los chips se reparten en varias líneas */
+  .filter-block.en-hoja { margin-top: var(--s5); }
+  .filter-block.en-hoja:first-child { margin-top: var(--s2); }
+  .filter-block.en-hoja .filter-head { padding: 0 var(--s4); }
+  .filter-block.en-hoja .filter-label { text-transform: uppercase; letter-spacing: 0.02em; font-weight: 400; }
+  .filter-block.en-hoja .chip-row {
+    flex-wrap: wrap; overflow: visible; margin: 0; padding: 0;
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .filter-block.en-hoja .chip { background: var(--surface); }
+  .filter-block.en-hoja .chip[aria-pressed="true"] { background: var(--tint-solid); }
+  .hoja-sub { display: block; font-size: var(--t-footnote); font-weight: 400; color: var(--label-2); }
 
   .dado-btn {
     flex: 0 0 auto;
@@ -596,15 +610,9 @@
   }
   .result-line p { margin: 0; }
   .clear-filters {
-    background: none;
-    border: none;
-    color: var(--tint);
-    font-size: var(--t-subhead);
-    font-weight: 500;
-    cursor: pointer;
-    padding: var(--s3) 0;
-    white-space: nowrap;
+    width: var(--tap); padding: 0; justify-content: center; color: var(--label-2);
   }
+  .clear-filters svg { width: 1rem; height: 1rem; }
 
   /* ---- Tarjetas ---- */
   /* Recorta en horizontal lo que asoma al deslizar una tarjeta; el
@@ -623,7 +631,48 @@
     transition: box-shadow 0.2s ease;
     position: relative;
     touch-action: pan-y;           /* el scroll vertical es del navegador; el horizontal, nuestro */
+    -webkit-touch-callout: none;   /* la pulsación larga abre nuestro menú, no el del sistema */
   }
+  @media (hover: none) {
+    li.card { -webkit-user-select: none; user-select: none; }
+  }
+  li.card.alzada {
+    z-index: 56;
+    transform: scale(1.03);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    transition: transform var(--dur-ui) var(--ease-out), box-shadow var(--dur-ui) var(--ease-out);
+  }
+
+  /* ---- Menú contextual ---- */
+  .menu-capa {
+    position: fixed; inset: 0; z-index: 55;
+    background: light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.35));
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  .menu-contextual {
+    position: fixed; z-index: 57;
+    width: 15.5rem;
+    background: var(--material);
+    -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+  .menu-item {
+    position: relative;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+    width: 100%; min-height: var(--tap); padding: 0 var(--s4);
+    border: none; background: transparent; cursor: pointer; text-align: left;
+    font: inherit; font-size: var(--t-body); color: var(--label); text-decoration: none;
+  }
+  .menu-item + .menu-item::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0;
+    height: 1px; background: var(--separator); transform: scaleY(0.5);
+  }
+  .menu-item svg { width: 1.25rem; height: 1.25rem; flex: none; }
+  .menu-item.peligro { color: var(--red); }
+  .menu-item:active, .menu-item:focus-visible { background: var(--fill); outline: none; }
+  .menu-sep { height: 8px; background: var(--fill); }
 
   /* Acciones al deslizar: viven a la derecha de la tarjeta y entran con ella */
   .card-deslizar {
@@ -996,11 +1045,11 @@
   .icon-btn-fuerte:active, .btn-primary:active, .chip[aria-pressed="true"]:active,
   .card-deslizar button:active { opacity: 0.85; }
   /* Los botones de solo texto no escalan: se atenúan */
-  .card-actions button, .clear-filters, .empty button, .toast button, .hoja-boton, .boton-fila,
+  .card-actions button, .empty button, .toast button, .hoja-boton, .boton-fila,
   .sede-list .sede-quitar, .sede-list .sede-editar, details.tools summary {
     transition: opacity var(--dur-press) ease-out;
   }
-  .card-actions button:active, .clear-filters:active, .empty button:active,
+  .card-actions button:active, .empty button:active,
   .toast button:active, .hoja-boton:active, .boton-fila:active, .sede-list .sede-quitar:active, .sede-list .sede-editar:active,
   details.tools summary:active {
     opacity: 0.5;
@@ -1016,7 +1065,7 @@
     .sedes-toggle:hover, .marca-btn[aria-pressed="false"]:hover,
     .chip[aria-pressed="false"]:hover { background: var(--fill-strong); }
     .icon-btn-fuerte:hover, .btn-primary:hover { opacity: 0.9; }
-    .card-actions button:hover, .clear-filters:hover, .empty button:hover,
+    .card-actions button:hover, .empty button:hover,
     .sede-list .sede-editar:hover, details.tools summary:hover, .hoja-boton:hover, .boton-fila:hover { opacity: 0.7; }
     .fila-boton:hover { background: var(--fill); }
   }
@@ -1025,6 +1074,7 @@
      escalados, pero se conservan los fundidos y cambios de color. */
   @media (prefers-reduced-motion: reduce) {
     :root { --press-scale: 1; --enter-shift: 0px; --toast-scale: 1; --empuje: 0; }
+    li.card.alzada { transform: none; }
     .scrim { transition: opacity 200ms ease; }
     .toast.saliendo { transform: translate(-50%, 0); }
     @starting-style { .toast { transform: translate(-50%, 0); } }
@@ -1034,6 +1084,8 @@
   }
 
   @media (prefers-reduced-transparency: reduce) {
+    .menu-contextual { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .menu-capa { -webkit-backdrop-filter: none; backdrop-filter: none; }
     .ficha-mapa { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
     .toast { background: light-dark(#1D1D1F, #3A3A3C); -webkit-backdrop-filter: none; backdrop-filter: none; }
     .result-line, .barra-titulo { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -1048,7 +1100,7 @@
     .result-line::after { display: none; }
     .hoja, li.card, .grupo, .sede-list, .sede-block, .mapa { border: 1px solid var(--separator); }
     .fila-g + .fila-g::before, .sede-list li + li::before { transform: none; background: var(--label-2); }
-    .field input, .field select, input.search, select#sort, select#lista-sel, textarea,
+    .field input, .field select, input.search, select#lista-sel, textarea,
     .btn-secondary, .chip, .dado-btn, .card-link, .icon-btn, .marca-btn, .sedes-toggle { border: 1px solid var(--label-2); }
   }
 
@@ -1126,57 +1178,19 @@
       </div>
     </div>
 
-    <div class="filter-block">
-      <div class="filter-head">
-        <span class="filter-label" id="lbl-zona">Zona</span>
-        <button class="filter-clear" id="clear-zonas" type="button" hidden aria-label="Quitar los filtros de zona"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
-      </div>
-      <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
-    </div>
-
-    <div class="filter-block">
-      <div class="filter-head">
-        <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
-        <button class="filter-clear" id="clear-tipos" type="button" hidden aria-label="Quitar los filtros de tipo de cocina"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
-      </div>
-      <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
-    </div>
-
-    <div class="filter-block">
-      <div class="filter-head">
-        <span class="filter-label" id="lbl-precio">Precio</span>
-        <button class="filter-clear" id="clear-precios" type="button" hidden aria-label="Quitar los filtros de precio"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
-      </div>
-      <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
-    </div>
-
-    <div class="filter-block" id="marcas-bloque" hidden>
-      <div class="filter-head">
-        <span class="filter-label" id="lbl-marcas">Mis marcas</span>
-        <button class="filter-clear" id="clear-marcas" type="button" hidden aria-label="Quitar los filtros de mis marcas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
-      </div>
-      <div class="chip-row" id="marca-chips" role="group" aria-labelledby="lbl-marcas"></div>
-    </div>
-
-    <div class="sort-row">
-      <label for="sort">Ordenar por</label>
-      <select id="sort">
-        <option value="nombre">Nombre (A–Z)</option>
-        <option value="zona">Zona</option>
-        <option value="tipo">Tipo de cocina</option>
-        <option value="precio">Precio (menor a mayor)</option>
-        <option value="recientes">Añadidos recientemente</option>
-        <option value="cerca">Más cerca de mí</option>
-      </select>
+    <!-- Lo de cada día a mano; el resto de filtros, en su hoja -->
+    <div class="chip-row acciones-rapidas">
+      <button class="chip filtros-btn" id="filtros-btn" type="button" aria-haspopup="dialog"
+              aria-controls="panel-filtros" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg><span>Filtros</span><span class="insignia" id="filtros-n" hidden></span></button>
+      <button class="chip clear-filters" id="clear-filters" type="button" hidden aria-label="Quitar todos los filtros y la búsqueda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"></path></svg></button>
       <button class="chip" id="abierto-chip" type="button" aria-pressed="false">Abierto ahora</button>
-      <button class="dado-btn" id="random-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"></rect><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"></circle></svg><span>Sorpréndeme</span></button>
+      <button class="dado-btn chip-accion" id="random-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"></rect><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"></circle></svg><span>Sorpréndeme</span></button>
     </div>
   </div>
 
   <div class="result-line">
     <p id="result-count" aria-live="polite"></p>
     <div class="result-acciones">
-      <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
       <div class="segmentado vista-toggle" role="group" aria-label="Cómo ver los restaurantes">
         <button type="button" id="vista-lista" aria-pressed="true">Lista</button>
         <button type="button" id="vista-mapa" aria-pressed="false">Mapa</button>
@@ -1228,6 +1242,63 @@
 
 <!-- Hojas inferiores: fuera de .wrap para que el fondo pueda echarse atrás -->
 <div class="scrim" id="scrim" hidden></div>
+
+<section class="hoja" id="panel-filtros" role="dialog" aria-modal="true" aria-labelledby="pf-titulo" hidden>
+  <div class="hoja-cabeza">
+    <span class="hoja-asa" aria-hidden="true"></span>
+    <button class="hoja-boton" id="pf-restablecer" type="button">Restablecer</button>
+    <h2 id="pf-titulo">Filtros<span class="hoja-sub" id="pf-cuenta"></span></h2>
+    <button class="hoja-boton fuerte" id="pf-cerrar" type="button">OK</button>
+  </div>
+  <div class="hoja-cuerpo">
+    <div class="filter-block en-hoja">
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-zona">Zona</span>
+        <button class="filter-clear" id="clear-zonas" type="button" hidden aria-label="Quitar los filtros de zona"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
+      </div>
+      <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
+    </div>
+
+    <div class="filter-block en-hoja">
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
+        <button class="filter-clear" id="clear-tipos" type="button" hidden aria-label="Quitar los filtros de tipo de cocina"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
+      </div>
+      <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
+    </div>
+
+    <div class="filter-block en-hoja">
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-precio">Precio</span>
+        <button class="filter-clear" id="clear-precios" type="button" hidden aria-label="Quitar los filtros de precio"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
+      </div>
+      <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
+    </div>
+
+    <div class="filter-block en-hoja" id="marcas-bloque" hidden>
+      <div class="filter-head">
+        <span class="filter-label" id="lbl-marcas">Mis marcas</span>
+        <button class="filter-clear" id="clear-marcas" type="button" hidden aria-label="Quitar los filtros de mis marcas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
+      </div>
+      <div class="chip-row" id="marca-chips" role="group" aria-labelledby="lbl-marcas"></div>
+    </div>
+
+    <h3 class="grupo-titulo">Orden</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="sort">Ordenar por</label>
+        <select id="sort">
+          <option value="nombre">Nombre (A–Z)</option>
+          <option value="zona">Zona</option>
+          <option value="tipo">Tipo de cocina</option>
+          <option value="precio">Precio (menor a mayor)</option>
+          <option value="recientes">Añadidos recientemente</option>
+          <option value="cerca">Más cerca de mí</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section class="hoja" id="panel-listas" role="dialog" aria-modal="true" aria-labelledby="pl-titulo" hidden>
   <div class="hoja-cabeza">
@@ -1462,6 +1533,10 @@
   </div>
 </form>
 
+<!-- Menú contextual de las tarjetas (mantener pulsada) -->
+<div class="menu-capa" id="menu-capa" hidden></div>
+<div class="menu-contextual" id="menu-contextual" role="menu" hidden></div>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden>
   <span id="toast-text"></span>
   <button type="button" id="toast-action" hidden></button>
@@ -1470,6 +1545,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>

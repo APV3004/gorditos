@@ -825,6 +825,11 @@
     var api;
 
     function quieto() { return !!(menosMovimiento && menosMovimiento.matches); }
+    // Con «medio», la hoja abre a media pantalla y se sube a completa
+    // arrastrando (o al escribir en ella). Posición = desplazamiento hacia abajo.
+    function posMedia() {
+      return opciones.medio ? Math.max(0, altura - Math.round(window.innerHeight * 0.55)) : 0;
+    }
 
     function pintar(y) {
       el.style.transform = "translate3d(0," + y.toFixed(2) + "px,0)";
@@ -852,18 +857,20 @@
       envoltura.inert = true;
       altura = el.offsetHeight;
       if (quieto()) {
-        muelle.fijar(0);
+        muelle.fijar(posMedia());
         if (estabaOculta && el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
         return;
       }
       if (estabaOculta) muelle.fijar(altura);
-      muelle.ir(0, { zeta: 1, respuesta: 0.38 });
+      muelle.ir(estabaOculta ? posMedia() : Math.min(muelle.valor(), posMedia()), { zeta: 1, respuesta: 0.38 });
     }
 
     function terminar() {
       fundido = null;
       el.hidden = true;
       el.style.transform = "";
+      el.style.top = ""; el.style.bottom = "";
+      el.classList.remove("con-teclado");
       if (hojaActiva === api) {
         hojaActiva = null;
         scrim.hidden = true;
@@ -918,15 +925,20 @@
       if (performance.now() - b.t > 80) v = 0;          // se paró antes de soltar
       arrastre = null;
       el.classList.remove("arrastrando");
-      var y = muelle.valor();
-      // Con un lanzamiento claro manda el sentido; si no, adónde iría a parar
-      var cerrarla = Math.abs(v) > 400 ? v > 0 : y + proyectar(v) > altura * 0.5;
-      if (cerrarla) {
+      // Se proyecta adónde iría a parar el lanzamiento y se elige el punto
+      // de anclaje más cercano a esa proyección (completa, media o cerrada)
+      var proyectado = muelle.valor() + proyectar(v);
+      var anclas = opciones.medio ? [0, posMedia(), altura] : [0, altura];
+      var destino = anclas[0];
+      for (var i = 1; i < anclas.length; i++) {
+        if (Math.abs(anclas[i] - proyectado) < Math.abs(destino - proyectado)) destino = anclas[i];
+      }
+      if (destino === altura) {
         velocidadSalida = v;
         opciones.alDescartar();
       } else {
-        // Vuelve a su sitio con la velocidad del dedo y un leve rebote
-        muelle.ir(0, { zeta: 0.8, respuesta: 0.3, velocidad: v });
+        // Va a su sitio con la velocidad del dedo y un leve rebote
+        muelle.ir(destino, { zeta: 0.8, respuesta: 0.3, velocidad: v });
       }
     }
 
@@ -944,7 +956,7 @@
     var toque = null;
     cuerpo.addEventListener("touchstart", function (e) {
       toque = e.touches.length === 1
-        ? { x: e.touches[0].clientX, y: e.touches[0].clientY, arriba: cuerpo.scrollTop <= 0 }
+        ? { x: e.touches[0].clientX, y: e.touches[0].clientY, arriba: cuerpo.scrollTop <= 0, suelta: muelle.valor() > 1 }
         : null;
     }, { passive: true });
     cuerpo.addEventListener("touchmove", function (e) {
@@ -952,6 +964,13 @@
       var t = e.touches[0];
       if (arrastre) { e.preventDefault(); mover(t.clientY); return; }
       var dy = t.clientY - toque.y, dx = t.clientX - toque.x;
+      if (toque.suelta) {                       // a media altura: subir o bajar la hoja
+        if (Math.abs(dy) < 10 && Math.abs(dx) < 10) { e.preventDefault(); return; }
+        if (Math.abs(dx) > Math.abs(dy)) { toque = null; return; }
+        e.preventDefault();
+        empezar(t.clientY);
+        return;
+      }
       if (!toque.arriba || cuerpo.scrollTop > 0 || dy < 0 || Math.abs(dx) > Math.abs(dy)) {
         if (Math.abs(dy) > 10 || Math.abs(dx) > 10) toque = null;
         return;
@@ -968,8 +987,36 @@
       cabeza.classList.toggle("con-scroll", cuerpo.scrollTop > 0);
     }, { passive: true });
 
-    api = { abrir: abrir, cerrar: cerrar, descartar: function () { opciones.alDescartar(); } };
+    el.addEventListener("focusin", function (e) {
+      if (opciones.medio && !arrastre && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && muelle.valor() > 1) {
+        muelle.ir(0, { zeta: 1, respuesta: 0.35 });
+      }
+    });
+
+    api = { el: el, abrir: abrir, cerrar: cerrar, descartar: function () { opciones.alDescartar(); } };
     return api;
+  }
+
+  // Con el teclado abierto, iOS no encoge la página: solo la parte visible
+  // (visualViewport). La hoja se ajusta a esa parte para que el campo en
+  // el que escribes no quede debajo del teclado.
+  if (window.visualViewport) {
+    var vv = window.visualViewport;
+    var ajustarAlTeclado = function () {
+      if (!hojaActiva) return;
+      var el = hojaActiva.el;
+      var tapado = window.innerHeight - vv.height;
+      if (tapado > 120) {
+        el.style.top = Math.round(vv.offsetTop + 10) + "px";
+        el.style.bottom = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height)) + "px";
+        el.classList.add("con-teclado");
+      } else if (el.classList.contains("con-teclado")) {
+        el.style.top = ""; el.style.bottom = "";
+        el.classList.remove("con-teclado");
+      }
+    };
+    vv.addEventListener("resize", ajustarAlTeclado);
+    vv.addEventListener("scroll", ajustarAlTeclado);
   }
 
   scrim.addEventListener("click", function () { if (hojaActiva) hojaActiva.descartar(); });
@@ -989,6 +1036,18 @@
     barra.addEventListener("click", function () {
       window.scrollTo({ top: 0, behavior: menosMovimiento && menosMovimiento.matches ? "auto" : "smooth" });
     });
+    // Al estirar la página arriba del todo (rebote de iOS), el título
+    // grande crece un poco, anclado a la izquierda, como en las apps de iOS
+    var rafTitulo = 0;
+    window.addEventListener("scroll", function () {
+      if (rafTitulo) return;
+      rafTitulo = requestAnimationFrame(function () {
+        rafTitulo = 0;
+        var y = window.scrollY;
+        var estirar = y < 0 && !(menosMovimiento && menosMovimiento.matches);
+        h1.style.transform = estirar ? "scale(" + (1 + Math.min(-y, 120) / 900).toFixed(4) + ")" : "";
+      });
+    }, { passive: true });
   })();
 
   /* ---- El aviso flotante se descarta deslizándolo hacia abajo ---- */
@@ -1051,7 +1110,8 @@
     var actual = leerCrudo(CLAVE_TEMA);
     if (ciclo.indexOf(actual) === -1) actual = "auto";
 
-    function aplicar(t) {
+    function aplicar(t, animar) {
+      if (animar) { conFundido(function () { aplicar(t, false); }); return; }
       actual = t;
       if (t === "auto") {
         document.documentElement.removeAttribute("data-theme");
@@ -1072,7 +1132,7 @@
       escribirCrudo(CLAVE_TEMA, t);
     }
     for (var i = 0; i < botones.length; i++) {
-      botones[i].addEventListener("click", function () { aplicar(this.getAttribute("data-tema")); });
+      botones[i].addEventListener("click", function () { aplicar(this.getAttribute("data-tema"), true); });
     }
     aplicar(actual);
   })();
@@ -1270,7 +1330,59 @@
     guardarFiltros();
     refrescarFuentesChips();
     render();
-    $("search").focus();
+    // El botón desaparece al no quedar filtros: el foco pasa a «Filtros»
+    // (no a la búsqueda, que en el móvil abriría el teclado)
+    $("filtros-btn").focus({ preventScroll: true });
+  });
+
+
+  /* ============================================================
+     12 bis. Hoja de filtros
+     Zona, tipo, precio, marcas y orden viven aquí; en la pantalla queda
+     lo de cada día. Abre a media altura: detrás se ve cómo cambia la lista.
+     ============================================================ */
+
+  var panelFiltros = $("panel-filtros");
+  var btnFiltros = $("filtros-btn");
+
+  function cuantosFiltros() {
+    return state.zonas.length + state.tipos.length + state.precios.length + state.marcas.length;
+  }
+  function pintarEstadoFiltros(visibles) {
+    var n = cuantosFiltros();
+    var insignia = $("filtros-n");
+    insignia.textContent = n ? String(n) : "";
+    insignia.hidden = !n;
+    btnFiltros.classList.toggle("activo", n > 0);
+    btnFiltros.setAttribute("aria-label", n ? "Filtros, " + n + (n === 1 ? " elegido" : " elegidos") : "Filtros");
+    $("pf-cuenta").textContent = visibles + (visibles === 1 ? " restaurante" : " restaurantes");
+    $("pf-restablecer").disabled = !n;
+    Array.prototype.forEach.call(document.querySelectorAll(".chip-row"), bordesChips);
+  }
+
+  function abrirFiltros() {
+    hojaFiltros.abrir();
+    btnFiltros.setAttribute("aria-expanded", "true");
+    try { $("pf-cerrar").focus({ preventScroll: true }); } catch (e) {}
+  }
+  function cerrarFiltros(devolverFoco) {
+    btnFiltros.setAttribute("aria-expanded", "false");
+    hojaFiltros.cerrar(function () {
+      if (devolverFoco) btnFiltros.focus({ preventScroll: true });
+    });
+  }
+  var hojaFiltros = crearHoja(panelFiltros, { medio: true, alDescartar: function () { cerrarFiltros(true); } });
+  btnFiltros.addEventListener("click", abrirFiltros);
+  $("pf-cerrar").addEventListener("click", function () { cerrarFiltros(true); });
+  $("pf-restablecer").addEventListener("click", function () {
+    state.zonas = []; state.tipos = []; state.precios = []; state.marcas = [];
+    firmasChips = {};
+    guardarFiltros();
+    refrescarFuentesChips();
+    render();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !panelFiltros.hidden) cerrarFiltros(true);
   });
 
   /* ============================================================
@@ -1617,6 +1729,36 @@
     cerrarDeslizado();
   });
 
+
+  /* Validación en línea: el aviso de duplicado sale al escribir el nombre
+     (no al pulsar Guardar), y los avisos de enlace se quitan en cuanto
+     el texto ya es válido. */
+  var temporizadorDup = null;
+  function comprobarDuplicado() {
+    var nombre = fNombre.value.trim();
+    var dup = nombre ? buscarDuplicado(nombre, editandoId) : null;
+    if (dup) {
+      avisoDup.textContent = "Ya tenéis «" + dup.nombre + "» en " + dup.zona + ". Si es otro sitio, puedes guardarlo igualmente.";
+      avisoDup.hidden = false;
+      pendienteConfirmarDuplicado = true;      // ya avisado: Guardar no vuelve a preguntar
+    } else {
+      avisoDup.hidden = true;
+      pendienteConfirmarDuplicado = false;
+    }
+  }
+  fNombre.addEventListener("input", function () {
+    if (fNombre.value.trim()) { errNombre.hidden = true; fNombre.removeAttribute("aria-invalid"); }
+    clearTimeout(temporizadorDup);
+    temporizadorDup = setTimeout(comprobarDuplicado, 350);
+  });
+  fNombre.addEventListener("blur", function () { clearTimeout(temporizadorDup); comprobarDuplicado(); });
+  fCarta.addEventListener("input", function () {
+    if (!avisoCarta.hidden && analizarUrl(fCarta.value).valida) avisoCarta.hidden = true;
+  });
+  fReserva.addEventListener("input", function () {
+    if (!avisoReserva.hidden && analizarReserva(fReserva.value).valida) avisoReserva.hidden = true;
+  });
+
   fCarta.addEventListener("blur", function () {
     var an = analizarUrl(fCarta.value);
     avisoCarta.hidden = an.vacia || an.valida;
@@ -1631,7 +1773,7 @@
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", function () {
       var activo = document.activeElement;
-      if (!activo || panel.hidden || !panel.contains(activo)) return;
+      if (!activo || !hojaActiva || !hojaActiva.el.contains(activo)) return;
       setTimeout(function () { desplazarA(activo, { block: "center", behavior: "smooth" }); }, 60);
     });
   }
@@ -2100,6 +2242,7 @@
     contador.appendChild(document.createTextNode(" de " + data.length + (data.length === 1 ? " restaurante" : " restaurantes")));
 
     btnLimpiar.hidden = !hayFiltros();
+    pintarEstadoFiltros(items.length);
 
     aplicarVista();
 
@@ -2128,9 +2271,48 @@
       return;
     }
     vacio.hidden = true;
+    var antes = medirTarjetas();
     var frag = document.createDocumentFragment();
     items.forEach(function (d) { frag.appendChild(crearTarjeta(d)); });
     lista.replaceChildren(frag);
+    animarTarjetas(antes);
+  }
+
+  /* Al filtrar u ordenar, cada tarjeta que sigue se desliza desde donde
+     estaba hasta su nuevo sitio (FLIP) y las nuevas aparecen fundiéndose.
+     Solo se miden las que están cerca de la pantalla. */
+  function medirTarjetas() {
+    if (!lista.firstElementChild || !lista.animate) return null;
+    var pos = Object.create(null), alto = window.innerHeight;
+    for (var c = lista.firstElementChild; c; c = c.nextElementSibling) {
+      var r = c.getBoundingClientRect();
+      if (r.bottom > -alto && r.top < alto * 2) pos[c.dataset.id] = r.top;
+    }
+    return pos;
+  }
+  function animarTarjetas(antes) {
+    if (!antes || gesto) return;
+    var quieto = menosMovimiento && menosMovimiento.matches, alto = window.innerHeight;
+    for (var c = lista.firstElementChild; c; c = c.nextElementSibling) {
+      var r = c.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > alto) continue;
+      var y0 = antes[c.dataset.id];
+      if (y0 === undefined) {
+        c.animate(quieto ? [{ opacity: 0 }, { opacity: 1 }]
+                         : [{ opacity: 0, transform: "scale(0.97)" }, { opacity: 1, transform: "none" }],
+                  { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+      } else if (!quieto && Math.abs(y0 - r.top) > 1) {
+        c.animate([{ transform: "translateY(" + (y0 - r.top).toFixed(1) + "px)" }, { transform: "none" }],
+                  { duration: 380, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+      }
+    }
+  }
+
+  // Fundido de toda la pantalla (cambio de tema, lista ↔ mapa) donde el
+  // navegador lo sabe hacer; si no, o con menos movimiento, cambio directo.
+  function conFundido(fn) {
+    if (!document.startViewTransition || (menosMovimiento && menosMovimiento.matches)) { fn(); return; }
+    document.startViewTransition(fn);
   }
 
   /* ============================================================
@@ -3300,7 +3482,7 @@
     if (v === "mapa") reiniciarEncuadre();       // al abrir el mapa, siempre encuadrado en todo
     else cerrarFicha(true);
     guardarFiltros();
-    render();
+    conFundido(render);
     // Leaflet calcula su tamaño al crearse: si el contenedor estuvo oculto,
     // hay que avisarle de que ya se ve.
     if (v === "mapa" && mapa) setTimeout(function () { mapa.invalidateSize(); }, 0);
@@ -3539,6 +3721,143 @@
   lista.addEventListener("pointercancel", soltarGesto);
   window.addEventListener("scroll", function () { if (deslizada && !gesto) cerrarDeslizado(); }, { passive: true });
 
+
+  /* ============================================================
+     16 bis ter. Menú contextual de una tarjeta
+     Mantener pulsada (o clic derecho): la tarjeta se alza, el fondo se
+     difumina y sale un menú que nace del punto donde has pulsado.
+     ============================================================ */
+
+  var menuCapa = $("menu-capa");
+  var menuEl = $("menu-contextual");
+  var menuTarjeta = null;
+  var temporizadorMenu = null;
+  var inicioMenu = null;
+
+  function itemMenu(texto, icono, accion, opciones) {
+    opciones = opciones || {};
+    var el = document.createElement(opciones.href ? "a" : "button");
+    el.className = "menu-item" + (opciones.peligro ? " peligro" : "");
+    el.setAttribute("role", "menuitem");
+    if (opciones.href) {
+      el.href = opciones.href;
+      if (opciones.externo) { el.target = "_blank"; el.rel = "noopener noreferrer"; }
+    } else {
+      el.type = "button";
+    }
+    var t = document.createElement("span");
+    t.textContent = texto;
+    el.appendChild(t);
+    el.insertAdjacentHTML("beforeend", icono);
+    el.addEventListener("click", function () { cerrarMenu(); if (accion) accion(); });
+    return el;
+  }
+
+  function abrirMenu(li, x, y) {
+    var d = null;
+    for (var i = 0; i < data.length; i++) if (String(data[i].id) === li.dataset.id) { d = data[i]; break; }
+    if (!d) return;
+    cerrarDeslizado();
+    menuTarjeta = li;
+
+    var items = [itemMenu("Editar", ICONOS.lapiz, function () { abrirPanel(d); })];
+    if (!(d.sedes && d.sedes.length > 1)) {
+      var p = puntosDe(d, false)[0] || {};
+      var destino = p.direccion ? { nombre: d.nombre, zona: "", direccion: p.direccion } : { nombre: d.nombre, zona: d.zona, direccion: "" };
+      items.push(itemMenu("Cómo llegar", ICONOS.mapa, null, { href: urlMapa(destino), externo: true }));
+      if (p.carta && analizarUrl(p.carta).valida) {
+        items.push(itemMenu("Ver la carta", ICONOS.carta, null, { href: analizarUrl(p.carta).href, externo: true }));
+      }
+      var res = analizarReserva(p.reserva);
+      if (!res.vacia && res.valida) {
+        items.push(res.tipo === "tel"
+          ? itemMenu("Llamar", ICONOS.tel, null, { href: res.href })
+          : itemMenu("Reservar", ICONOS.reserva, null, { href: res.href, externo: true }));
+      }
+    }
+    var sep = document.createElement("div");
+    sep.className = "menu-sep"; sep.setAttribute("role", "separator");
+    items.push(sep);
+    items.push(itemMenu("Eliminar", ICONOS.papelera, function () { eliminar(d); }, { peligro: true }));
+    menuEl.replaceChildren.apply(menuEl, items);
+    menuEl.setAttribute("aria-label", "Acciones para " + d.nombre);
+
+    menuCapa.hidden = false;
+    menuEl.hidden = false;
+    li.classList.add("alzada");
+
+    // Junto a la tarjeta (debajo si cabe, si no encima), sin salirse
+    var r = li.getBoundingClientRect();
+    var w = menuEl.offsetWidth, h = menuEl.offsetHeight, m = 12;
+    var izq = Math.min(Math.max(m, x - w / 2), window.innerWidth - w - m);
+    var arriba = r.bottom + 8 + h < window.innerHeight - m ? r.bottom + 8
+               : r.top - 8 - h > m ? r.top - 8 - h
+               : Math.min(Math.max(m, y - h / 2), window.innerHeight - h - m);
+    menuEl.style.left = Math.round(izq) + "px";
+    menuEl.style.top = Math.round(arriba) + "px";
+    menuEl.style.transformOrigin = Math.round(x - izq) + "px " + Math.round(y - arriba) + "px";
+
+    var quieto = menosMovimiento && menosMovimiento.matches;
+    if (menuEl.animate) {
+      menuEl.animate(quieto ? [{ opacity: 0 }, { opacity: 1 }]
+                            : [{ opacity: 0, transform: "scale(0.5)" }, { opacity: 1, transform: "none" }],
+                     { duration: 340, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+      menuCapa.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220 });
+    }
+    var primero = menuEl.querySelector(".menu-item");
+    if (primero) try { primero.focus({ preventScroll: true }); } catch (e) {}
+  }
+
+  function cerrarMenu() {
+    if (menuEl.hidden) return;
+    var li = menuTarjeta; menuTarjeta = null;
+    if (li) li.classList.remove("alzada");
+    function fin() { menuEl.hidden = true; menuCapa.hidden = true; menuEl.replaceChildren(); }
+    if (!menuEl.animate || (menosMovimiento && menosMovimiento.matches)) { fin(); return; }
+    menuCapa.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, fill: "forwards" });
+    var an = menuEl.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(0.8)" }],
+                            { duration: 180, easing: "ease-in", fill: "forwards" });
+    an.onfinish = function () { an.cancel(); menuCapa.getAnimations().forEach(function (a) { a.cancel(); }); fin(); };
+  }
+
+  menuCapa.addEventListener("click", cerrarMenu);
+  menuCapa.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarMenu(); });
+  window.addEventListener("resize", cerrarMenu);
+
+  // Mantener pulsado medio segundo sin moverse (dedo o lápiz)
+  lista.addEventListener("pointerdown", function (e) {
+    clearTimeout(temporizadorMenu);
+    var li = e.target.closest("li.card");
+    if (!li || e.pointerType === "mouse" || e.target.closest(".card-deslizar")) return;
+    inicioMenu = { x: e.clientX, y: e.clientY };
+    temporizadorMenu = setTimeout(function () {
+      gesto = null;                           // ya no es un deslizamiento
+      suprimirClic();
+      abrirMenu(li, inicioMenu.x, inicioMenu.y);
+    }, 500);
+  });
+  lista.addEventListener("pointermove", function (e) {
+    if (inicioMenu && (Math.abs(e.clientX - inicioMenu.x) > 10 || Math.abs(e.clientY - inicioMenu.y) > 10)) {
+      clearTimeout(temporizadorMenu); inicioMenu = null;
+    }
+  });
+  ["pointerup", "pointercancel"].forEach(function (t) {
+    lista.addEventListener(t, function () {
+      // Si el menú se abrió con esta pulsación, el clic al soltar no cuenta
+      if (!menuEl.hidden && inicioMenu) suprimirClic();
+      clearTimeout(temporizadorMenu); inicioMenu = null;
+    });
+  });
+  // Clic derecho (y la pulsación larga de Android, que llega como contextmenu)
+  lista.addEventListener("contextmenu", function (e) {
+    var li = e.target.closest("li.card");
+    if (!li) return;
+    e.preventDefault();
+    clearTimeout(temporizadorMenu);
+    if (menuEl.hidden) abrirMenu(li, e.clientX, e.clientY);
+  });
+
   /* ============================================================
      16 bis. «Sorpréndeme»
      ============================================================ */
@@ -3695,7 +4014,7 @@
       if (devolverFoco) $("gestionar-btn").focus({ preventScroll: true });
     }, { inmediato: !!inmediato });
   }
-  var hojaListas = crearHoja(panelListas, { alDescartar: function () { cerrarPanelListas(true); } });
+  var hojaListas = crearHoja(panelListas, { medio: true, alDescartar: function () { cerrarPanelListas(true); } });
   $("gestionar-btn").addEventListener("click", abrirPanelListas);
   $("pl-cerrar").addEventListener("click", function () { cerrarPanelListas(true); });
   document.addEventListener("keydown", function (e) {
@@ -4055,7 +4374,7 @@
     function puedeRecargarSolo() {
       var a = document.activeElement;
       var escribiendo = !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
-      return panel.hidden && panelListas.hidden && !escribiendo;
+      return !hojaActiva && !escribiendo;
     }
 
     function recargar() {
