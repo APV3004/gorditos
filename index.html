@@ -74,6 +74,11 @@
     --focus-ring: light-dark(rgba(0, 113, 227, 0.3), rgba(41, 151, 255, 0.45));
     --shadow-color: light-dark(rgba(0, 0, 0, 0.06), transparent);
 
+    /* Hojas: en oscuro, iOS las eleva un tono */
+    --bg-hoja: light-dark(#F2F2F7, #1C1C1E);
+    --surface-hoja: light-dark(#FFFFFF, #2C2C2E);
+    --surface-2-hoja: light-dark(#F2F2F7, #3A3A3C);
+
     --toast-bg: light-dark(rgba(29, 29, 31, 0.86), rgba(58, 58, 60, 0.86));
     --toast-fg: #F5F5F7;
     --toast-action: light-dark(#2997FF, #64D2FF);
@@ -104,6 +109,10 @@
     --press-scale: 0.97;
     --enter-shift: 8px;
     --toast-scale: 0.96;
+    --empuje: 0.06;            /* cuánto se echa atrás el fondo con una hoja */
+
+    /* Iconos de máscara (toman el color del texto con currentColor) */
+    --i-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 5.5 6.5 6.5L9 18.5'/%3E%3C/svg%3E");
   }
   :root[data-theme="light"] { color-scheme: light; }
   :root[data-theme="dark"] { color-scheme: dark; }
@@ -124,6 +133,7 @@
       --pin: #FF3B30; --me: #007AFF;
       --focus-ring: rgba(0, 113, 227, 0.3); --shadow-color: rgba(0, 0, 0, 0.06);
       --toast-bg: rgba(29, 29, 31, 0.86); --toast-action: #2997FF;
+      --bg-hoja: #F2F2F7; --surface-hoja: #FFFFFF; --surface-2-hoja: #F2F2F7;
     }
   }
 
@@ -132,7 +142,7 @@
 
   html {
     /* deja sitio a la barra fija de resultados al desplazar hasta algo */
-    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 4rem);
+    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 6.75rem);
   }
 
   body {
@@ -199,32 +209,19 @@
   .count { color: var(--label); font-weight: 600; }
   .hint { font-size: var(--t-caption); color: var(--label-2); font-weight: 400; letter-spacing: 0.01em; }
 
-  .header-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--s2); flex: 0 0 auto; }
+  .header-actions { display: flex; align-items: center; gap: var(--s3); flex: 0 0 auto; padding-top: var(--s1); }
 
-  .add-btn {
-    font-weight: 600;
-    font-size: var(--t-subhead);
-    background: var(--tint-solid);
-    color: #FFFFFF;
-    border: none;
-    border-radius: 999px;
-    padding: 0 var(--s5);
-    min-height: var(--tap);
-    cursor: pointer;
-    white-space: nowrap;
+  /* Botones redondos de icono, como los de la barra de navegación de iOS */
+  .icon-btn {
+    width: var(--tap); height: var(--tap);
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; border-radius: 50%;
+    background: var(--fill); color: var(--tint);
+    cursor: pointer; padding: 0;
   }
-
-  .theme-btn {
-    background: var(--fill);
-    border: none;
-    color: var(--label);
-    border-radius: 999px;
-    min-height: 2.125rem;
-    padding: 0 var(--s3);
-    font-size: var(--t-footnote);
-    font-weight: 500;
-    cursor: pointer;
-  }
+  .icon-btn svg { width: 1.375rem; height: 1.375rem; }
+  .icon-btn-fuerte { background: var(--tint-solid); color: #FFFFFF; }
+  .icon-btn-fuerte svg { stroke-width: 2.4; }
 
   /* Aviso de almacenamiento no disponible */
   .banner {
@@ -240,12 +237,11 @@
   /* ---- Selector de lista y panel de gestión ---- */
   .lista-bar { display: flex; align-items: center; gap: var(--s3); margin: calc(var(--s1) * -1) 0 var(--s4); }
   .lista-bar label { font-size: var(--t-subhead); color: var(--label-2); white-space: nowrap; }
-  .lista-bar .theme-btn { min-height: var(--tap); margin-left: auto; padding: 0 var(--s4); font-size: var(--t-subhead); color: var(--tint); }
   .pl-sub { font-weight: 600; font-size: var(--t-body); margin: var(--s5) 0 var(--s2); }
   .pl-etiqueta { margin: var(--s3) 0 var(--s2); }
   .pl-anadir { margin-top: var(--s3); }
   .nota-campo { margin: var(--s2) 0 0; }
-  .nota-intro { margin: 0 0 var(--s1); }
+  .nota-intro { margin: 0 var(--s4) var(--s1); }
   .msg-pie { margin: var(--s4) 0 0; }
   .fila-inline { display: flex; gap: var(--s2); }
   .fila-inline input { flex: 1; min-width: 0; }
@@ -260,20 +256,148 @@
   .login-screen .sub { margin-bottom: var(--s5); }
   .login-screen .btn { width: 100%; }
 
-  /* ---- Paneles (alta / edición, listas) ---- */
-  .panel {
+  /* ---- Hojas inferiores (alta / edición, listas y ajustes) ----
+     Las mueve app.js con un muelle; aquí solo su aspecto. */
+  .scrim {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: var(--progreso-hoja, 0);
+    touch-action: none;
+  }
+  .hoja {
+    /* dentro, las superficies suben un tono (en oscuro) */
+    --surface: var(--surface-hoja);
+    --surface-2: var(--surface-2-hoja);
+    position: fixed; z-index: 45;
+    left: 0; right: 0; bottom: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 0.625rem);
+    max-width: 640px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    background: var(--bg-hoja);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.18);
+    transform: translate3d(0, 100%, 0);
+    will-change: transform;
+  }
+  .hoja-cabeza {
+    flex: none; position: relative;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: var(--s4) var(--s2) var(--s2);
+    touch-action: none; cursor: grab;
+    user-select: none; -webkit-user-select: none;
+  }
+  .hoja.arrastrando .hoja-cabeza { cursor: grabbing; }
+  .hoja-asa {
+    position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 5px; border-radius: 3px; background: var(--label-3);
+  }
+  .hoja-cabeza h2 {
+    grid-column: 2; margin: 0; padding: 0 var(--s2);
+    font-size: var(--t-body); font-weight: 600; line-height: 1.3; text-align: center;
+  }
+  .hoja-boton {
+    justify-self: start;
+    background: none; border: none; cursor: pointer;
+    min-height: var(--tap); padding: 0 var(--s2);
+    color: var(--tint); font-size: var(--t-body); font-weight: 400;
+    border-radius: var(--r-sm);
+  }
+  .hoja-boton.fuerte { justify-self: end; font-weight: 600; }
+  .hoja-boton:disabled { color: var(--label-3); cursor: default; }
+  /* Borde de desplazamiento: aparece solo cuando hay contenido debajo */
+  .hoja-cabeza::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--s3);
+    background: linear-gradient(var(--bg-hoja), transparent);
+    opacity: 0; transition: opacity 0.2s ease; pointer-events: none; z-index: 1;
+  }
+  .hoja-cabeza.con-scroll::after { opacity: 1; }
+  .hoja-cuerpo {
+    flex: 1; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    padding: var(--s2) var(--s4) calc(env(safe-area-inset-bottom, 0px) + var(--s8));
+  }
+
+  /* ---- Formularios agrupados, como en Ajustes ----
+     Filas dentro de un bloque redondeado, separadas por una línea fina
+     que no llega al borde izquierdo; título encima y explicación debajo. */
+  .grupo-titulo {
+    margin: var(--s6) var(--s4) var(--s2);
+    font-size: var(--t-footnote); font-weight: 400; color: var(--label-2);
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .hoja-cuerpo > :first-child .grupo-titulo, .hoja-cuerpo > .grupo-titulo:first-child { margin-top: var(--s2); }
+  .grupo {
     background: var(--surface);
-    border-radius: var(--r-lg);
-    padding: var(--s4);
-    margin-bottom: var(--s5);
-    box-shadow: 0 1px 3px var(--shadow-color);
-    /* Aparece bajando desde los botones que lo abren */
-    transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out);
+    border-radius: var(--r-md);
+    overflow: hidden;
   }
-  @starting-style {
-    .panel { opacity: 0; transform: translateY(calc(var(--enter-shift) * -1)); }
+  .grupo + .grupo { margin-top: var(--s4); }
+  .grupo-titulo:has(+ [hidden]), .grupo-titulo:has(+ .sede-list:empty) { display: none; }
+  .grupo-separado { margin-top: var(--s8); }
+  .fila-g {
+    position: relative;
+    display: flex; align-items: center; gap: var(--s3);
+    width: 100%; min-height: var(--tap);
+    padding: 0 var(--s4);
+    font-size: var(--t-body); color: var(--label);
   }
-  .panel h2 { font-weight: 700; font-size: var(--t-title); letter-spacing: -0.01em; line-height: 1.2; margin: 0 0 var(--s3); }
+  .fila-g + .fila-g::before {
+    content: ""; position: absolute; top: 0; left: var(--s4); right: 0;
+    height: 1px; background: var(--separator); transform: scaleY(0.5); transform-origin: top;
+  }
+  .fila-g > label { flex: 0 0 6.25rem; }
+  .fila-g input[type="text"], .fila-g input[type="url"], .fila-g input[type="email"],
+  .fila-g input[type="password"], .fila-g select {
+    flex: 1; min-width: 0; width: 100%;
+    min-height: var(--tap); padding: var(--s3) 0;
+    border: none; background: transparent; border-radius: 0;
+    font: inherit; color: var(--label);
+    outline: none; -webkit-appearance: none; appearance: none;
+  }
+  .fila-g select {
+    padding-right: 1.5rem; cursor: pointer;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7.5 9.5 4.5-4.5 4.5 4.5M7.5 14.5l4.5 4.5 4.5-4.5'/%3E%3C/svg%3E") right center / 16px no-repeat;
+    color: var(--label-2);
+  }
+  /* El campo enfocado se nota sin bordes: fondo levemente teñido */
+  .fila-g:focus-within:not(.fila-boton) { background: var(--tint-fill); }
+  .fila-g:has([aria-invalid="true"]) > label { color: var(--red); }
+  .boton-fila {
+    flex: none; background: none; border: none; padding: 0; cursor: pointer;
+    min-height: var(--tap); color: var(--tint); font-size: var(--t-body); font-weight: 500;
+  }
+  .boton-fila:disabled, .fila-boton:disabled { color: var(--label-3); cursor: default; }
+  .fila-boton {
+    border: none; background: transparent; cursor: pointer; text-align: left;
+    color: var(--tint); font-family: inherit;
+  }
+  .fila-boton.fuerte { font-weight: 600; }
+  .fila-boton.destructivo { color: var(--red); justify-content: center; }
+  .fila-check { justify-content: space-between; cursor: pointer; }
+  .fila-check input { flex: none; width: 1.375rem; height: 1.375rem; margin: 0; accent-color: #34C759; }
+  .grupo-pie { margin: var(--s2) var(--s4) 0; font-size: var(--t-footnote); color: var(--label-2); line-height: 1.4; }
+  .msg.grupo-msg { margin: var(--s2) var(--s1) 0; }
+  .grupo-details { margin-top: var(--s6); }
+  details.grupo-details summary { padding: var(--s3) var(--s4); background: var(--surface); border-radius: var(--r-md); font-size: var(--t-body); }
+  details.grupo-details[open] summary { margin-bottom: var(--s1); }
+
+  /* Con una hoja abierta, el fondo no se desplaza y, en el móvil, se echa
+     atrás siguiendo a la hoja (--progreso-hoja va de 0 a 1). */
+  html.hoja-abierta, html.hoja-abierta body { overflow: hidden; }
+  @media (max-width: 640px) {
+    html.hoja-abierta body { background: #000000; transition: none; }
+    .wrap.empujada {
+      min-height: 100dvh;
+      background: var(--bg);
+      transform: scale(calc(1 - var(--empuje) * var(--progreso-hoja, 0)));
+      border-radius: calc(14px * var(--progreso-hoja, 0));
+    }
+  }
+
+  .btn-destructivo {
+    width: 100%; margin-top: var(--s8);
+    background: var(--surface); color: var(--red); font-size: var(--t-body);
+  }
 
   .field { display: flex; flex-direction: column; gap: var(--s1); margin-bottom: var(--s3); }
   .field label { font-size: var(--t-footnote); color: var(--label-2); font-weight: 500; letter-spacing: 0.01em; }
@@ -299,9 +423,9 @@
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .field select, select#sort, select#lista-sel {
-    background-image: linear-gradient(45deg, transparent 50%, var(--label-2) 50%), linear-gradient(135deg, var(--label-2) 50%, transparent 50%);
-    background-position: right 14px center, right 9px center;
-    background-size: 5px 5px, 5px 5px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7.5 9.5 4.5-4.5 4.5 4.5M7.5 14.5l4.5 4.5 4.5-4.5'/%3E%3C/svg%3E");
+    background-position: right 10px center;
+    background-size: 16px 16px;
     background-repeat: no-repeat;
     padding-right: var(--s8);
   }
@@ -319,7 +443,6 @@
   .field-row .field { flex: 1; min-width: 0; }
   .field-row .field.precio { flex: 0 0 7.25rem; }
 
-  .panel-actions { display: flex; gap: var(--s3); margin-top: var(--s4); }
 
   .btn {
     font-weight: 600;
@@ -342,7 +465,12 @@
   /* ---- Controles ---- */
   .controls { margin-top: var(--s1); display: flex; flex-direction: column; gap: var(--s4); }
 
-  input.search { padding-left: var(--s3); }
+  .campo-buscar { position: relative; flex: 1; min-width: 0; }
+  .campo-buscar svg {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    width: 1.125rem; height: 1.125rem; color: var(--label-2); pointer-events: none;
+  }
+  input.search { padding-left: 2.25rem; }
   input.search::-webkit-search-cancel-button { -webkit-appearance: none; }
 
   .filter-block { display: flex; flex-direction: column; gap: var(--s2); }
@@ -353,21 +481,33 @@
        compensa el alto del botón. */
     width: 44px; height: 44px; margin: -13px 0 -13px -6px;
     display: flex; align-items: center; justify-content: center;
-    border: none; background: transparent; color: var(--label-2);
-    font-size: var(--t-subhead); line-height: 1; cursor: pointer; border-radius: 999px;
+    border: none; background: transparent; color: var(--label-3);
+    cursor: pointer; border-radius: 999px; padding: 0;
   }
-  .filter-clear:active { background: var(--fill); }
+  .filter-clear svg { width: 1.125rem; height: 1.125rem; }
+  .filter-clear svg path { stroke: var(--bg); }
 
+  @property --fade-izq { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @property --fade-der { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  /* De borde a borde de la pantalla; donde quedan chips fuera de la vista,
+     se funden en vez de cortarse en seco */
   .chip-row {
     display: flex;
     gap: var(--s2);
     overflow-x: auto;
-    padding-bottom: var(--s1);
+    margin: 0 calc(var(--s5) * -1);
+    padding: 0 var(--s5) var(--s1);
+    scroll-padding-inline: var(--s5);
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-izq), #000 calc(100% - var(--fade-der)), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 var(--fade-izq), #000 calc(100% - var(--fade-der)), transparent);
+    transition: --fade-izq 0.2s ease, --fade-der 0.2s ease;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
   }
   .chip-row::-webkit-scrollbar { display: none; }
+  .chip-row.mas-izq { --fade-izq: 2rem; }
+  .chip-row.mas-der { --fade-der: 2rem; }
 
   .chip {
     flex: 0 0 auto;
@@ -405,12 +545,32 @@
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 0.375rem;
   }
+  .dado-btn svg { width: 1.125rem; height: 1.125rem; flex: none; }
+
+  /* ---- Barra del título compacto (como la de navegación de iOS) ---- */
+  .barra-titulo {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    height: calc(env(safe-area-inset-top, 0px) + 2.75rem);
+    padding-top: env(safe-area-inset-top, 0px);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--material);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    font-size: var(--t-body); font-weight: 600; color: var(--label);
+    opacity: 0; pointer-events: none; cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  /* El título llega desde abajo, desde donde estaba el grande */
+  .barra-titulo span { transform: translateY(6px); transition: transform var(--dur-ui) var(--ease-out); }
+  html.titulo-compacto .barra-titulo { opacity: 1; pointer-events: auto; }
+  html.titulo-compacto .barra-titulo span { transform: none; }
 
   /* ---- Barra de resultados: material translúcido, fija al desplazar ---- */
   .result-line {
     position: sticky;
-    top: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 2.75rem);   /* justo bajo la barra del título */
     z-index: 10;
     margin: var(--s5) calc(var(--s5) * -1) 0;
     padding: var(--s2) var(--s5);
@@ -447,7 +607,13 @@
   }
 
   /* ---- Tarjetas ---- */
-  ul.list { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
+  /* Recorta en horizontal lo que asoma al deslizar una tarjeta; el
+     margen deja sitio al anillo de la tarjeta destacada. */
+  ul.list {
+    list-style: none; margin: var(--s3) calc(var(--s2) * -1) 0; padding: var(--s2);
+    display: flex; flex-direction: column; gap: var(--s3);
+    overflow-x: clip;
+  }
 
   li.card {
     background: var(--surface);
@@ -455,7 +621,29 @@
     padding: var(--s4);
     box-shadow: 0 1px 3px var(--shadow-color);
     transition: box-shadow 0.2s ease;
+    position: relative;
+    touch-action: pan-y;           /* el scroll vertical es del navegador; el horizontal, nuestro */
   }
+
+  /* Acciones al deslizar: viven a la derecha de la tarjeta y entran con ella */
+  .card-deslizar {
+    position: absolute; top: 0; bottom: 0; left: calc(100% + var(--s2));
+    width: 168px;
+    display: flex; gap: var(--s2);
+  }
+  .card-deslizar button {
+    flex: 1 1 0; min-width: 0; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s1);
+    border: none; border-radius: var(--r-lg); color: #FFFFFF; cursor: pointer;
+    font-size: var(--t-footnote); font-weight: 600;
+    transition: flex-grow 0.25s var(--ease-out), opacity 0.2s ease;
+  }
+  .card-deslizar svg { width: 1.375rem; height: 1.375rem; }
+  .deslizar-editar { background: #8E8E93; background: light-dark(#8E8E93, #636366); }
+  .deslizar-borrar { background: var(--red-solid); }
+  /* Pasado el umbral, «Eliminar» ocupa todo: soltar ahí borra */
+  .card-deslizar.todo .deslizar-editar { flex-grow: 0; opacity: 0; padding: 0; }
+  .card-deslizar.todo .deslizar-borrar { flex-grow: 1; }
 
   /* Tarjeta elegida por el botón del azar */
   li.card.destacada { box-shadow: 0 0 0 2px var(--tint), 0 0 0 6px var(--focus-ring); }
@@ -526,29 +714,6 @@
   }
   .card-link svg { width: 1rem; height: 1rem; flex: 0 0 auto; color: var(--tint); }
 
-  .confirm-row {
-    margin-top: var(--s3);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--s2) var(--s3);
-    background: var(--red-fill);
-    border-radius: var(--r-md);
-    padding: var(--s3);
-  }
-  .confirm-row p { font-size: var(--t-subhead); color: var(--label); flex: 1 1 100%; margin: 0; }
-  .confirm-row button {
-    font-size: var(--t-subhead);
-    font-weight: 600;
-    border-radius: 10px;
-    padding: 0 var(--s4);
-    min-height: var(--tap);
-    border: none;
-    cursor: pointer;
-  }
-  .confirm-yes { background: var(--red-solid); color: #FFFFFF; }
-  .confirm-no { background: var(--surface); color: var(--label); }
-
   .empty { text-align: center; color: var(--label-2); padding: var(--s8) var(--s3); font-size: var(--t-subhead); line-height: 1.6; }
   .empty p { margin: 0; }
   .empty button {
@@ -584,7 +749,11 @@
   }
   details.tools summary::-webkit-details-marker { display: none; }
   details.tools summary::before {
-    content: "›"; display: inline-block; width: 1em; font-weight: 600;
+    content: ""; display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.35em;
+    vertical-align: -0.05em;
+    background: currentColor;
+    -webkit-mask: var(--i-chevron) center / contain no-repeat;
+    mask: var(--i-chevron) center / contain no-repeat;
     transition: transform 0.2s var(--ease-out);
   }
   details.tools[open] summary::before { transform: rotate(90deg); }
@@ -600,18 +769,25 @@
   .tools-row { display: flex; flex-wrap: wrap; gap: var(--s2); }
   .tools-row .btn { flex: 1 1 auto; }
 
-  .sede-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+  .sede-list {
+    list-style: none; margin: 0; padding: 0;
+    background: var(--surface); border-radius: var(--r-md); overflow: hidden;
+  }
   .sede-list:empty { display: none; }
   .sede-list li {
+    position: relative;
     display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
-    background: var(--surface-2); border-radius: var(--r-md);
-    padding: var(--s2) var(--s3); font-size: var(--t-subhead);
+    min-height: var(--tap); padding: var(--s1) var(--s4); font-size: var(--t-body);
   }
-  .sede-list li.editandose { box-shadow: 0 0 0 2px var(--tint), 0 0 0 5px var(--focus-ring); }
+  .sede-list li + li::before {
+    content: ""; position: absolute; top: 0; left: var(--s4); right: 0;
+    height: 1px; background: var(--separator); transform: scaleY(0.5); transform-origin: top;
+  }
+  .sede-list li.editandose { background: var(--tint-fill); }
   .sede-list .sede-acciones { display: flex; align-items: center; gap: var(--s3); flex: 0 0 auto; }
   .sede-list .sede-quitar, .sede-list .sede-editar {
     background: none; border: none; font-weight: 500;
-    font-size: var(--t-subhead); padding: var(--s2) var(--s1); min-height: var(--tap); cursor: pointer;
+    font-size: var(--t-body); padding: var(--s2) var(--s1); min-height: var(--tap); cursor: pointer;
   }
   .sede-list .sede-quitar { color: var(--red); }
   .sede-list .sede-editar { color: var(--tint); }
@@ -626,7 +802,10 @@
     color: var(--label); font-size: var(--t-subhead); font-weight: 500; text-align: left; cursor: pointer;
   }
   .sedes-toggle::after {                       /* flecha que gira al desplegar */
-    content: "›"; color: var(--label-2); font-weight: 600; order: 3;
+    content: ""; order: 3; width: 0.875rem; height: 0.875rem; flex: none;
+    background: var(--label-2);
+    -webkit-mask: var(--i-chevron) center / contain no-repeat;
+    mask: var(--i-chevron) center / contain no-repeat;
     transform: rotate(90deg); transition: transform 0.2s var(--ease-out);
   }
   .sedes-toggle[aria-expanded="true"]::after { transform: rotate(-90deg); }
@@ -639,33 +818,82 @@
 
   /* ---- Lista / Mapa: control segmentado ---- */
   .result-acciones { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--s2) var(--s4); }
-  .vista-toggle {
+  .segmentado {
     display: inline-flex; padding: 2px; border-radius: 9px;
     background: var(--fill);
   }
-  .vista-toggle button {
+  .segmentado.ancho { display: flex; }
+  .segmentado.ancho button { flex: 1; }
+  .segmentado button {
     min-height: 2.25rem; padding: 0 var(--s4); border: none; border-radius: 7px;
     background: transparent; color: var(--label);
     font-size: var(--t-footnote); font-weight: 500; cursor: pointer;
   }
-  .vista-toggle button[aria-pressed="true"] {
+  .segmentado button[aria-pressed="true"] {
     background: var(--segment-on); font-weight: 600;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
   }
 
   .mapa-wrap { margin-top: var(--s3); }
+  .mapa-marco { position: relative; }
   .mapa {
     position: relative; z-index: 0;            /* los paneles de Leaflet no tapan el aviso ni el formulario */
     height: 62vh; min-height: 320px;
-    border-radius: var(--r-lg);
+    border-radius: 22px;
     overflow: hidden; background: var(--fill);
   }
   .mapa-pie { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); margin-top: var(--s3); }
   .mapa-nota { margin: 0; flex: 1; font-size: var(--t-footnote); line-height: 1.5; color: var(--label-2); }
 
   .leaflet-container { font: inherit; }
+  /* Controles del mapa con el mismo material que la ficha */
+  .leaflet-bar { border: none !important; border-radius: 10px !important; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important; }
+  .leaflet-bar a, .leaflet-bar a:hover {
+    width: 36px !important; height: 36px !important; line-height: 36px !important;
+    background: var(--material) !important; color: var(--label) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--separator) !important; font-weight: 400;
+  }
+  .leaflet-bar a:last-child { border-bottom: none !important; }
+  /* La atribución, pequeña y arriba: la ficha ocupa el borde de abajo */
+  .leaflet-bottom.leaflet-right { top: 0; bottom: auto; }
+  .leaflet-control-attribution {
+    font-size: 10px !important; line-height: 1.4;
+    background: var(--material) !important; color: var(--label-2) !important;
+    border-radius: 0 0 0 8px; padding: 1px 6px !important;
+  }
+  .leaflet-control-attribution a { color: var(--label-2) !important; }
   .leaflet-container a.card-link { color: var(--label); }
-  .marcador-rest { stroke: var(--surface); fill: var(--pin); }
+  .marcador-rest { stroke: var(--surface); fill: var(--pin); transition: stroke-width 0.2s ease; }
+  .marcador-elegido { stroke-width: 3; }
+
+  /* Ficha del mapa: material translúcido, esquinas concéntricas con el
+     mapa (22 − 10 de margen = 12) */
+  .ficha-mapa {
+    position: absolute; z-index: 1;
+    left: 10px; right: 10px; bottom: 10px;
+    max-height: calc(100% - 20px); overflow: auto;
+    padding: var(--s5) var(--s4) var(--s4);
+    background: var(--material);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+    touch-action: none;
+    will-change: transform;
+  }
+  .ficha-mapa .hoja-asa { top: 6px; }
+  .ficha-cerrar {
+    position: absolute; top: var(--s2); right: var(--s2);
+    width: var(--tap); height: var(--tap); padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: none; cursor: pointer; color: var(--fill-strong);
+  }
+  .ficha-cerrar svg { width: 1.75rem; height: 1.75rem; }
+  .ficha-cerrar svg path { stroke: var(--label-2); }
+  .ficha-mapa .popup-nombre { font-size: var(--t-title); font-weight: 700; letter-spacing: -0.01em; padding-right: var(--tap); }
+  .ficha-mapa .popup-sub { font-size: var(--t-subhead); font-weight: 500; }   /* sobre material, algo más de peso */
+  .ficha-mapa .card-links { margin-top: var(--s3); }
   .marcador-yo { stroke: #FFFFFF; fill: var(--me); }
   .precision-yo { stroke: var(--me); fill: var(--me); }
 
@@ -729,7 +957,9 @@
     gap: var(--s4);
     /* Entra desde abajo y sale por el mismo camino */
     transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out);
+    touch-action: none;            /* se descarta deslizándolo hacia abajo */
   }
+  .toast.arrastrando { transition: none; }
   @starting-style {
     .toast { opacity: 0; transform: translate(-50%, 16px) scale(var(--toast-scale)); }
   }
@@ -750,55 +980,63 @@
      Todo lo pulsable reacciona en el mismo instante del toque (no al
      soltar). Va al final para sumar «transform» a las transiciones de
      cada componente. */
-  .add-btn, .theme-btn, .btn, .chip, .dado-btn, .card-link, .marca-btn,
-  .sedes-toggle, .vista-toggle button, .confirm-row button, .filter-clear {
+  .icon-btn, .btn, .chip, .dado-btn, .card-link, .marca-btn,
+  .sedes-toggle, .segmentado button, .filter-clear {
     transition: transform var(--dur-press) ease-out, background-color 0.15s ease,
                 color 0.15s ease, box-shadow 0.15s ease, opacity var(--dur-press) ease-out;
   }
-  .add-btn:active, .theme-btn:active, .btn:active, .chip:active, .dado-btn:active,
+  .icon-btn:active, .btn:active, .chip:active, .dado-btn:active,
   .card-link:active, .marca-btn:active, .sedes-toggle:active,
-  .vista-toggle button:active, .confirm-row button:active, .filter-clear:active {
+  .segmentado button:active, .filter-clear:active {
     transform: scale(var(--press-scale));
   }
-  .btn-secondary:active, .theme-btn:active, .dado-btn:active, .card-link:active,
+  .btn-secondary:active, .icon-btn:not(.icon-btn-fuerte):active, .dado-btn:active, .card-link:active,
   .sedes-toggle:active, .marca-btn[aria-pressed="false"]:active,
   .chip[aria-pressed="false"]:active { background: var(--fill-strong); }
-  .add-btn:active, .btn-primary:active, .chip[aria-pressed="true"]:active,
-  .confirm-yes:active { opacity: 0.85; }
+  .icon-btn-fuerte:active, .btn-primary:active, .chip[aria-pressed="true"]:active,
+  .card-deslizar button:active { opacity: 0.85; }
   /* Los botones de solo texto no escalan: se atenúan */
-  .card-actions button, .clear-filters, .empty button, .toast button,
+  .card-actions button, .clear-filters, .empty button, .toast button, .hoja-boton, .boton-fila,
   .sede-list .sede-quitar, .sede-list .sede-editar, details.tools summary {
     transition: opacity var(--dur-press) ease-out;
   }
   .card-actions button:active, .clear-filters:active, .empty button:active,
-  .toast button:active, .sede-list .sede-quitar:active, .sede-list .sede-editar:active,
+  .toast button:active, .hoja-boton:active, .boton-fila:active, .sede-list .sede-quitar:active, .sede-list .sede-editar:active,
   details.tools summary:active {
     opacity: 0.5;
   }
 
+  /* Las filas-botón se iluminan al tocarlas, como las celdas de iOS */
+  .fila-boton { transition: background-color 0.2s ease; }
+  .fila-boton:active { background: var(--fill-strong); transition: none; }
+
   /* Con ratón o trackpad, un indicio al pasar por encima */
   @media (hover: hover) {
-    .btn-secondary:hover, .theme-btn:hover, .dado-btn:hover, .card-link:hover,
+    .btn-secondary:hover, .icon-btn:not(.icon-btn-fuerte):hover, .dado-btn:hover, .card-link:hover,
     .sedes-toggle:hover, .marca-btn[aria-pressed="false"]:hover,
     .chip[aria-pressed="false"]:hover { background: var(--fill-strong); }
-    .add-btn:hover, .btn-primary:hover, .confirm-yes:hover { opacity: 0.9; }
+    .icon-btn-fuerte:hover, .btn-primary:hover { opacity: 0.9; }
     .card-actions button:hover, .clear-filters:hover, .empty button:hover,
-    .sede-list .sede-editar:hover, details.tools summary:hover { opacity: 0.7; }
+    .sede-list .sede-editar:hover, details.tools summary:hover, .hoja-boton:hover, .boton-fila:hover { opacity: 0.7; }
+    .fila-boton:hover { background: var(--fill); }
   }
 
   /* Menos movimiento no es «sin respuesta»: sin desplazamientos ni
      escalados, pero se conservan los fundidos y cambios de color. */
   @media (prefers-reduced-motion: reduce) {
-    :root { --press-scale: 1; --enter-shift: 0px; --toast-scale: 1; }
+    :root { --press-scale: 1; --enter-shift: 0px; --toast-scale: 1; --empuje: 0; }
+    .scrim { transition: opacity 200ms ease; }
     .toast.saliendo { transform: translate(-50%, 0); }
     @starting-style { .toast { transform: translate(-50%, 0); } }
     .sedes-toggle::after, details.tools summary::before { transition: none; }
+    .barra-titulo span { transform: none; transition: none; }
     html { scroll-behavior: auto; }
   }
 
   @media (prefers-reduced-transparency: reduce) {
+    .ficha-mapa { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
     .toast { background: light-dark(#1D1D1F, #3A3A3C); -webkit-backdrop-filter: none; backdrop-filter: none; }
-    .result-line { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .result-line, .barra-titulo { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
   }
 
   @media (prefers-contrast: more) {
@@ -808,19 +1046,24 @@
     .result-line { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
                    border-bottom: 1px solid var(--separator); }
     .result-line::after { display: none; }
-    .panel, li.card, .sede-list li, .sede-block, .mapa, .confirm-row { border: 1px solid var(--separator); }
+    .hoja, li.card, .grupo, .sede-list, .sede-block, .mapa { border: 1px solid var(--separator); }
+    .fila-g + .fila-g::before, .sede-list li + li::before { transform: none; background: var(--label-2); }
     .field input, .field select, input.search, select#sort, select#lista-sel, textarea,
-    .btn-secondary, .chip, .dado-btn, .card-link, .theme-btn, .marca-btn, .sedes-toggle { border: 1px solid var(--label-2); }
+    .btn-secondary, .chip, .dado-btn, .card-link, .icon-btn, .marca-btn, .sedes-toggle { border: 1px solid var(--label-2); }
   }
 
   @media print {
-    .controls, .panel, .add-btn, .theme-btn, .card-actions, .confirm-row, .toast, details.tools { display: none !important; }
+    .controls, .hoja, .scrim, .barra-titulo, .header-actions, .card-actions, .card-deslizar, .toast, details.tools { display: none !important; }
     .result-line { position: static; background: none; }
     li.card { break-inside: avoid; border: 1px solid #999; }
   }
 </style>
 </head>
 <body>
+<!-- Barra que aparece al bajar, cuando el título grande ya no se ve.
+     Es decorativa (el h1 sigue ahí): tocarla vuelve arriba. -->
+<div class="barra-titulo" id="barra-titulo" aria-hidden="true"><span>Dónde comer</span></div>
+
 <div class="wrap">
 
   <div class="login-screen" id="login-screen" hidden>
@@ -850,9 +1093,10 @@
       <p class="sub">Vuestras listas, ordenables por zona, tipo de cocina y precio.</p>
     </div>
     <div class="header-actions">
-      <button class="add-btn" id="open-add" type="button" aria-expanded="false" aria-controls="panel">＋ Añadir</button>
-      <button class="theme-btn" id="theme-btn" type="button">Tema: automático</button>
-      <button class="theme-btn" id="logout-btn" type="button">Salir</button>
+      <button class="icon-btn" id="gestionar-btn" type="button" aria-label="Listas y ajustes"
+              aria-haspopup="dialog" aria-controls="panel-listas" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="10" r="3"></circle><path d="M6.6 18.2a6.5 6.5 0 0 1 10.8 0"></path></svg></button>
+      <button class="icon-btn icon-btn-fuerte" id="open-add" type="button" aria-label="Añadir restaurante"
+              aria-haspopup="dialog" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
     </div>
   </header>
 
@@ -860,219 +1104,23 @@
   <div class="lista-bar" id="lista-bar" hidden>
     <label for="lista-sel" id="lista-sel-label">Lista</label>
     <select id="lista-sel"></select>
-    <button class="theme-btn" id="gestionar-btn" type="button" aria-expanded="false" aria-controls="panel-listas">Gestionar</button>
   </div>
 
   <div class="banner" id="sync-banner" hidden></div>
 
-  <section class="panel" id="panel-listas" aria-labelledby="pl-titulo" hidden>
-    <h2 id="pl-titulo">Listas y cuenta</h2>
 
-    <div id="pl-actual">
-      <h3 class="pl-sub" id="pl-titulo-lista"></h3>
-
-      <div class="field" id="pl-renombrar-bloque">
-        <label for="pl-nombre">Nombre</label>
-        <div class="fila-inline">
-          <input type="text" id="pl-nombre" maxlength="60" autocapitalize="sentences" autocorrect="off">
-          <button class="btn btn-secondary" id="pl-renombrar" type="button">Renombrar</button>
-        </div>
-      </div>
-
-      <p class="filter-label pl-etiqueta">Quién la ve</p>
-      <ul class="sede-list" id="pl-miembros"></ul>
-
-      <div id="pl-anadir-bloque" class="pl-anadir">
-        <div class="field">
-          <label for="pl-email">Añadir a alguien por su email</label>
-          <input type="email" id="pl-email" inputmode="email" autocapitalize="none" autocorrect="off"
-                 spellcheck="false" autocomplete="off" placeholder="Ej. marta@gmail.com" maxlength="200">
-        </div>
-        <label class="check"><input type="checkbox" id="pl-admin"> También puede gestionar la lista (añadir y quitar gente)</label>
-        <button class="btn btn-secondary" id="pl-anadir" type="button">Añadir a la lista</button>
-        <p class="hint nota-campo">Tiene que tener cuenta: créasela antes en Supabase → Authentication → Users.</p>
-      </div>
-    </div>
-
-    <h3 class="pl-sub">Nueva lista</h3>
-    <div class="field">
-      <label for="pl-nueva" class="sr-only">Nombre de la nueva lista</label>
-      <div class="fila-inline">
-        <input type="text" id="pl-nueva" maxlength="60" placeholder="Ej. Amigos del curro" autocapitalize="sentences">
-        <button class="btn btn-secondary" id="pl-crear" type="button">Crear</button>
-      </div>
-    </div>
-
-    <h3 class="pl-sub">Tu contraseña</h3>
-    <div class="field">
-      <label for="pl-pass1">Nueva contraseña <span class="hint">— mínimo 8 caracteres</span></label>
-      <input type="password" id="pl-pass1" autocomplete="new-password">
-    </div>
-    <div class="field">
-      <label for="pl-pass2">Repítela</label>
-      <input type="password" id="pl-pass2" autocomplete="new-password">
-    </div>
-    <button class="btn btn-secondary" id="pl-pass-btn" type="button">Cambiar contraseña</button>
-
-    <p class="msg msg-pie" id="pl-msg" aria-live="polite"></p>
-    <div class="panel-actions">
-      <button class="btn btn-secondary" id="pl-cerrar" type="button">Cerrar</button>
-    </div>
-  </section>
-
-  <form class="panel" id="panel" novalidate aria-labelledby="panel-title" hidden>
-    <h2 id="panel-title">Añadir restaurante</h2>
-
-    <div class="field" id="ia-enlace-bloque">
-      <label for="f-enlace">Pegar un enlace <span class="hint">— mejor la web del restaurante</span></label>
-      <div class="fila-inline">
-        <input type="url" id="f-enlace" placeholder="Ej. https://sottosopra.es" inputmode="url"
-               autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="500">
-        <button class="btn btn-secondary" id="ia-extraer-btn" type="button">Rellenar</button>
-      </div>
-    </div>
-    <p class="msg" id="ia-msg" aria-live="polite" hidden></p>
-
-    <div class="field">
-      <label for="f-nombre">Nombre</label>
-      <input type="text" id="f-nombre" placeholder="Ej. Casa Dani"
-             autocapitalize="words" autocorrect="off" spellcheck="false"
-             enterkeyhint="done" maxlength="80" required
-             aria-describedby="f-nombre-error">
-    </div>
-    <p class="msg msg-error" id="f-nombre-error" hidden>Escribe un nombre para poder guardarlo.</p>
-    <p class="msg msg-warn" id="f-dup-warn" hidden></p>
-
-    <div class="field-row">
-      <div class="field">
-        <label for="f-tipo">Tipo de cocina</label>
-        <input type="text" id="f-tipo" placeholder="Ej. Asturiana"
-               autocapitalize="sentences" autocorrect="off" spellcheck="false"
-               enterkeyhint="done" maxlength="60" list="tipos-sugeridos">
-      </div>
-      <div class="field precio">
-        <label for="f-precio">Precio</label>
-        <select id="f-precio">
-          <option value="1">€</option>
-          <option value="2" selected>€€</option>
-          <option value="3">€€€</option>
-        </select>
-      </div>
-    </div>
-    <datalist id="tipos-sugeridos"></datalist>
-
-    <div class="field">
-      <label for="f-zona">Zona</label>
-      <input type="text" id="f-zona" placeholder="Ej. Chamberí"
-             autocapitalize="words" autocorrect="off" spellcheck="false"
-             enterkeyhint="done" maxlength="80" list="zonas-sugeridas">
-    </div>
-    <datalist id="zonas-sugeridas"></datalist>
-
-    <div class="field">
-      <label for="f-carta">Carta o menú online <span class="hint">— opcional</span></label>
-      <input type="url" id="f-carta" placeholder="Ej. casadani.com/carta"
-             inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false"
-             enterkeyhint="done" maxlength="500"
-             aria-describedby="f-carta-warn">
-    </div>
-    <p class="msg msg-warn" id="f-carta-warn" hidden></p>
-
-    <div class="field">
-      <label for="f-reserva">Reservar <span class="hint">— opcional: web o teléfono</span></label>
-      <input type="text" id="f-reserva" placeholder="Ej. 915 63 89 77 o casadani.com/reservas"
-             autocapitalize="none" autocorrect="off" spellcheck="false"
-             enterkeyhint="done" maxlength="500"
-             aria-describedby="f-reserva-warn">
-    </div>
-    <p class="msg msg-warn" id="f-reserva-warn" hidden></p>
-
-    <div class="field">
-      <label for="f-direccion">Dirección <span class="hint">— opcional, afina «Cómo llegar»</span></label>
-      <input type="text" id="f-direccion" placeholder="Ej. C/ Gaztambide, 56"
-             autocapitalize="words" autocorrect="off" spellcheck="false"
-             enterkeyhint="done" maxlength="160">
-    </div>
-
-    <div class="field">
-      <label for="f-horario">Horario <span class="hint">— opcional; si lo dejas vacío se busca solo</span></label>
-      <div class="fila-apilada">
-        <input type="text" id="f-horario" placeholder="Ej. M-D 13-16, 20-23:30; lunes cerrado"
-               autocapitalize="none" autocorrect="off" spellcheck="false"
-               enterkeyhint="done" maxlength="200" aria-describedby="f-horario-msg">
-        <button class="btn btn-secondary" id="f-horario-web" type="button">Buscar en su web</button>
-      </div>
-    </div>
-    <p class="msg" id="f-horario-msg" aria-live="polite" hidden></p>
-
-    <details class="tools" id="sedes-details">
-      <summary>Varios locales <span class="hint">— opcional, solo si tiene más de uno</span></summary>
-      <div class="tools-body">
-        <p class="hint nota-intro">Si añades más de un local, la tarjeta muestra uno por cada zona que coincida con el filtro que tengas puesto (o todos, si no filtras). Con uno solo, va directo, sin preguntar. Los datos de arriba (carta, reserva, dirección, horario) se ignoran si hay locales aquí.</p>
-
-        <ul class="sede-list" id="sede-list"></ul>
-
-        <div class="field">
-          <label for="f-sede-nombre">Nombre del local</label>
-          <input type="text" id="f-sede-nombre" placeholder="Ej. Alcalá" maxlength="60"
-                 autocapitalize="words" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="f-sede-zona">Zona <span class="hint">— para poder filtrar por barrio</span></label>
-          <input type="text" id="f-sede-zona" placeholder="Ej. Chamberí" maxlength="80" list="zonas-sugeridas"
-                 autocapitalize="words" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="f-sede-direccion">Dirección <span class="hint">— opcional</span></label>
-          <input type="text" id="f-sede-direccion" placeholder="Ej. C/ Alcalá, 25" maxlength="160"
-                 autocapitalize="words" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="f-sede-carta">Carta <span class="hint">— opcional</span></label>
-          <input type="url" id="f-sede-carta" placeholder="Ej. sitio.com/alcala/carta" maxlength="500"
-                 inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="f-sede-reserva">Reservar <span class="hint">— opcional: web o teléfono</span></label>
-          <input type="text" id="f-sede-reserva" placeholder="Ej. 915 00 00 00" maxlength="500"
-                 autocapitalize="none" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="f-sede-horario">Horario <span class="hint">— opcional; si lo dejas vacío se busca solo</span></label>
-          <div class="fila-apilada">
-            <input type="text" id="f-sede-horario" placeholder="Ej. L-V 13-16, 20-23:30" maxlength="200"
-                   autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="f-sede-horario-msg">
-            <button class="btn btn-secondary" id="f-sede-horario-web" type="button">Buscar en su web</button>
-          </div>
-        </div>
-        <p class="msg" id="f-sede-horario-msg" aria-live="polite" hidden></p>
-        <div class="tools-row">
-          <button class="btn btn-secondary" id="add-sede-btn" type="button">＋ Añadir este local</button>
-          <button class="btn btn-secondary" id="cancel-sede-btn" type="button" hidden>Cancelar</button>
-        </div>
-      </div>
-    </details>
-
-    <div class="field">
-      <label for="f-nota">Nota <span class="hint">— opcional</span></label>
-      <input type="text" id="f-nota" placeholder="Ej. reservar con antelación"
-             autocapitalize="sentences" enterkeyhint="done" maxlength="120">
-    </div>
-
-    <div class="panel-actions">
-      <button class="btn btn-primary" id="save-btn" type="submit">Guardar</button>
-      <button class="btn btn-secondary" id="cancel-btn" type="button">Cancelar</button>
-    </div>
-  </form>
 
   <div class="controls">
     <div class="search-row">
       <label class="sr-only" for="search">Buscar restaurante</label>
       <div class="fila-inline">
+        <div class="campo-buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.2-4.2"></path></svg>
         <input type="search" class="search" id="search"
                placeholder="Buscar, o escribe una frase…"
                autocapitalize="none" autocorrect="off" spellcheck="false"
                enterkeyhint="search" maxlength="120">
+        </div>
         <button class="btn btn-secondary" id="ia-buscar-btn" type="button"
                 title="Convierte lo que has escrito en filtros">Interpretar</button>
       </div>
@@ -1081,7 +1129,7 @@
     <div class="filter-block">
       <div class="filter-head">
         <span class="filter-label" id="lbl-zona">Zona</span>
-        <button class="filter-clear" id="clear-zonas" type="button" hidden aria-label="Quitar los filtros de zona">✕</button>
+        <button class="filter-clear" id="clear-zonas" type="button" hidden aria-label="Quitar los filtros de zona"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
       </div>
       <div class="chip-row" id="zona-chips" role="group" aria-labelledby="lbl-zona"></div>
     </div>
@@ -1089,7 +1137,7 @@
     <div class="filter-block">
       <div class="filter-head">
         <span class="filter-label" id="lbl-tipo">Tipo de cocina</span>
-        <button class="filter-clear" id="clear-tipos" type="button" hidden aria-label="Quitar los filtros de tipo de cocina">✕</button>
+        <button class="filter-clear" id="clear-tipos" type="button" hidden aria-label="Quitar los filtros de tipo de cocina"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
       </div>
       <div class="chip-row" id="tipo-chips" role="group" aria-labelledby="lbl-tipo"></div>
     </div>
@@ -1097,7 +1145,7 @@
     <div class="filter-block">
       <div class="filter-head">
         <span class="filter-label" id="lbl-precio">Precio</span>
-        <button class="filter-clear" id="clear-precios" type="button" hidden aria-label="Quitar los filtros de precio">✕</button>
+        <button class="filter-clear" id="clear-precios" type="button" hidden aria-label="Quitar los filtros de precio"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
       </div>
       <div class="chip-row" id="precio-chips" role="group" aria-labelledby="lbl-precio"></div>
     </div>
@@ -1105,7 +1153,7 @@
     <div class="filter-block" id="marcas-bloque" hidden>
       <div class="filter-head">
         <span class="filter-label" id="lbl-marcas">Mis marcas</span>
-        <button class="filter-clear" id="clear-marcas" type="button" hidden aria-label="Quitar los filtros de mis marcas">✕</button>
+        <button class="filter-clear" id="clear-marcas" type="button" hidden aria-label="Quitar los filtros de mis marcas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
       </div>
       <div class="chip-row" id="marca-chips" role="group" aria-labelledby="lbl-marcas"></div>
     </div>
@@ -1121,7 +1169,7 @@
         <option value="cerca">Más cerca de mí</option>
       </select>
       <button class="chip" id="abierto-chip" type="button" aria-pressed="false">Abierto ahora</button>
-      <button class="dado-btn" id="random-btn" type="button">Sorpréndeme</button>
+      <button class="dado-btn" id="random-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"></rect><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"></circle></svg><span>Sorpréndeme</span></button>
     </div>
   </div>
 
@@ -1129,7 +1177,7 @@
     <p id="result-count" aria-live="polite"></p>
     <div class="result-acciones">
       <button class="clear-filters" id="clear-filters" type="button" hidden>Quitar filtros</button>
-      <div class="vista-toggle" role="group" aria-label="Cómo ver los restaurantes">
+      <div class="segmentado vista-toggle" role="group" aria-label="Cómo ver los restaurantes">
         <button type="button" id="vista-lista" aria-pressed="true">Lista</button>
         <button type="button" id="vista-mapa" aria-pressed="false">Mapa</button>
       </div>
@@ -1137,10 +1185,18 @@
   </div>
 
   <div class="mapa-wrap" id="mapa-wrap" hidden>
-    <div id="map" class="mapa" role="region" aria-label="Mapa de los restaurantes con dirección"></div>
+    <div class="mapa-marco">
+      <div id="map" class="mapa" role="region" aria-label="Mapa de los restaurantes con dirección"></div>
+      <!-- Ficha del restaurante elegido, como en Mapas: sube desde abajo -->
+      <div class="ficha-mapa" id="ficha-mapa" role="group" aria-label="Restaurante elegido en el mapa" hidden>
+        <span class="hoja-asa" aria-hidden="true"></span>
+        <button class="ficha-cerrar" id="ficha-cerrar" type="button" aria-label="Cerrar la ficha"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"></circle><path d="m8.6 8.6 6.8 6.8m0-6.8-6.8 6.8" fill="none" stroke-width="2.1" stroke-linecap="round"></path></svg></button>
+        <div id="ficha-contenido"></div>
+      </div>
+    </div>
     <div class="mapa-pie">
       <p class="mapa-nota" id="mapa-nota" aria-live="polite"></p>
-      <button class="dado-btn" id="centrar-btn" type="button">Mi ubicación</button>
+      <button class="dado-btn" id="centrar-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4 3.8 10.7a.4.4 0 0 0 0 .75l6.6 2.15 2.15 6.6a.4.4 0 0 0 .75 0Z"></path></svg><span>Mi ubicación</span></button>
     </div>
   </div>
 
@@ -1170,6 +1226,242 @@
 
 </div>
 
+<!-- Hojas inferiores: fuera de .wrap para que el fondo pueda echarse atrás -->
+<div class="scrim" id="scrim" hidden></div>
+
+<section class="hoja" id="panel-listas" role="dialog" aria-modal="true" aria-labelledby="pl-titulo" hidden>
+  <div class="hoja-cabeza">
+    <span class="hoja-asa" aria-hidden="true"></span>
+    <span></span>
+    <h2 id="pl-titulo">Listas y ajustes</h2>
+    <button class="hoja-boton fuerte" id="pl-cerrar" type="button">OK</button>
+  </div>
+  <div class="hoja-cuerpo">
+
+    <div id="pl-actual">
+      <h3 class="grupo-titulo" id="pl-titulo-lista"></h3>
+      <div class="grupo" id="pl-renombrar-bloque">
+        <div class="fila-g">
+          <label for="pl-nombre">Nombre</label>
+          <input type="text" id="pl-nombre" maxlength="60" autocapitalize="sentences" autocorrect="off">
+          <button class="boton-fila" id="pl-renombrar" type="button">Renombrar</button>
+        </div>
+      </div>
+
+      <h3 class="grupo-titulo">Quién la ve</h3>
+      <ul class="sede-list" id="pl-miembros"></ul>
+
+      <div id="pl-anadir-bloque">
+        <h3 class="grupo-titulo">Añadir a alguien</h3>
+        <div class="grupo">
+          <div class="fila-g">
+            <label for="pl-email" class="sr-only">Su email</label>
+            <input type="email" id="pl-email" inputmode="email" autocapitalize="none" autocorrect="off"
+                   spellcheck="false" autocomplete="off" placeholder="Su email, ej. marta@gmail.com" maxlength="200">
+          </div>
+          <label class="fila-g fila-check" for="pl-admin">
+            <span>También puede gestionar la lista</span>
+            <input type="checkbox" id="pl-admin" switch>
+          </label>
+          <button class="fila-g fila-boton" id="pl-anadir" type="button">Añadir a la lista</button>
+        </div>
+        <p class="grupo-pie">Tiene que tener cuenta: créasela antes en Supabase → Authentication → Users. Quien gestiona puede añadir y quitar gente.</p>
+      </div>
+    </div>
+
+    <h3 class="grupo-titulo">Nueva lista</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="pl-nueva" class="sr-only">Nombre de la nueva lista</label>
+        <input type="text" id="pl-nueva" maxlength="60" placeholder="Nombre, ej. Amigos del curro" autocapitalize="sentences">
+        <button class="boton-fila" id="pl-crear" type="button">Crear</button>
+      </div>
+    </div>
+
+    <h3 class="grupo-titulo">Tu contraseña</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="pl-pass1">Nueva</label>
+        <input type="password" id="pl-pass1" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div class="fila-g">
+        <label for="pl-pass2">Repítela</label>
+        <input type="password" id="pl-pass2" autocomplete="new-password">
+      </div>
+      <button class="fila-g fila-boton" id="pl-pass-btn" type="button">Cambiar contraseña</button>
+    </div>
+
+    <p class="msg grupo-msg" id="pl-msg" aria-live="polite"></p>
+
+    <h3 class="grupo-titulo">Apariencia</h3>
+    <div class="segmentado ancho" id="tema-seg" role="group" aria-label="Apariencia">
+      <button type="button" data-tema="auto" aria-pressed="true">Automático</button>
+      <button type="button" data-tema="light" aria-pressed="false">Claro</button>
+      <button type="button" data-tema="dark" aria-pressed="false">Oscuro</button>
+    </div>
+
+    <div class="grupo grupo-separado">
+      <button class="fila-g fila-boton destructivo" id="logout-btn" type="button">Cerrar sesión</button>
+    </div>
+  </div>
+</section>
+
+<form class="hoja" id="panel" novalidate role="dialog" aria-modal="true" aria-labelledby="panel-title" hidden>
+  <div class="hoja-cabeza">
+    <span class="hoja-asa" aria-hidden="true"></span>
+    <button class="hoja-boton" id="cancel-btn" type="button">Cancelar</button>
+    <h2 id="panel-title">Añadir restaurante</h2>
+    <button class="hoja-boton fuerte" id="save-btn" type="submit">Guardar</button>
+  </div>
+  <div class="hoja-cuerpo">
+
+    <div id="ia-enlace-bloque">
+      <h3 class="grupo-titulo">Rellenar desde un enlace</h3>
+      <div class="grupo">
+        <div class="fila-g">
+          <label for="f-enlace" class="sr-only">Enlace a la web del restaurante</label>
+          <input type="url" id="f-enlace" placeholder="Pega su web, ej. sottosopra.es" inputmode="url"
+                 autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="500">
+          <button class="boton-fila" id="ia-extraer-btn" type="button">Rellenar</button>
+        </div>
+      </div>
+    </div>
+    <p class="msg grupo-msg" id="ia-msg" aria-live="polite" hidden></p>
+
+    <h3 class="grupo-titulo">Restaurante</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="f-nombre">Nombre</label>
+        <input type="text" id="f-nombre" placeholder="Casa Dani"
+               autocapitalize="words" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="80" required
+               aria-describedby="f-nombre-error">
+      </div>
+      <div class="fila-g">
+        <label for="f-tipo">Cocina</label>
+        <input type="text" id="f-tipo" placeholder="Asturiana"
+               autocapitalize="sentences" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="60" list="tipos-sugeridos">
+      </div>
+      <div class="fila-g">
+        <label for="f-zona">Zona</label>
+        <input type="text" id="f-zona" placeholder="Chamberí"
+               autocapitalize="words" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="80" list="zonas-sugeridas">
+      </div>
+      <div class="fila-g">
+        <label for="f-precio">Precio</label>
+        <select id="f-precio">
+          <option value="1">€</option>
+          <option value="2" selected>€€</option>
+          <option value="3">€€€</option>
+        </select>
+      </div>
+    </div>
+    <p class="msg msg-error grupo-msg" id="f-nombre-error" hidden>Escribe un nombre para poder guardarlo.</p>
+    <p class="msg msg-warn grupo-msg" id="f-dup-warn" hidden></p>
+    <datalist id="tipos-sugeridos"></datalist>
+    <datalist id="zonas-sugeridas"></datalist>
+
+    <h3 class="grupo-titulo">Enlaces y dirección</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="f-carta">Carta</label>
+        <input type="url" id="f-carta" placeholder="Opcional"
+               inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="500"
+               aria-describedby="f-carta-warn">
+      </div>
+      <div class="fila-g">
+        <label for="f-reserva">Reservar</label>
+        <input type="text" id="f-reserva" placeholder="Web o teléfono"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="500"
+               aria-describedby="f-reserva-warn">
+      </div>
+      <div class="fila-g">
+        <label for="f-direccion">Dirección</label>
+        <input type="text" id="f-direccion" placeholder="Opcional"
+               autocapitalize="words" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="160">
+      </div>
+    </div>
+    <p class="grupo-pie">Todo opcional. La dirección afina «Cómo llegar».</p>
+    <p class="msg msg-warn grupo-msg" id="f-carta-warn" hidden></p>
+    <p class="msg msg-warn grupo-msg" id="f-reserva-warn" hidden></p>
+
+    <h3 class="grupo-titulo">Horario</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="f-horario" class="sr-only">Horario</label>
+        <input type="text" id="f-horario" placeholder="M-D 13-16, 20-23:30; lunes cerrado"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" maxlength="200" aria-describedby="f-horario-msg">
+      </div>
+      <button class="fila-g fila-boton" id="f-horario-web" type="button">Buscar en su web</button>
+    </div>
+    <p class="grupo-pie">Opcional: si lo dejas vacío, se busca solo.</p>
+    <p class="msg grupo-msg" id="f-horario-msg" aria-live="polite" hidden></p>
+
+    <details class="tools grupo-details" id="sedes-details">
+      <summary>Varios locales <span class="hint">— solo si tiene más de uno</span></summary>
+      <div class="tools-body">
+        <p class="grupo-pie nota-intro">Si añades más de un local, la tarjeta muestra uno por cada zona que coincida con el filtro que tengas puesto (o todos, si no filtras). Con uno solo, va directo, sin preguntar. Los datos de arriba (carta, reserva, dirección, horario) se ignoran si hay locales aquí.</p>
+
+        <ul class="sede-list" id="sede-list"></ul>
+
+        <div class="grupo">
+          <div class="fila-g">
+            <label for="f-sede-nombre">Local</label>
+            <input type="text" id="f-sede-nombre" placeholder="Alcalá" maxlength="60"
+                   autocapitalize="words" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="fila-g">
+            <label for="f-sede-zona">Zona</label>
+            <input type="text" id="f-sede-zona" placeholder="Para filtrar por barrio" maxlength="80" list="zonas-sugeridas"
+                   autocapitalize="words" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="fila-g">
+            <label for="f-sede-direccion">Dirección</label>
+            <input type="text" id="f-sede-direccion" placeholder="Opcional" maxlength="160"
+                   autocapitalize="words" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="fila-g">
+            <label for="f-sede-carta">Carta</label>
+            <input type="url" id="f-sede-carta" placeholder="Opcional" maxlength="500"
+                   inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="fila-g">
+            <label for="f-sede-reserva">Reservar</label>
+            <input type="text" id="f-sede-reserva" placeholder="Web o teléfono" maxlength="500"
+                   autocapitalize="none" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="fila-g">
+            <label for="f-sede-horario">Horario</label>
+            <input type="text" id="f-sede-horario" placeholder="Opcional" maxlength="200"
+                   autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="f-sede-horario-msg">
+          </div>
+          <button class="fila-g fila-boton" id="f-sede-horario-web" type="button">Buscar horario en su web</button>
+        </div>
+        <p class="msg grupo-msg" id="f-sede-horario-msg" aria-live="polite" hidden></p>
+        <div class="grupo">
+          <button class="fila-g fila-boton fuerte" id="add-sede-btn" type="button">Añadir este local</button>
+          <button class="fila-g fila-boton" id="cancel-sede-btn" type="button" hidden>Cancelar</button>
+        </div>
+      </div>
+    </details>
+
+    <h3 class="grupo-titulo">Nota</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="f-nota" class="sr-only">Nota</label>
+        <input type="text" id="f-nota" placeholder="Opcional, ej. reservar con antelación"
+               autocapitalize="sentences" enterkeyhint="done" maxlength="120">
+      </div>
+    </div>
+  </div>
+</form>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden>
   <span id="toast-text"></span>
   <button type="button" id="toast-action" hidden></button>
@@ -1178,6 +1470,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=27"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

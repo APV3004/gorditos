@@ -491,7 +491,7 @@
 
   function avisoSinListas() {
     if (!listas.length && !soloLectura) {
-      mostrarBanner("Aún no estás en ninguna lista. Crea una en «Gestionar», o pide a quien gestione una que te añada con tu email (" + miEmail + ").");
+      mostrarBanner("Aún no estás en ninguna lista. Crea una en «Listas y ajustes» (el botón redondo de arriba), o pide a quien gestione una que te añada con tu email (" + miEmail + ").");
     }
   }
 
@@ -558,7 +558,7 @@
 
   function requiereConexion() {
     if (!soloLectura && sb && !listaActual) {
-      avisar("Primero crea una lista (o pide que te añadan a una) en «Gestionar».");
+      avisar("Primero crea una lista (o pide que te añadan a una) en «Listas y ajustes».");
       return true;
     }
     if (soloLectura || !sb) {
@@ -573,6 +573,8 @@
      ============================================================ */
 
   function mostrarLogin(mensajeError) {
+    if (hojaActiva) hojaActiva.cerrar(null, { inmediato: true });
+    document.documentElement.classList.remove("titulo-compacto");
     $("app-shell").hidden = true;
     $("login-screen").hidden = false;
     var err = $("login-error");
@@ -743,17 +745,309 @@
     }, 340);
   }
 
+
+  /* ============================================================
+     10 bis. Hojas inferiores
+     Se abren desde abajo, siguen al dedo 1:1 y, al soltar, siguen con
+     la velocidad del dedo hacia donde apunta el gesto. Las mueve un
+     muelle (amortiguamiento + respuesta, como en iOS): si las agarras a
+     medio camino, siguen desde donde estén, sin saltos.
+     ============================================================ */
+
+  function crearMuelle(alPintar) {
+    var x = 0, v = 0, destino = 0, zeta = 1, respuesta = 0.35;
+    var raf = 0, ultimo = 0, alLlegar = null;
+    function paso(t) {
+      var dt = Math.min(0.064, Math.max(0.001, (t - ultimo) / 1000));
+      ultimo = t;
+      var k = Math.pow(2 * Math.PI / respuesta, 2);   // rigidez (masa 1)
+      var c = 4 * Math.PI * zeta / respuesta;         // amortiguamiento
+      var n = Math.ceil(dt / 0.004), h = dt / n;
+      for (var i = 0; i < n; i++) {
+        v += (-k * (x - destino) - c * v) * h;
+        x += v * h;
+      }
+      if (Math.abs(x - destino) < 0.5 && Math.abs(v) < 8) {
+        x = destino; v = 0; raf = 0;
+        alPintar(x);
+        var f = alLlegar; alLlegar = null;
+        if (f) f();
+        return;
+      }
+      alPintar(x);
+      raf = requestAnimationFrame(paso);
+    }
+    return {
+      // Cambia el destino sin perder la velocidad que lleva
+      ir: function (nuevo, opciones, fin) {
+        destino = nuevo; zeta = opciones.zeta; respuesta = opciones.respuesta;
+        if (typeof opciones.velocidad === "number") v = opciones.velocidad;
+        alLlegar = fin || null;
+        if (!raf) { ultimo = performance.now(); raf = requestAnimationFrame(paso); }
+      },
+      parar: function () {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0; alLlegar = null;
+        return x;
+      },
+      fijar: function (valor) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0; alLlegar = null; x = valor; v = 0;
+        alPintar(x);
+      },
+      valor: function () { return x; }
+    };
+  }
+
+  // Más allá del límite, el elemento sigue cada vez menos al dedo
+  function gomaElastica(exceso, dimension) {
+    var c = 0.55;
+    return (exceso * dimension * c) / (dimension + c * Math.abs(exceso));
+  }
+  // Dónde acabaría lo lanzado, como la deceleración del scroll de iOS
+  function proyectar(velocidad) {
+    var d = 0.998;
+    return (velocidad / 1000) * d / (1 - d);
+  }
+
+  var scrim = $("scrim");
+  var envoltura = document.querySelector(".wrap");
+  var hojaActiva = null;
+
+  function crearHoja(el, opciones) {
+    var cabeza = el.querySelector(".hoja-cabeza");
+    var cuerpo = el.querySelector(".hoja-cuerpo");
+    var altura = 0;
+    var alCerrar = null;
+    var velocidadSalida = 0;
+    var fundido = null;
+    var muelle = crearMuelle(pintar);
+    var api;
+
+    function quieto() { return !!(menosMovimiento && menosMovimiento.matches); }
+
+    function pintar(y) {
+      el.style.transform = "translate3d(0," + y.toFixed(2) + "px,0)";
+      var p = altura ? Math.max(0, Math.min(1, 1 - y / altura)) : 1;
+      document.documentElement.style.setProperty("--progreso-hoja", p.toFixed(4));
+    }
+
+    function abrir() {
+      if (hojaActiva && hojaActiva !== api) hojaActiva.cerrar(null, { inmediato: true });
+      hojaActiva = api;
+      alCerrar = null;
+      if (fundido) { fundido.cancel(); fundido = null; }
+      var estabaOculta = el.hidden;
+      el.hidden = false;
+      scrim.hidden = false;
+      if (estabaOculta) {
+        // El fondo se echa atrás desde el centro de lo que se está viendo
+        envoltura.style.transformOrigin = "50% " +
+          Math.round(window.scrollY + window.innerHeight / 2 - envoltura.offsetTop) + "px";
+        cuerpo.scrollTop = 0;
+        cabeza.classList.remove("con-scroll");
+      }
+      document.documentElement.classList.add("hoja-abierta");
+      envoltura.classList.add("empujada");
+      envoltura.inert = true;
+      altura = el.offsetHeight;
+      if (quieto()) {
+        muelle.fijar(0);
+        if (estabaOculta && el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+        return;
+      }
+      if (estabaOculta) muelle.fijar(altura);
+      muelle.ir(0, { zeta: 1, respuesta: 0.38 });
+    }
+
+    function terminar() {
+      fundido = null;
+      el.hidden = true;
+      el.style.transform = "";
+      if (hojaActiva === api) {
+        hojaActiva = null;
+        scrim.hidden = true;
+        document.documentElement.classList.remove("hoja-abierta");
+        document.documentElement.style.setProperty("--progreso-hoja", "0");
+        envoltura.classList.remove("empujada");
+        envoltura.inert = false;
+        envoltura.style.transformOrigin = "";
+      }
+      var f = alCerrar; alCerrar = null;
+      if (f) f();
+    }
+
+    // alTerminar solo se llama si la hoja llega a cerrarse: si alguien la
+    // vuelve a abrir o la agarra a medio camino, se descarta.
+    function cerrar(alTerminar, op) {
+      alCerrar = alTerminar || null;
+      var v = velocidadSalida; velocidadSalida = 0;
+      if ((op && op.inmediato) || el.hidden) { muelle.parar(); if (fundido) fundido.cancel(); terminar(); return; }
+      altura = el.offsetHeight;
+      if (quieto()) {
+        muelle.parar();
+        document.documentElement.style.setProperty("--progreso-hoja", "0");
+        if (!el.animate) { terminar(); return; }
+        fundido = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+        fundido.onfinish = function () { if (fundido) { fundido.cancel(); terminar(); } };
+        return;
+      }
+      muelle.ir(altura, { zeta: 1, respuesta: 0.32, velocidad: v }, terminar);
+    }
+
+    /* ---- Arrastre ---- */
+    var arrastre = null;
+    function empezar(y) {
+      if (fundido) return;
+      alCerrar = null;
+      altura = el.offsetHeight;
+      arrastre = { inicio: y, base: muelle.parar(), muestras: [{ y: y, t: performance.now() }] };
+      el.classList.add("arrastrando");
+    }
+    function mover(y) {
+      var bruto = arrastre.base + (y - arrastre.inicio);
+      muelle.fijar(bruto < 0 ? -gomaElastica(-bruto, altura) : bruto);
+      var ahora = performance.now();
+      arrastre.muestras.push({ y: y, t: ahora });
+      while (arrastre.muestras.length > 2 && ahora - arrastre.muestras[0].t > 100) arrastre.muestras.shift();
+    }
+    function soltar() {
+      var m = arrastre.muestras, a = m[0], b = m[m.length - 1];
+      var dt = b.t - a.t;
+      var v = dt > 8 ? (b.y - a.y) / dt * 1000 : 0;     // px/s, hacia abajo positivo
+      if (performance.now() - b.t > 80) v = 0;          // se paró antes de soltar
+      arrastre = null;
+      el.classList.remove("arrastrando");
+      var y = muelle.valor();
+      // Con un lanzamiento claro manda el sentido; si no, adónde iría a parar
+      var cerrarla = Math.abs(v) > 400 ? v > 0 : y + proyectar(v) > altura * 0.5;
+      if (cerrarla) {
+        velocidadSalida = v;
+        opciones.alDescartar();
+      } else {
+        // Vuelve a su sitio con la velocidad del dedo y un leve rebote
+        muelle.ir(0, { zeta: 0.8, respuesta: 0.3, velocidad: v });
+      }
+    }
+
+    // Desde la cabecera, siempre (punteros: dedo, ratón o lápiz)
+    cabeza.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || e.target.closest("button, a, input, select, textarea")) return;
+      try { cabeza.setPointerCapture(e.pointerId); } catch (err) {}
+      empezar(e.clientY);
+    });
+    cabeza.addEventListener("pointermove", function (e) { if (arrastre) mover(e.clientY); });
+    cabeza.addEventListener("pointerup", function () { if (arrastre) soltar(); });
+    cabeza.addEventListener("pointercancel", function () { if (arrastre) soltar(); });
+
+    // Desde el contenido, solo tirando hacia abajo cuando ya está arriba del todo
+    var toque = null;
+    cuerpo.addEventListener("touchstart", function (e) {
+      toque = e.touches.length === 1
+        ? { x: e.touches[0].clientX, y: e.touches[0].clientY, arriba: cuerpo.scrollTop <= 0 }
+        : null;
+    }, { passive: true });
+    cuerpo.addEventListener("touchmove", function (e) {
+      if (!toque) return;
+      var t = e.touches[0];
+      if (arrastre) { e.preventDefault(); mover(t.clientY); return; }
+      var dy = t.clientY - toque.y, dx = t.clientX - toque.x;
+      if (!toque.arriba || cuerpo.scrollTop > 0 || dy < 0 || Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dy) > 10 || Math.abs(dx) > 10) toque = null;
+        return;
+      }
+      e.preventDefault();                       // que no rebote el scroll de dentro
+      if (dy >= 10) empezar(t.clientY);         // umbral de 10 px antes de decidir
+    }, { passive: false });
+    function finToque() { toque = null; if (arrastre) soltar(); }
+    cuerpo.addEventListener("touchend", finToque);
+    cuerpo.addEventListener("touchcancel", finToque);
+
+    // Borde de desplazamiento: la cabecera solo se separa si hay algo debajo
+    cuerpo.addEventListener("scroll", function () {
+      cabeza.classList.toggle("con-scroll", cuerpo.scrollTop > 0);
+    }, { passive: true });
+
+    api = { abrir: abrir, cerrar: cerrar, descartar: function () { opciones.alDescartar(); } };
+    return api;
+  }
+
+  scrim.addEventListener("click", function () { if (hojaActiva) hojaActiva.descartar(); });
+  scrim.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+
+
+  /* ---- Título compacto: aparece en la barra cuando el grande se va ---- */
+  (function tituloCompacto() {
+    var h1 = document.querySelector("header.page h1");
+    var barra = $("barra-titulo");
+    if (!h1 || !barra || !window.IntersectionObserver) return;
+    new IntersectionObserver(function (entradas) {
+      var e = entradas[0];
+      var fuera = !e.isIntersecting && e.boundingClientRect.top < 0 && !$("app-shell").hidden;
+      document.documentElement.classList.toggle("titulo-compacto", fuera);
+    }, { rootMargin: "-44px 0px 0px 0px" }).observe(h1);
+    barra.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: menosMovimiento && menosMovimiento.matches ? "auto" : "smooth" });
+    });
+  })();
+
+  /* ---- El aviso flotante se descarta deslizándolo hacia abajo ---- */
+  (function arrastrarAviso() {
+    if (!refsToast()) return;
+    var muelle = crearMuelle(function (y) {
+      toast.style.transform = Math.abs(y) < 0.5 ? "" : "translate(-50%," + y.toFixed(2) + "px)";
+      toast.style.opacity = y > 0 ? String(Math.max(0, 1 - y / (toast.offsetHeight * 2))) : "";
+    });
+    var g = null;
+    toast.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || e.target.closest("button")) return;
+      clearTimeout(temporizadorToast);                 // mientras lo tienes agarrado, no se va
+      clearTimeout(temporizadorSalida);
+      toast.classList.remove("saliendo");
+      toast.classList.add("arrastrando");
+      g = { id: e.pointerId, y0: e.clientY, base: muelle.parar(), muestras: [{ y: e.clientY, t: performance.now() }] };
+      try { toast.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    toast.addEventListener("pointermove", function (e) {
+      if (!g || e.pointerId !== g.id) return;
+      var b = g.base + e.clientY - g.y0;
+      muelle.fijar(b < 0 ? -gomaElastica(-b, 60) : b);
+      var ahora = performance.now();
+      g.muestras.push({ y: e.clientY, t: ahora });
+      while (g.muestras.length > 2 && ahora - g.muestras[0].t > 100) g.muestras.shift();
+    });
+    function soltar() {
+      if (!g) return;
+      var m = g.muestras, v = 0, ult = m[m.length - 1];
+      g = null;
+      if (m.length > 1 && ult.t - m[0].t > 8 && performance.now() - ult.t < 80) v = (ult.y - m[0].y) / (ult.t - m[0].t) * 1000;
+      var alto = toast.offsetHeight;
+      if (muelle.valor() + proyectar(v) > alto * 0.6) {
+        muelle.ir(alto * 2.5, { zeta: 1, respuesta: 0.25, velocidad: v }, function () {
+          toast.hidden = true;
+          toastAction.onclick = null;
+          toast.classList.remove("arrastrando");
+          muelle.fijar(0);
+        });
+      } else {
+        muelle.ir(0, { zeta: 0.8, respuesta: 0.3, velocidad: v }, function () { toast.classList.remove("arrastrando"); });
+        temporizadorToast = setTimeout(ocultarToast, 3200);
+      }
+    }
+    toast.addEventListener("pointerup", soltar);
+    toast.addEventListener("pointercancel", soltar);
+  })();
+
   /* ============================================================
      11. Tema claro / oscuro / automático — sin cambios
      ============================================================ */
 
   (function tema() {
-    var btn = $("theme-btn");
+    var botones = document.querySelectorAll("#tema-seg button");
     var metaLight = document.querySelector('meta[data-scheme="light"]');
     var metaDark = document.querySelector('meta[data-scheme="dark"]');
     var metaManual = document.querySelector('meta[data-scheme="manual"]');
     var ciclo = ["auto", "light", "dark"];
-    var nombres = { auto: "automático", light: "claro", dark: "oscuro" };
     var actual = leerCrudo(CLAVE_TEMA);
     if (ciclo.indexOf(actual) === -1) actual = "auto";
 
@@ -772,11 +1066,14 @@
         metaManual.content = (t === "dark") ? "#000000" : "#F2F2F7";
       }
       if (typeof actualizarTeselas === "function") actualizarTeselas();
-      btn.textContent = "Tema: " + nombres[t];
-      btn.setAttribute("aria-label", "Cambiar tema. Ahora: " + nombres[t]);
+      for (var i = 0; i < botones.length; i++) {
+        botones[i].setAttribute("aria-pressed", botones[i].getAttribute("data-tema") === t ? "true" : "false");
+      }
       escribirCrudo(CLAVE_TEMA, t);
     }
-    btn.addEventListener("click", function () { aplicar(ciclo[(ciclo.indexOf(actual) + 1) % ciclo.length]); });
+    for (var i = 0; i < botones.length; i++) {
+      botones[i].addEventListener("click", function () { aplicar(this.getAttribute("data-tema")); });
+    }
     aplicar(actual);
   })();
 
@@ -792,7 +1089,8 @@
     marcas = [];
     try { localStorage.removeItem(CLAVE_LISTAS); localStorage.removeItem(CLAVE_LISTA_ACTUAL); } catch (e) {}
     listas = []; miembros = []; data = []; listaActual = null; miId = ""; miEmail = "";
-    if (!$("panel-listas").hidden) cerrarPanelListas(false);
+    cerrarPanelListas(false, true);
+    if (!panel.hidden) cerrarPanel(false, true);
     pintarSelectorListas();
     mostrarLogin();
   });
@@ -880,7 +1178,21 @@
     contenedor.replaceChildren(frag);
     marcar();
     contenedor.scrollLeft = scroll;
+    bordesChips(contenedor);
   }
+
+  // Fundido en el lado por el que quedan chips fuera de la vista
+  function bordesChips(fila) {
+    var max = fila.scrollWidth - fila.clientWidth;
+    fila.classList.toggle("mas-izq", fila.scrollLeft > 2);
+    fila.classList.toggle("mas-der", fila.scrollLeft < max - 2);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".chip-row"), function (fila) {
+    fila.addEventListener("scroll", function () { bordesChips(fila); }, { passive: true });
+  });
+  window.addEventListener("resize", function () {
+    Array.prototype.forEach.call(document.querySelectorAll(".chip-row"), bordesChips);
+  });
 
   // «Zona · 2»: se ve de un vistazo cuántos hay marcados aunque la fila
   // de chips esté desplazada y no se vean.
@@ -1058,7 +1370,7 @@
   function cancelarEdicionSede() {
     sedeEditandoIdx = null;
     limpiarCamposSede();
-    $("add-sede-btn").textContent = "＋ Añadir este local";
+    $("add-sede-btn").textContent = "Añadir este local";
     $("cancel-sede-btn").hidden = true;
   }
 
@@ -1254,7 +1566,6 @@
       sedesEnEdicion = (item.sedes || []).map(function (s) { return Object.assign({}, s); });
       horarioPanelActual = item.horario || null;
       fHorario.value = horarioParaCampo(item.horario);
-      btnGuardar.textContent = "Guardar cambios";
     } else {
       editandoId = null;
       panelTitle.textContent = "Añadir restaurante";
@@ -1273,37 +1584,37 @@
     decirIA("");
     sedesDetails.open = sedesEnEdicion.length > 0;
     limpiarAvisosFormulario();
-    if (item) btnGuardar.textContent = "Guardar cambios";
-    panel.hidden = false;
+    hojaForm.abrir();
     btnAbrir.setAttribute("aria-expanded", "true");
     cerrarTodasLasConfirmaciones();
-    desplazarA(panel, { behavior: "smooth", block: "start" });
     setTimeout(function () {
       try { fNombre.focus({ preventScroll: true }); } catch (e) { fNombre.focus(); }
-    }, 220);
+    }, 380);
   }
 
-  function cerrarPanel(devolverFoco) {
-    panel.hidden = true;
-    editandoId = null;
-    sedesEnEdicion = [];
-    cancelarEdicionSede();
-    renderSedeList();
-    sedesDetails.open = false;
-    limpiarAvisosFormulario();
+  // Lo que se limpia espera a que la hoja acabe de irse: si se agarra a
+  // medio camino y vuelve, el formulario sigue intacto.
+  function cerrarPanel(devolverFoco, inmediato) {
     btnAbrir.setAttribute("aria-expanded", "false");
-    if (devolverFoco) btnAbrir.focus();
+    hojaForm.cerrar(function () {
+      editandoId = null;
+      sedesEnEdicion = [];
+      cancelarEdicionSede();
+      renderSedeList();
+      sedesDetails.open = false;
+      limpiarAvisosFormulario();
+      if (devolverFoco) btnAbrir.focus({ preventScroll: true });
+    }, { inmediato: !!inmediato });
   }
+  var hojaForm = crearHoja(panel, { alDescartar: function () { cerrarPanel(true); } });
 
-  btnAbrir.addEventListener("click", function () {
-    if (panel.hidden) abrirPanel(null); else cerrarPanel(true);
-  });
+  btnAbrir.addEventListener("click", function () { abrirPanel(null); });
   $("cancel-btn").addEventListener("click", function () { cerrarPanel(true); });
 
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
     if (!panel.hidden) { cerrarPanel(true); return; }
-    if (Object.keys(idsExpandidosBorrado).length) { cerrarTodasLasConfirmaciones(); render(); }
+    cerrarDeslizado();
   });
 
   fCarta.addEventListener("blur", function () {
@@ -1350,10 +1661,10 @@
 
     var dup = buscarDuplicado(nombre, editandoId);
     if (dup && !pendienteConfirmarDuplicado) {
-      avisoDup.textContent = "Ya tenéis «" + dup.nombre + "» en " + dup.zona + ". Pulsa otra vez si de verdad quieres añadirlo por duplicado.";
+      avisoDup.textContent = "Ya tenéis «" + dup.nombre + "» en " + dup.zona + ". Pulsa «Guardar» otra vez si de verdad quieres añadirlo por duplicado.";
       avisoDup.hidden = false;
       pendienteConfirmarDuplicado = true;
-      btnGuardar.textContent = "Añadir de todos modos";
+      // (el botón de la cabecera no cabe otro texto: lo dice el aviso)
       desplazarA(avisoDup, { block: "nearest", behavior: "smooth" });
       return;
     }
@@ -1412,7 +1723,10 @@
      15. Borrado con confirmación y deshacer
      ============================================================ */
 
-  function cerrarTodasLasConfirmaciones() { idsExpandidosBorrado = Object.create(null); }
+  function cerrarTodasLasConfirmaciones() {
+    idsExpandidosBorrado = Object.create(null);
+    if (typeof cerrarDeslizado === "function") cerrarDeslizado();
+  }
 
   function eliminar(item) {
     if (requiereConexion()) return;
@@ -1420,7 +1734,7 @@
     var listaDelBorrado = listaActual;   // «Deshacer» lo devuelve a SU lista, aunque cambies de lista antes
 
     sb.from("restaurantes").delete().eq("id", item.id).then(function (res) {
-      if (res.error) { avisar("No se pudo eliminar: inténtalo de nuevo."); return; }
+      if (res.error) { avisar("No se pudo eliminar: inténtalo de nuevo."); render(); return; }
       quitarLocal(item.id);
       guardarCache();
       refrescarFuentesChips();
@@ -1441,7 +1755,7 @@
           });
         }
       });
-    }).catch(function () { avisar("No se pudo eliminar: revisa la conexión."); });
+    }).catch(function () { avisar("No se pudo eliminar: revisa la conexión."); render(); });
   }
 
   /* ============================================================
@@ -1453,7 +1767,9 @@
     carta:   svgBase + '<path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>',
     reserva: svgBase + '<path d="M4 6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"></path><path d="M8 3v4M16 3v4M4 10h16"></path><path d="m9.5 15 1.8 1.8 3.4-3.4"></path></svg>',
     tel:     svgBase + '<path d="M16.5 21A13.5 13.5 0 0 1 3 7.5 2.5 2.5 0 0 1 5.5 5h1.8a1 1 0 0 1 1 .78l.7 3.1a1 1 0 0 1-.42 1.05l-1.4.95a11 11 0 0 0 4.94 4.94l.95-1.4a1 1 0 0 1 1.05-.42l3.1.7a1 1 0 0 1 .78 1v1.8A2.5 2.5 0 0 1 16.5 21Z"></path></svg>',
-    mapa:    svgBase + '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>'
+    mapa:    svgBase + '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>',
+    lapiz:   svgBase + '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"></path><path d="m13.5 6.5 4 4"></path></svg>',
+    papelera: svgBase + '<path d="M4 7h16M10 11v6M14 11v6"></path><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"></path><path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"></path></svg>'
   };
 
   function crearPildora(etiqueta, href, icono, descripcion, externo) {
@@ -1747,48 +2063,28 @@
     var btnBorrar = document.createElement("button");
     btnBorrar.type = "button"; btnBorrar.className = "danger"; btnBorrar.textContent = "Eliminar";
     btnBorrar.setAttribute("aria-label", "Eliminar " + d.nombre);
-    btnBorrar.setAttribute("aria-expanded", idsExpandidosBorrado[d.id] ? "true" : "false");
+    // Sin «¿Seguro?»: el aviso trae «Deshacer», que es más rápido y perdona igual
+    btnBorrar.addEventListener("click", function () { eliminar(d); });
 
     acciones.appendChild(btnEditar); acciones.appendChild(btnBorrar);
     li.appendChild(acciones);
 
-    var confirmacion = document.createElement("div");
-    confirmacion.className = "confirm-row";
-    confirmacion.setAttribute("role", "group");
-    confirmacion.setAttribute("aria-label", "Confirmar borrado de " + d.nombre);
-    confirmacion.hidden = !idsExpandidosBorrado[d.id];
-    var pregunta = document.createElement("p");
-    pregunta.textContent = "¿Eliminar «" + d.nombre + "» de la lista?";
-    var si = document.createElement("button");
-    si.type = "button"; si.className = "confirm-yes"; si.textContent = "Sí, eliminar";
-    var no = document.createElement("button");
-    no.type = "button"; no.className = "confirm-no"; no.textContent = "Cancelar";
-    confirmacion.appendChild(pregunta); confirmacion.appendChild(si); confirmacion.appendChild(no);
-    li.appendChild(confirmacion);
-
-    btnBorrar.addEventListener("click", function () {
-      var abierto = !!idsExpandidosBorrado[d.id];
-      cerrarTodasLasConfirmaciones();
-      if (!abierto) {
-        idsExpandidosBorrado[d.id] = true;
-        confirmacion.hidden = false;
-        aparecer(confirmacion);
-        btnBorrar.setAttribute("aria-expanded", "true");
-        si.focus();
-      } else {
-        confirmacion.hidden = true;
-        btnBorrar.setAttribute("aria-expanded", "false");
-      }
-      var otras = lista.querySelectorAll(".confirm-row");
-      for (var i = 0; i < otras.length; i++) if (otras[i] !== confirmacion) otras[i].hidden = true;
-    });
-    no.addEventListener("click", function () {
-      delete idsExpandidosBorrado[d.id];
-      confirmacion.hidden = true;
-      btnBorrar.setAttribute("aria-expanded", "false");
-      btnBorrar.focus();
-    });
-    si.addEventListener("click", function () { eliminar(d); });
+    // Acciones que aparecen al deslizar la tarjeta a la izquierda (como en
+    // Mail). Duplican los botones de arriba, así que no se anuncian ni se
+    // alcanzan con el tabulador.
+    var capa = document.createElement("div");
+    capa.className = "card-deslizar";
+    capa.setAttribute("aria-hidden", "true");
+    var dEditar = document.createElement("button");
+    dEditar.type = "button"; dEditar.tabIndex = -1; dEditar.className = "deslizar-editar";
+    dEditar.innerHTML = ICONOS.lapiz + "<span>Editar</span>";
+    dEditar.addEventListener("click", function () { cerrarDeslizado(); abrirPanel(d); });
+    var dBorrar = document.createElement("button");
+    dBorrar.type = "button"; dBorrar.tabIndex = -1; dBorrar.className = "deslizar-borrar";
+    dBorrar.innerHTML = ICONOS.papelera + "<span>Eliminar</span>";
+    dBorrar.addEventListener("click", function () { borrarDeslizando(li, d, 0); });
+    capa.appendChild(dEditar); capa.appendChild(dBorrar);
+    li.appendChild(capa);
 
     return li;
   }
@@ -1861,7 +2157,7 @@
      romperse; por eso no es lo predeterminado. */
   var TESELAS = {
     osm: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    cartoClaro: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=",
+    cartoClaro: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=",   // el más parecido a Mapas
     cartoOscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key="
   };
   var ATRIB_OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
@@ -2825,6 +3121,7 @@
     capaRest = L.layerGroup().addTo(mapa);
     if (typeof mapa.on === "function") {
       mapa.on("dragstart", function () { usuarioMovioMapa = true; });
+      mapa.on("click", function () { cerrarFicha(false); });   // tocar el mapa suelta la ficha
       mapa.on("zoomstart", function () { if (!moviendoYo) usuarioMovioMapa = true; });
     }
     return true;
@@ -2900,16 +3197,17 @@
       puntosDe(d, true).forEach(function (p) {
         if (!geoUtil(p.geo, p.clave)) return;
         var ll = [p.geo.lat, p.geo.lng];
-        var m = L.circleMarker(ll, { radius: 9, weight: 2, fillOpacity: 0.95,
+        var m = L.circleMarker(ll, { radius: 9, weight: 2, fillOpacity: 0.95, bubblingMouseEvents: false,
                                      className: "marcador-rest" + (p.geo.aprox ? " marcador-aprox" : "") });
-        m.bindPopup(crearPopup(d, p));
+        m.on("click", function () { abrirFicha(d, p, m); });
         m.addTo(capaRest);
-        if (!marcadoresPorId[d.id]) marcadoresPorId[d.id] = { marcador: m, ll: ll };
+        if (!marcadoresPorId[d.id]) marcadoresPorId[d.id] = { marcador: m, ll: ll, d: d, p: p };
         puntos.push(ll);
       });
     });
 
     pintarYo();
+    refrescarFicha();
 
     // Cambiar de filtro vuelve a encuadrar. Mientras llegan puntos nuevos
     // (búsqueda en curso) también, salvo que tú hayas movido el mapa.
@@ -3000,6 +3298,7 @@
     if (state.vista === v) return;
     state.vista = v;
     if (v === "mapa") reiniciarEncuadre();       // al abrir el mapa, siempre encuadrado en todo
+    else cerrarFicha(true);
     guardarFiltros();
     render();
     // Leaflet calcula su tamaño al crearse: si el contenedor estuvo oculto,
@@ -3018,6 +3317,227 @@
     avisar("Buscando tu ubicación…");
     gestionarUbicacion();
   });
+
+
+
+  /* ============================================================
+     17 bis. Ficha del mapa
+     Sustituye al globo de Leaflet: una tarjeta translúcida que sube
+     desde abajo (muelle), se descarta deslizándola hacia abajo y marca
+     la chincheta elegida.
+     ============================================================ */
+
+  var ficha = $("ficha-mapa");
+  var fichaContenido = $("ficha-contenido");
+  var fichaActual = null;          // { id, marcador }
+  var muelleFicha = crearMuelle(function (y) {
+    ficha.style.transform = Math.abs(y) < 0.5 ? "" : "translate3d(0," + y.toFixed(2) + "px,0)";
+  });
+
+  function marcarElegido(m, si) {
+    if (!m || !m.setRadius) return;
+    m.setRadius(si ? 12 : 9);
+    var el = m.getElement && m.getElement();
+    if (el) el.classList.toggle("marcador-elegido", si);
+    if (si && m.bringToFront) m.bringToFront();
+  }
+
+  function abrirFicha(d, p, m) {
+    if (fichaActual) marcarElegido(fichaActual.marcador, false);
+    fichaActual = { id: d.id, marcador: m };
+    marcarElegido(m, true);
+    fichaContenido.replaceChildren(crearPopup(d, p));
+    var estabaOculta = ficha.hidden;
+    ficha.hidden = false;
+    if (menosMovimiento && menosMovimiento.matches) {
+      muelleFicha.fijar(0);
+      if (estabaOculta && ficha.animate) ficha.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+      asomarElegido(m);
+      return;
+    }
+    if (estabaOculta) muelleFicha.fijar(ficha.offsetHeight + 16);
+    muelleFicha.ir(0, { zeta: 1, respuesta: 0.35 });
+    asomarElegido(m);
+  }
+
+  // Si la chincheta elegida queda bajo la ficha, el mapa sube lo justo
+  function asomarElegido(m) {
+    if (!mapa || !m || !m.getLatLng) return;
+    var pt = mapa.latLngToContainerPoint(m.getLatLng());
+    var limite = mapa.getSize().y - ficha.offsetHeight - 36;
+    if (pt.y > limite) {
+      moverMapa(function () {
+        mapa.panBy([0, pt.y - limite], { animate: !(menosMovimiento && menosMovimiento.matches) });
+      });
+    }
+  }
+
+  function cerrarFicha(inmediato, velocidad) {
+    if (!fichaActual) return;
+    marcarElegido(fichaActual.marcador, false);
+    fichaActual = null;
+    function fin() { ficha.hidden = true; muelleFicha.fijar(0); fichaContenido.replaceChildren(); }
+    if (inmediato || (menosMovimiento && menosMovimiento.matches)) { muelleFicha.parar(); fin(); return; }
+    muelleFicha.ir(ficha.offsetHeight + 16, { zeta: 1, respuesta: 0.3, velocidad: velocidad || 0 }, fin);
+  }
+
+  // Al repintar el mapa los marcadores se rehacen: la ficha sigue al nuevo
+  function refrescarFicha() {
+    if (!fichaActual) return;
+    var e = marcadoresPorId[fichaActual.id];
+    if (!e) { cerrarFicha(true); return; }
+    fichaActual.marcador = e.marcador;
+    marcarElegido(e.marcador, true);
+    fichaContenido.replaceChildren(crearPopup(e.d, e.p));
+  }
+
+  $("ficha-cerrar").addEventListener("click", function () { cerrarFicha(false); });
+
+  (function arrastrarFicha() {
+    var g = null;
+    ficha.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || e.target.closest("#ficha-cerrar")) return;
+      g = { id: e.pointerId, y0: e.clientY, movido: false, base: 0, muestras: [] };
+    });
+    ficha.addEventListener("pointermove", function (e) {
+      if (!g || e.pointerId !== g.id) return;
+      var dy = e.clientY - g.y0;
+      if (!g.movido) {
+        if (Math.abs(dy) < 6) return;
+        g.movido = true;
+        g.base = muelleFicha.parar() - dy;
+        try { ficha.setPointerCapture(e.pointerId); } catch (err) {}
+      }
+      var b = g.base + dy;
+      muelleFicha.fijar(b < 0 ? -gomaElastica(-b, 80) : b);   // hacia arriba resiste
+      var ahora = performance.now();
+      g.muestras.push({ y: e.clientY, t: ahora });
+      while (g.muestras.length > 2 && ahora - g.muestras[0].t > 100) g.muestras.shift();
+    });
+    function soltar() {
+      if (!g) return;
+      var h = g; g = null;
+      if (!h.movido) return;
+      suprimirClic();
+      var m = h.muestras, v = 0, ult = m[m.length - 1];
+      if (m.length > 1 && ult.t - m[0].t > 8 && performance.now() - ult.t < 80) v = (ult.y - m[0].y) / (ult.t - m[0].t) * 1000;
+      var y = muelleFicha.valor();
+      var cerrar = Math.abs(v) > 300 ? v > 0 : y + proyectar(v) > ficha.offsetHeight * 0.5;
+      if (cerrar) cerrarFicha(false, v);
+      else muelleFicha.ir(0, { zeta: 0.8, respuesta: 0.3, velocidad: v });
+    }
+    ficha.addEventListener("pointerup", soltar);
+    ficha.addEventListener("pointercancel", soltar);
+  })();
+
+  /* ============================================================
+     16 bis bis. Deslizar una tarjeta
+     Sigue al dedo en horizontal (tras 10 px que deciden si es scroll o
+     deslizar). Al soltar, el sentido del lanzamiento decide si se queda
+     abierta; pasado el 60 % del ancho, borra.
+     ============================================================ */
+
+  var ANCHO_ACCIONES = 168;      // dos botones de 80 + hueco
+  var deslizada = null;
+  var gesto = null;
+
+  function muelleDe(li) {
+    if (!li._muelle) {
+      li._muelle = crearMuelle(function (x) {
+        li.style.transform = Math.abs(x) < 0.5 ? "" : "translate3d(" + x.toFixed(2) + "px,0,0)";
+        var capa = li.querySelector(".card-deslizar");
+        if (capa) {
+          capa.style.width = Math.max(ANCHO_ACCIONES, -x - 8) + "px";
+          capa.classList.toggle("todo", -x > li.offsetWidth * 0.6);
+        }
+      });
+    }
+    return li._muelle;
+  }
+
+  function cerrarDeslizado() {
+    if (!deslizada) return;
+    muelleDe(deslizada).ir(0, { zeta: 1, respuesta: 0.3 });
+    deslizada = null;
+  }
+
+  // Tras un arrastre, el navegador manda un clic al soltar: se descarta
+  function suprimirClic() {
+    function parar(e) { e.stopPropagation(); e.preventDefault(); }
+    document.addEventListener("click", parar, true);
+    setTimeout(function () { document.removeEventListener("click", parar, true); }, 0);
+  }
+
+  function borrarDeslizando(li, d, velocidad) {
+    if (deslizada === li) deslizada = null;
+    if (requiereConexion()) { muelleDe(li).ir(0, { zeta: 1, respuesta: 0.3 }); return; }
+    var quieto = menosMovimiento && menosMovimiento.matches;
+    if (quieto || !li.animate) { eliminar(d); return; }
+    muelleDe(li).ir(-li.offsetWidth * 1.4, { zeta: 1, respuesta: 0.25, velocidad: velocidad }, function () {
+      // La fila se cierra antes de que conteste el servidor: sin saltos
+      var cs = getComputedStyle(li);
+      li.style.overflow = "hidden";
+      var an = li.animate([
+        { height: li.offsetHeight + "px", marginTop: "0px", paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom },
+        { height: "0px", marginTop: "-0.75rem", paddingTop: "0px", paddingBottom: "0px" }
+      ], { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "forwards" });
+      an.onfinish = function () { eliminar(d); };
+    });
+  }
+
+  lista.addEventListener("pointerdown", function (e) {
+    var li = e.target.closest("li.card");
+    if (deslizada && deslizada !== li) cerrarDeslizado();
+    if (e.pointerType === "mouse" || !li || e.target.closest(".card-deslizar")) return;
+    gesto = { li: li, id: e.pointerId, x0: e.clientX, y0: e.clientY, decidido: false,
+              tocarParaCerrar: deslizada === li, muestras: [] };
+  });
+  lista.addEventListener("pointermove", function (e) {
+    if (!gesto || e.pointerId !== gesto.id) return;
+    var dx = e.clientX - gesto.x0, dy = e.clientY - gesto.y0;
+    if (!gesto.decidido) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      if (Math.abs(dy) >= Math.abs(dx)) { gesto = null; return; }   // es scroll
+      gesto.decidido = true;
+      try { gesto.li.setPointerCapture(e.pointerId); } catch (err) {}
+      gesto.base = muelleDe(gesto.li).parar() - dx;                  // sigue desde donde esté
+      gesto.li.classList.add("deslizando");
+      deslizada = gesto.li;
+    }
+    var bruto = gesto.base + dx;
+    // A la derecha no hay nada: resiste como una goma
+    muelleDe(gesto.li).fijar(bruto > 0 ? gomaElastica(bruto, 120) : bruto);
+    var ahora = performance.now();
+    gesto.muestras.push({ x: e.clientX, t: ahora });
+    while (gesto.muestras.length > 2 && ahora - gesto.muestras[0].t > 100) gesto.muestras.shift();
+  });
+  function soltarGesto() {
+    if (!gesto) return;
+    var g = gesto; gesto = null;
+    if (!g.decidido) {
+      if (g.tocarParaCerrar) { cerrarDeslizado(); suprimirClic(); }
+      return;
+    }
+    g.li.classList.remove("deslizando");
+    suprimirClic();
+    var m = g.muestras, v = 0, ult = m[m.length - 1];
+    if (m.length > 1 && ult.t - m[0].t > 8 && performance.now() - ult.t < 80) {
+      v = (ult.x - m[0].x) / (ult.t - m[0].t) * 1000;
+    }
+    var muelle = muelleDe(g.li), x = muelle.valor();
+    if (-x > g.li.offsetWidth * 0.6 && v < 300) {
+      var id = g.li.dataset.id;
+      for (var i = 0; i < data.length; i++) {
+        if (String(data[i].id) === id) { borrarDeslizando(g.li, data[i], v); return; }
+      }
+    }
+    var abrir = Math.abs(v) > 300 ? v < 0 : x + proyectar(v) < -ANCHO_ACCIONES / 2;
+    deslizada = abrir ? g.li : null;
+    muelle.ir(abrir ? -ANCHO_ACCIONES : 0, { zeta: abrir ? 0.85 : 1, respuesta: 0.3, velocidad: v });
+  }
+  lista.addEventListener("pointerup", soltarGesto);
+  lista.addEventListener("pointercancel", soltarGesto);
+  window.addEventListener("scroll", function () { if (deslizada && !gesto) cerrarDeslizado(); }, { passive: true });
 
   /* ============================================================
      16 bis. «Sorpréndeme»
@@ -3078,7 +3598,7 @@
     if (enMapa) {
       var m = marcadoresPorId[elegido.id];
       moverMapa(function () { mapa.setView(m.ll, Math.max(mapa.getZoom(), 15)); });
-      m.marcador.openPopup();
+      abrirFicha(m.d, m.p, m.marcador);
     } else {
       destacar(elegido);
     }
@@ -3163,20 +3683,20 @@
   }
 
   function abrirPanelListas() {
-    panelListas.hidden = false;
+    hojaListas.abrir();
     $("gestionar-btn").setAttribute("aria-expanded", "true");
     decirListas("");
     pintarPanelListas();
-    desplazarA(panelListas, { behavior: "smooth", block: "start" });
+    try { $("pl-cerrar").focus({ preventScroll: true }); } catch (e) {}
   }
-  function cerrarPanelListas(devolverFoco) {
-    panelListas.hidden = true;
+  function cerrarPanelListas(devolverFoco, inmediato) {
     $("gestionar-btn").setAttribute("aria-expanded", "false");
-    if (devolverFoco) $("gestionar-btn").focus();
+    hojaListas.cerrar(function () {
+      if (devolverFoco) $("gestionar-btn").focus({ preventScroll: true });
+    }, { inmediato: !!inmediato });
   }
-  $("gestionar-btn").addEventListener("click", function () {
-    if (panelListas.hidden) abrirPanelListas(); else cerrarPanelListas(true);
-  });
+  var hojaListas = crearHoja(panelListas, { alDescartar: function () { cerrarPanelListas(true); } });
+  $("gestionar-btn").addEventListener("click", abrirPanelListas);
   $("pl-cerrar").addEventListener("click", function () { cerrarPanelListas(true); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !panelListas.hidden) cerrarPanelListas(true);
