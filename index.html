@@ -221,13 +221,14 @@
 
   /* Botones redondos de icono, como los de la barra de navegación de iOS */
   .icon-btn {
-    width: var(--tap); height: var(--tap);
+    width: 44px; height: 44px;           /* como en la barra de iOS: no crecen con el texto */
     display: inline-flex; align-items: center; justify-content: center;
     border: none; border-radius: 50%;
     background: var(--fill); color: var(--tint);
     cursor: pointer; padding: 0;
   }
-  .icon-btn svg { width: 1.375rem; height: 1.375rem; }
+  .icon-btn svg { width: 22px; height: 22px; }
+  .cabecera-texto { flex: 1; min-width: 0; }
   .icon-btn-fuerte { background: var(--tint-solid); color: #FFFFFF; }
   .icon-btn-fuerte svg { stroke-width: 2.4; }
 
@@ -243,8 +244,27 @@
   }
 
   /* ---- Selector de lista y panel de gestión ---- */
-  .lista-bar { display: flex; align-items: center; gap: var(--s3); margin: calc(var(--s1) * -1) 0 var(--s4); }
-  .lista-bar label { font-size: var(--t-subhead); color: var(--label-2); white-space: nowrap; }
+  /* Selector de lista como antetítulo, al estilo del menú de buzones de
+     Mail: texto de acento con un chevron; el desplegable es el nativo */
+  .lista-bar {
+    position: relative; display: inline-flex; align-items: center;
+    margin: calc(var(--s2) * -1) 0 0; color: var(--tint);
+  }
+  .lista-bar select {
+    -webkit-appearance: none; appearance: none;
+    border: none; background: transparent; color: inherit; cursor: pointer;
+    font: inherit; font-size: var(--t-subhead); font-weight: 600;
+    min-height: var(--tap); padding: 0 1.25rem 0 0; max-width: 60vw;
+    text-overflow: ellipsis;
+  }
+  .lista-bar::after {
+    content: ""; position: absolute; right: 0; top: 50%;
+    width: 0.75rem; height: 0.75rem; margin-top: -0.375rem;
+    background: currentColor; pointer-events: none;
+    -webkit-mask: var(--i-chevron) center / contain no-repeat; mask: var(--i-chevron) center / contain no-repeat;
+    transform: rotate(90deg);
+  }
+  .cabecera-texto:has(#lista-bar:not([hidden])) .kicker { display: none; }
   .nota-intro { margin: 0 var(--s4) var(--s1); }
   .fila-inline { display: flex; gap: var(--s2); }
   .fila-inline input { flex: 1; min-width: 0; }
@@ -304,6 +324,14 @@
     border-radius: var(--r-sm);
   }
   .hoja-boton.fuerte { justify-self: end; font-weight: 600; }
+  .hoja { container-type: inline-size; }
+  /* Con texto grande, el título baja a su propia línea bajo los botones */
+  @container (max-width: 20rem) {
+    .hoja-cabeza { grid-template-columns: 1fr 1fr; }
+    .hoja-cabeza h2 { grid-column: 1 / -1; grid-row: 2; padding-top: var(--s1); }
+    .hoja-cabeza > span:not(.hoja-asa):empty { display: none; }
+    .hoja-cabeza > span:not(.hoja-asa):empty + h2 + .hoja-boton { grid-column: 2; }
+  }
   .hoja-boton:disabled { color: var(--label-3); cursor: default; }
   /* Borde de desplazamiento: aparece solo cuando hay contenido debajo */
   .hoja-cabeza::after {
@@ -331,6 +359,14 @@
     background: var(--surface);
     border-radius: var(--r-md);
     overflow: hidden;
+    container-type: inline-size;
+  }
+  /* Texto grande (el grupo mide menos de 20 «rem»): como en iOS con los
+     tamaños de accesibilidad, la etiqueta pasa encima del campo */
+  @container (max-width: 20rem) {
+    .fila-g:has(> label:not(.sr-only)) { flex-wrap: wrap; row-gap: 0; padding-top: var(--s2); }
+    .fila-g > label:not(.sr-only) { flex-basis: 100%; font-size: var(--t-footnote); color: var(--label-2); }
+    .fila-g:has(> label:not(.sr-only)) input, .fila-g:has(> label:not(.sr-only)) select { padding-top: 0; }
   }
   .grupo + .grupo { margin-top: var(--s4); }
   .grupo-titulo:has(+ [hidden]), .grupo-titulo:has(+ .sede-list:empty) { display: none; }
@@ -403,7 +439,6 @@
   .field input,
   .field select,
   input.search,
-  select#lista-sel,
   textarea {
     font-size: var(--t-body);
     padding: var(--s2) var(--s3);
@@ -418,16 +453,14 @@
     appearance: none;
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .field select, select#lista-sel {
+  .field select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7.5 9.5 4.5-4.5 4.5 4.5M7.5 14.5l4.5 4.5 4.5-4.5'/%3E%3C/svg%3E");
     background-position: right 10px center;
     background-size: 16px 16px;
     background-repeat: no-repeat;
     padding-right: var(--s8);
   }
-  select#lista-sel { flex: 1; min-width: 0; width: auto; }
-  .field input:focus, .field select:focus, input.search:focus,
-  select#lista-sel:focus, textarea:focus {
+  .field input:focus, .field select:focus, input.search:focus, textarea:focus {
     background-color: var(--surface);
     border-color: var(--tint);
     box-shadow: 0 0 0 4px var(--focus-ring);
@@ -595,9 +628,10 @@
     font-weight: 500;              /* sobre material, algo más de peso */
     color: var(--label-2);
     display: flex;
+    flex-wrap: wrap;               /* con texto muy grande, Lista/Mapa baja de línea */
     align-items: center;
     justify-content: space-between;
-    gap: var(--s3);
+    gap: var(--s2) var(--s3);
     min-height: 3.5rem;
   }
   /* Borde de desplazamiento: un degradado suave en vez de una raya */
@@ -609,6 +643,30 @@
     pointer-events: none;
   }
   .result-line p { margin: 0; }
+  .actualizando {
+    display: inline-flex; align-items: center; gap: var(--s1);
+    font-size: var(--t-caption); color: var(--label-2); margin-right: auto; margin-left: calc(var(--s2) * -1);
+  }
+  .giro {
+    width: 0.875rem; height: 0.875rem; border-radius: 50%;
+    border: 2px solid var(--fill-strong); border-top-color: var(--label-2);
+    animation: giro 0.9s linear infinite;
+  }
+  @keyframes giro { to { transform: rotate(360deg); } }
+
+  /* Siluetas de carga: la forma de una tarjeta, con un brillo que pasa */
+  li.card.silueta { display: flex; flex-direction: column; gap: var(--s3); pointer-events: none; }
+  .sil-linea, .sil-pildoras span {
+    display: block; height: 0.875rem; border-radius: 6px; background: var(--fill);
+    background-image: linear-gradient(90deg, transparent, light-dark(rgba(255,255,255,0.6), rgba(255,255,255,0.06)), transparent);
+    background-size: 200% 100%; background-repeat: no-repeat;
+    animation: brillo 1.4s ease-in-out infinite;
+  }
+  .sil-linea { width: 45%; }
+  .sil-linea.larga { width: 65%; height: 1.125rem; }
+  .sil-pildoras { display: flex; gap: var(--s2); }
+  .sil-pildoras span { width: 6rem; height: var(--tap); border-radius: 999px; }
+  @keyframes brillo { from { background-position: 150% 0; } to { background-position: -50% 0; } }
   .clear-filters {
     width: var(--tap); padding: 0; justify-content: center; color: var(--label-2);
   }
@@ -696,6 +754,9 @@
 
   /* Tarjeta elegida por el botón del azar */
   li.card.destacada { box-shadow: 0 0 0 2px var(--tint), 0 0 0 6px var(--focus-ring); }
+  /* «Sorpréndeme»: la tarjeta por la que pasa el dado */
+  li.card.barajando { box-shadow: 0 0 0 2px var(--tint); transition: none; }
+  .dado-btn.girando svg { animation: giro 0.75s cubic-bezier(0.32, 0.72, 0, 1); }
   li.card:focus { outline: none; }
 
   .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
@@ -734,6 +795,14 @@
   .card-links { margin-top: var(--s3); display: flex; flex-wrap: wrap; gap: var(--s2); }
 
   .card-actions { margin-top: var(--s1); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s5); }
+  /* En pantallas táctiles, Editar/Eliminar están al deslizar y al mantener
+     pulsada la tarjeta: aquí solo aparecen si llegas con el teclado */
+  @media (hover: none) {
+    .card-actions:not(:focus-within) {
+      position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+      overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+  }
   .card-actions button {
     background: none;
     border: none;
@@ -866,7 +935,7 @@
   .sede-block .sede-nombre { font-weight: 600; font-size: var(--t-subhead); margin: 0 0 var(--s1); }
 
   /* ---- Lista / Mapa: control segmentado ---- */
-  .result-acciones { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+  .result-acciones { margin-left: auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--s2) var(--s4); }
   .segmentado {
     display: inline-flex; padding: 2px; border-radius: 9px;
     background: var(--fill);
@@ -1075,6 +1144,7 @@
   @media (prefers-reduced-motion: reduce) {
     :root { --press-scale: 1; --enter-shift: 0px; --toast-scale: 1; --empuje: 0; }
     li.card.alzada { transform: none; }
+    .giro, .sil-linea, .sil-pildoras span { animation: none; }
     .scrim { transition: opacity 200ms ease; }
     .toast.saliendo { transform: translate(-50%, 0); }
     @starting-style { .toast { transform: translate(-50%, 0); } }
@@ -1100,7 +1170,7 @@
     .result-line::after { display: none; }
     .hoja, li.card, .grupo, .sede-list, .sede-block, .mapa { border: 1px solid var(--separator); }
     .fila-g + .fila-g::before, .sede-list li + li::before { transform: none; background: var(--label-2); }
-    .field input, .field select, input.search, select#lista-sel, textarea,
+    .field input, .field select, input.search, textarea,
     .btn-secondary, .chip, .dado-btn, .card-link, .icon-btn, .marca-btn, .sedes-toggle { border: 1px solid var(--label-2); }
   }
 
@@ -1139,10 +1209,14 @@
   <div id="app-shell" hidden>
 
   <header class="page">
-    <div>
+    <div class="cabecera-texto">
+      <!-- Con listas, su nombre ocupa el lugar del antetítulo y sirve para cambiar de lista -->
+      <div class="lista-bar" id="lista-bar" hidden>
+        <label for="lista-sel" id="lista-sel-label" class="sr-only">Lista</label>
+        <select id="lista-sel"></select>
+      </div>
       <p class="kicker">Adrián · Madrid</p>
       <h1>Dónde <em>comer</em></h1>
-      <p class="sub">Vuestras listas, ordenables por zona, tipo de cocina y precio.</p>
     </div>
     <div class="header-actions">
       <button class="icon-btn" id="gestionar-btn" type="button" aria-label="Listas y ajustes"
@@ -1153,10 +1227,6 @@
   </header>
 
 
-  <div class="lista-bar" id="lista-bar" hidden>
-    <label for="lista-sel" id="lista-sel-label">Lista</label>
-    <select id="lista-sel"></select>
-  </div>
 
   <div class="banner" id="sync-banner" hidden></div>
 
@@ -1169,12 +1239,10 @@
         <div class="campo-buscar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.2-4.2"></path></svg>
         <input type="search" class="search" id="search"
-               placeholder="Buscar, o escribe una frase…"
+               placeholder="Buscar, o pide «italiano barato»"
                autocapitalize="none" autocorrect="off" spellcheck="false"
                enterkeyhint="search" maxlength="120">
         </div>
-        <button class="btn btn-secondary" id="ia-buscar-btn" type="button"
-                title="Convierte lo que has escrito en filtros">Interpretar</button>
       </div>
     </div>
 
@@ -1190,6 +1258,7 @@
 
   <div class="result-line">
     <p id="result-count" aria-live="polite"></p>
+    <span class="actualizando" id="actualizando" role="status" hidden><span class="giro" aria-hidden="true"></span><span class="sr-only">Actualizando</span></span>
     <div class="result-acciones">
       <div class="segmentado vista-toggle" role="group" aria-label="Cómo ver los restaurantes">
         <button type="button" id="vista-lista" aria-pressed="true">Lista</button>
@@ -1545,6 +1614,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=29"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>

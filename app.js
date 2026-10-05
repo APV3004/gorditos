@@ -502,11 +502,22 @@
     $("login-screen").hidden = true;
     $("app-shell").hidden = false;
 
+    // Lo último que se vio, al instante; si no hay nada guardado, tarjetas
+    // de carga en vez de una lista vacía. Lo fresco llega después.
+    leerCacheListas();
+    elegirListaActual();
+    pintarSelectorListas();
+    data = leerCache();
+    cargando = true;
+    refrescarFuentesChips();
+    render();
+
     // Solo un fallo al CARGAR cuenta como «sin conexión»; un error de pintado
     // no debe tirar los datos frescos por la copia guardada.
     cargarListas()
       .then(cargarTodo)
       .then(function () {
+        cargando = false;
         suscribirTiempoReal();
         avisoSinListas();
         refrescarFuentesChips();
@@ -514,6 +525,7 @@
         procesarGeo();       // en segundo plano: cuando abras el mapa, ya estará todo situado
         procesarHorarios();
       }, function () {
+        cargando = false;
         // Sin red ahora mismo: la última copia vista, sin permitir escribir.
         modoSinConexion();
         mostrarBanner(data.length
@@ -541,13 +553,16 @@
     refrescarFuentesChips();
     render();
     if (!sb || soloLectura) return Promise.resolve();
+    cargando = true;
+    render();
     return cargarTodo().then(function () {
+      cargando = false;
       suscribirTiempoReal();
       avisoSinListas();
       refrescarFuentesChips();
       render();
       procesarGeo();
-    }).catch(function () {});
+    }).catch(function () { cargando = false; render(); });
   }
 
   function cambiarLista(id) {
@@ -664,6 +679,7 @@
   var editandoId = null;
   var pendienteConfirmarDuplicado = false;
   var idsExpandidosBorrado = Object.create(null);
+  var cargando = false;          // pidiendo datos frescos a Supabase
   var idsSedesAbiertas = Object.create(null);
 
   /* ============================================================
@@ -1396,7 +1412,15 @@
     debounceBusqueda = setTimeout(function () { state.search = plano(v); render(); }, 110);
   });
   $("search").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    // Si lo escrito no coincide con ningún nombre, se entiende como una
+    // petición («italiano barato en Chamberí») y se traduce a filtros
+    clearTimeout(debounceBusqueda);
+    state.search = plano(e.target.value);
+    render();
+    if (state.search && !data.filter(coincide).length) interpretarFrase();
+    e.target.blur();
   });
 
   var selectOrden = $("sort");
@@ -2233,6 +2257,23 @@
 
   function render() {
     var items = ordenar(data.filter(coincide));
+    $("actualizando").hidden = !cargando;
+
+    // Primera carga sin nada guardado: siluetas de tarjeta, no «lista vacía»
+    if (cargando && !data.length && state.vista !== "mapa") {
+      contador.textContent = "Cargando…";
+      vacio.hidden = true;
+      var siluetas = document.createDocumentFragment();
+      for (var k = 0; k < 3; k++) {
+        var sil = document.createElement("li");
+        sil.className = "card silueta";
+        sil.setAttribute("aria-hidden", "true");
+        sil.innerHTML = '<span class="sil-linea larga"></span><span class="sil-linea"></span><span class="sil-pildoras"><span></span><span></span></span>';
+        siluetas.appendChild(sil);
+      }
+      lista.replaceChildren(siluetas);
+      return;
+    }
 
     contador.replaceChildren();
     var fuerte = document.createElement("span");
@@ -2267,6 +2308,13 @@
       } else {
         p.textContent = "Ningún restaurante coincide con esos filtros.";
         vacio.appendChild(p);
+        var frase = $("search").value.trim();
+        if (frase) {
+          var bi = document.createElement("button");
+          bi.type = "button"; bi.textContent = "Buscar «" + frase + "» como filtros";
+          bi.addEventListener("click", interpretarFrase);
+          vacio.appendChild(bi);
+        }
       }
       return;
     }
@@ -3668,7 +3716,7 @@
   }
 
   lista.addEventListener("pointerdown", function (e) {
-    var li = e.target.closest("li.card");
+    var li = e.target.closest("li.card:not(.silueta)");
     if (deslizada && deslizada !== li) cerrarDeslizado();
     if (e.pointerType === "mouse" || !li || e.target.closest(".card-deslizar")) return;
     gesto = { li: li, id: e.pointerId, x0: e.clientX, y0: e.clientY, decidido: false,
@@ -3828,7 +3876,7 @@
   // Mantener pulsado medio segundo sin moverse (dedo o lápiz)
   lista.addEventListener("pointerdown", function (e) {
     clearTimeout(temporizadorMenu);
-    var li = e.target.closest("li.card");
+    var li = e.target.closest("li.card:not(.silueta)");
     if (!li || e.pointerType === "mouse" || e.target.closest(".card-deslizar")) return;
     inicioMenu = { x: e.clientX, y: e.clientY };
     temporizadorMenu = setTimeout(function () {
@@ -3851,7 +3899,7 @@
   });
   // Clic derecho (y la pulsación larga de Android, que llega como contextmenu)
   lista.addEventListener("contextmenu", function (e) {
-    var li = e.target.closest("li.card");
+    var li = e.target.closest("li.card:not(.silueta)");
     if (!li) return;
     e.preventDefault();
     clearTimeout(temporizadorMenu);
@@ -3918,11 +3966,38 @@
       var m = marcadoresPorId[elegido.id];
       moverMapa(function () { mapa.setView(m.ll, Math.max(mapa.getZoom(), 15)); });
       abrirFicha(m.d, m.p, m.marcador);
+      avisar("Te toca: " + elegido.nombre + ".");
     } else {
-      destacar(elegido);
+      barajar(function () {
+        destacar(elegido);
+        avisar("Te toca: " + elegido.nombre + ".");
+      });
     }
-    avisar("Te toca: " + elegido.nombre + ".");
   });
+
+  // Un repaso rápido por las tarjetas que se ven, cada vez más lento,
+  // como un dado que se para. Menos de un segundo; con menos movimiento,
+  // directo al resultado.
+  function barajar(alAcabar) {
+    var boton = $("random-btn");
+    var alto = window.innerHeight;
+    var vistas = Array.prototype.filter.call(lista.children, function (li) {
+      var r = li.getBoundingClientRect();
+      return r.top > 0 && r.bottom < alto;
+    });
+    if ((menosMovimiento && menosMovimiento.matches) || vistas.length < 2) { alAcabar(); return; }
+    boton.classList.add("girando");
+    var pausas = [70, 90, 120, 160, 210];
+    var i = 0, anterior = null;
+    (function paso() {
+      if (anterior) anterior.classList.remove("barajando");
+      if (i === pausas.length) { boton.classList.remove("girando"); alAcabar(); return; }
+      var otras = vistas.filter(function (li) { return li !== anterior; });
+      anterior = otras[Math.floor(Math.random() * otras.length)];
+      anterior.classList.add("barajando");
+      setTimeout(paso, pausas[i++]);
+    })();
+  }
 
   /* ============================================================
      16 quater. Listas, miembros y contraseña
@@ -4231,9 +4306,10 @@
 
   /* ---- Convertir una frase en filtros ---- */
 
-  $("ia-buscar-btn").addEventListener("click", function () {
+  var interpretando = false;
+  function interpretarFrase() {
     var frase = $("search").value.trim();
-    if (!frase) { $("search").focus(); return; }
+    if (!frase || interpretando) return;
 
     var zonas = [], tipos = [];
     data.forEach(function (d) {
@@ -4242,9 +4318,8 @@
       if (tipos.indexOf(t) === -1) tipos.push(t);
     });
 
-    var boton = $("ia-buscar-btn");
-    boton.disabled = true;
-    avisar("Interpretando…");
+    interpretando = true;
+    avisar("Interpretando «" + frase + "»…");
 
     llamarAsistente({ accion: "buscar", texto: frase, zonas: zonas, tipos: tipos, marcas: marcasDisponibles }).then(function (r) {
       var f = r.filtros || {};
@@ -4276,9 +4351,9 @@
     }).catch(function (e) {
       avisar(e.message || "No se pudo interpretar la frase.");
     }).then(function () {
-      boton.disabled = false;
+      interpretando = false;
     });
-  });
+  }
 
   /* ============================================================
      17. Copia de seguridad: exportar / restaurar (contra Supabase)
