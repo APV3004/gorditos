@@ -60,6 +60,14 @@
     --toast-fg: #F1EEE2;
     --shadow: 0 1px 0 rgba(29, 43, 34, 0.06);
     --radius: 14px;
+    /* Movimiento: curva que imita un muelle críticamente amortiguado
+       (sin rebote), y un toque más rápido para la respuesta al pulsar. */
+    --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-press: 100ms;
+    --dur-ui: 320ms;
+    --press-scale: 0.97;
+    --enter-shift: 8px;
+    --toast-scale: 0.96;
     color-scheme: light;
   }
 
@@ -146,7 +154,6 @@
   :where(a, button, input, select, textarea, summary):focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-    border-radius: 6px;
   }
 
   .sr-only {
@@ -165,26 +172,27 @@
     gap: 14px;
   }
 
-  .kicker { font-size: 13px; color: var(--accent-strong); letter-spacing: 0.02em; margin: 0 0 6px; }
+  .kicker { font-size: 0.8125rem; color: var(--accent-strong); letter-spacing: 0.02em; margin: 0 0 6px; }
 
   h1 {
     font-family: 'Newsreader', Georgia, serif;
     font-weight: 500;
-    font-size: 34px;
-    line-height: 1.08;
+    font-size: clamp(2.125rem, 1.6rem + 1.6vw, 2.625rem);
+    line-height: 1.05;
     margin: 0 0 10px;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;      /* el titular grande se aprieta */
+    font-optical-sizing: auto;
   }
   h1 em { font-style: italic; color: var(--wine); }
 
-  .sub { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin: 0; max-width: 46ch; }
+  .sub { color: var(--ink-soft); font-size: 0.9062rem; line-height: 1.5; margin: 0; max-width: 46ch; }
   .count { font-family: 'Newsreader', serif; color: var(--ink); font-weight: 500; }
 
   .header-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
 
   .add-btn {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 0.9375rem;
     background: var(--green);
     color: var(--paper);
     border: none;
@@ -203,7 +211,7 @@
     border-radius: 999px;
     min-height: 34px;
     padding: 0 12px;
-    font-size: 12.5px;
+    font-size: 0.7812rem;
     font-weight: 600;
     cursor: pointer;
   }
@@ -214,7 +222,7 @@
     color: var(--warn-fg);
     border-radius: var(--radius);
     padding: 12px 14px;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     line-height: 1.5;
     margin-bottom: 18px;
   }
@@ -222,9 +230,9 @@
   /* ---- Panel de alta / edición ---- */
   /* ---- Selector de lista y panel de gestión ---- */
   .lista-bar { display: flex; align-items: center; gap: 10px; margin: -6px 0 18px; }
-  .lista-bar label { font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+  .lista-bar label { font-size: 0.875rem; color: var(--ink-soft); white-space: nowrap; }
   select#lista-sel {
-    flex: 1; min-width: 0; min-height: 44px; font-size: 16px;
+    flex: 1; min-width: 0; min-height: 44px; font-size: 1rem;
     padding: 0 30px 0 12px; border-radius: 9px;
     border: 1px solid var(--line-input); background-color: var(--paper-raised); color: var(--ink);
     -webkit-appearance: none; appearance: none;
@@ -233,14 +241,14 @@
     background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
   }
   .lista-bar .theme-btn { min-height: 44px; margin-left: auto; }
-  .pl-sub { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 16px; margin: 18px 0 8px; }
+  .pl-sub { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 1rem; margin: 18px 0 8px; }
   .fila-inline { display: flex; gap: 8px; }
   .fila-inline input { flex: 1; min-width: 0; }
   .fila-inline .btn { flex: 0 0 auto; }
   /* Campo a lo ancho y el botón debajo: en el móvil no cabe al lado */
   .fila-apilada { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-  .fila-apilada .btn { min-height: 44px; font-size: 14px; }
-  .check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; margin: 0 0 8px; }
+  .fila-apilada .btn { min-height: 44px; font-size: 0.875rem; }
+  .check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 0.875rem; margin: 0 0 8px; }
   .check input { width: 20px; height: 20px; accent-color: var(--green); flex: 0 0 auto; }
 
   .login-screen {
@@ -248,7 +256,7 @@
     margin: 15vh auto 0;
     padding: 0 4px;
   }
-  .login-screen h1 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 28px; margin: 0; }
+  .login-screen h1 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 1.75rem; margin: 0; }
 
   .panel {
     background: var(--paper-raised);
@@ -256,12 +264,17 @@
     border-radius: var(--radius);
     padding: 16px;
     margin-bottom: 20px;
+    /* Aparece bajando desde los botones que lo abren */
+    transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out);
   }
-  .panel h2 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 19px; margin: 0 0 12px; }
+  @starting-style {
+    .panel { opacity: 0; transform: translateY(calc(var(--enter-shift) * -1)); }
+  }
+  .panel h2 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 1.1875rem; margin: 0 0 12px; }
 
   .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-  .field label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
-  .field .hint { font-size: 12px; color: var(--ink-soft); font-weight: 400; }
+  .field label { font-size: 0.7812rem; color: var(--ink-soft); font-weight: 600; letter-spacing: 0.01em; }
+  .field .hint { font-size: 0.75rem; color: var(--ink-soft); font-weight: 400; }
 
   /* 16px mínimo: por debajo, Safari en iOS hace zoom al enfocar el campo */
   .field input,
@@ -269,7 +282,7 @@
   input.search,
   select#sort,
   textarea {
-    font-size: 16px;
+    font-size: 1rem;
     padding: 11px 12px;
     border-radius: 9px;
     border: 1px solid var(--line-input);
@@ -302,7 +315,7 @@
 
   .btn {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 0.9375rem;
     border-radius: 9px;
     padding: 0 16px;
     min-height: 46px;
@@ -313,7 +326,7 @@
   .btn-primary:active { opacity: 0.85; }
   .btn-secondary { background: transparent; color: var(--ink-soft); border: 1px solid var(--line-input); }
 
-  .msg { font-size: 12.5px; line-height: 1.45; margin: -4px 0 12px; }
+  .msg { font-size: 0.7812rem; line-height: 1.45; margin: -4px 0 12px; }
   .msg-error { color: var(--danger); }
   .msg-warn { background: var(--warn-bg); color: var(--warn-fg); padding: 9px 11px; border-radius: 8px; margin-top: 0; }
 
@@ -326,14 +339,14 @@
 
   .filter-block { display: flex; flex-direction: column; gap: 8px; }
   .filter-head { display: flex; align-items: center; gap: 4px; min-height: 18px; }
-  .filter-label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .filter-label { font-size: 0.7812rem; color: var(--ink-soft); font-weight: 600; letter-spacing: 0.01em; }
   .filter-clear {
     /* Zona de toque de 44 px sin que la fila crezca: el margen negativo
        compensa el alto del botón. */
     width: 44px; height: 44px; margin: -13px 0 -13px -6px;
     display: flex; align-items: center; justify-content: center;
     border: none; background: transparent; color: var(--ink-soft);
-    font-size: 15px; line-height: 1; cursor: pointer; border-radius: 999px;
+    font-size: 0.9375rem; line-height: 1; cursor: pointer; border-radius: 999px;
   }
   .filter-clear:active { background: var(--chip-bg); }
 
@@ -353,7 +366,7 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    font-size: 14px;
+    font-size: 0.875rem;
     padding: 0 15px;
     border-radius: 999px;
     background: var(--chip-bg);
@@ -369,7 +382,7 @@
   .chip[aria-pressed="true"] { background: var(--chip-active-bg); color: var(--chip-active-fg); }
 
   .sort-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
-  .sort-row label { font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+  .sort-row label { font-size: 0.875rem; color: var(--ink-soft); white-space: nowrap; }
   select#sort { width: auto; flex: 1 1 130px; background-color: var(--paper-raised); }
 
   .dado-btn {
@@ -380,7 +393,7 @@
     border: 1px solid var(--line-input);
     background: var(--paper-raised);
     color: var(--ink);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
@@ -388,7 +401,7 @@
   .dado-btn:active { background: var(--chip-bg); }
 
   .result-line {
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     color: var(--ink-soft);
     margin-top: 20px;
     display: flex;
@@ -401,7 +414,7 @@
     background: none;
     border: none;
     color: var(--accent-strong);
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 600;
     cursor: pointer;
     text-decoration: underline;
@@ -433,21 +446,21 @@
   .card-name {
     font-family: 'Newsreader', Georgia, serif;
     font-weight: 500;
-    font-size: 19px;
+    font-size: 1.1875rem;
     line-height: 1.25;
-    letter-spacing: -0.005em;
+    letter-spacing: -0.01em;
     margin: 0;
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .card-price { font-size: 13.5px; color: var(--accent-strong); font-weight: 600; white-space: nowrap; }
+  .card-price { font-size: 0.8438rem; color: var(--accent-strong); font-weight: 600; white-space: nowrap; }
 
   .card-meta {
     margin: 5px 0 0;
     display: flex;
     flex-wrap: wrap;
     gap: 4px 9px;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     color: var(--ink-soft);
     overflow-wrap: anywhere;
   }
@@ -455,7 +468,7 @@
 
   .flag {
     margin: 8px 0 0;
-    font-size: 12.5px;
+    font-size: 0.7812rem;
     background: var(--flag-bg);
     color: var(--flag-fg);
     padding: 5px 9px;
@@ -471,7 +484,7 @@
     border: none;
     padding: 11px 0;
     min-height: 44px;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 600;
     color: var(--ink-soft);
     cursor: pointer;
@@ -490,7 +503,7 @@
     border: 1px solid var(--line-input);
     background: transparent;
     color: var(--ink);
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
@@ -508,9 +521,9 @@
     border-radius: 9px;
     padding: 10px;
   }
-  .confirm-row p { font-size: 13px; color: var(--ink); flex: 1 1 100%; margin: 0; }
+  .confirm-row p { font-size: 0.8125rem; color: var(--ink); flex: 1 1 100%; margin: 0; }
   .confirm-row button {
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 600;
     border-radius: 7px;
     padding: 0 14px;
@@ -521,14 +534,14 @@
   .confirm-yes { background: var(--danger); color: var(--paper-raised); }
   .confirm-no { background: transparent; color: var(--ink); border: 1px solid var(--line-input); }
 
-  .empty { text-align: center; color: var(--ink-soft); padding: 36px 10px; font-size: 14.5px; line-height: 1.6; }
+  .empty { text-align: center; color: var(--ink-soft); padding: 36px 10px; font-size: 0.9062rem; line-height: 1.6; }
   .empty button {
     display: inline-block;
     margin-top: 12px;
     background: none;
     border: none;
     color: var(--accent-strong);
-    font-size: 14.5px;
+    font-size: 0.9062rem;
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 3px;
@@ -539,7 +552,7 @@
   /* ---- Pie y copia de seguridad ---- */
   footer.note {
     margin-top: 30px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--ink-soft);
     line-height: 1.6;
     border-top: 1px solid var(--line);
@@ -561,26 +574,26 @@
   .tools-body textarea {
     min-height: 110px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.4;
     resize: vertical;
     background-color: var(--paper-raised);
   }
   .tools-row { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tools-row .btn { flex: 1 1 auto; min-height: 44px; font-size: 14px; }
+  .tools-row .btn { flex: 1 1 auto; min-height: 44px; font-size: 0.875rem; }
 
   .sede-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .sede-list:empty { display: none; }
   .sede-list li {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     background: var(--paper); border: 1px solid var(--line); border-radius: 9px;
-    padding: 9px 11px; font-size: 14px;
+    padding: 9px 11px; font-size: 0.875rem;
   }
   .sede-list li.editandose { border-color: var(--accent); box-shadow: 0 0 0 2px var(--focus-ring); }
   .sede-list .sede-acciones { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
   .sede-list .sede-quitar, .sede-list .sede-editar {
     background: none; border: none; font-weight: 600;
-    font-size: 13px; padding: 8px 2px; min-height: 40px; cursor: pointer;
+    font-size: 0.8125rem; padding: 8px 2px; min-height: 40px; cursor: pointer;
     text-decoration: underline; text-underline-offset: 3px;
   }
   .sede-list .sede-quitar { color: var(--danger); }
@@ -593,16 +606,16 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
     min-height: 44px; padding: 8px 14px;
     border: 1px solid var(--line-input); border-radius: 12px; background: transparent;
-    color: var(--ink); font-size: 13.5px; font-weight: 600; text-align: left; cursor: pointer;
+    color: var(--ink); font-size: 0.8438rem; font-weight: 600; text-align: left; cursor: pointer;
   }
   .sedes-toggle:active { background: var(--chip-bg); }
   .sedes-toggle::after {                       /* flecha que gira al desplegar */
-    content: "▾"; color: var(--ink-soft); font-size: 12px; order: 3; transition: transform 0.15s ease;
+    content: "▾"; color: var(--ink-soft); font-size: 0.75rem; order: 3; transition: transform 0.15s ease;
   }
   .sedes-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
-  .sedes-pista { color: var(--ink-soft); font-weight: 400; font-size: 12.5px; flex: 1; text-align: right; }
+  .sedes-pista { color: var(--ink-soft); font-weight: 400; font-size: 0.7812rem; flex: 1; text-align: right; }
   .sedes-pista:empty { display: none; }
-  .sede-dist { font-size: 12.5px; }
+  .sede-dist { font-size: 0.7812rem; }
 
   /* ---- Lista / Mapa ---- */
   .result-acciones { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px 14px; }
@@ -613,7 +626,7 @@
   .vista-toggle button {
     min-height: 40px; padding: 0 15px; border: none; border-radius: 999px;
     background: transparent; color: var(--ink-soft);
-    font-size: 13.5px; font-weight: 600; cursor: pointer;
+    font-size: 0.8438rem; font-weight: 600; cursor: pointer;
   }
   .vista-toggle button[aria-pressed="true"] { background: var(--chip-active-bg); color: var(--chip-active-fg); }
 
@@ -625,7 +638,7 @@
     overflow: hidden; background: var(--chip-bg);
   }
   .mapa-pie { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 10px; }
-  .mapa-nota { margin: 0; flex: 1; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+  .mapa-nota { margin: 0; flex: 1; font-size: 0.8125rem; line-height: 1.55; color: var(--ink-soft); }
 
   .leaflet-container { font: inherit; }
   .leaflet-container a.card-link { color: var(--ink); }
@@ -638,10 +651,10 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   }
   .leaflet-popup-content { margin: 12px 14px; min-width: 210px; }
-  .popup-nombre { font-family: 'Newsreader', Georgia, serif; font-size: 17px; font-weight: 500; margin: 0; }
-  .popup-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  .popup-nombre { font-family: 'Newsreader', Georgia, serif; font-size: 1.0625rem; font-weight: 500; margin: 0; }
+  .popup-sub { margin: 3px 0 0; font-size: 0.7812rem; color: var(--ink-soft); }
   .popup .card-links { margin-top: 9px; }
-  .popup .card-link { padding: 0 11px; font-size: 12.5px; }
+  .popup .card-link { padding: 0 11px; font-size: 0.7812rem; }
 
   .card-dist { color: var(--accent-strong); font-weight: 600; }
   .card-horario { font-weight: 600; }
@@ -651,17 +664,17 @@
   .marca-btn {
     min-height: 40px; padding: 0 13px; border-radius: 999px;
     border: 1px solid var(--line-input); background: transparent; color: var(--ink-soft);
-    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
   }
   .marca-btn[aria-pressed="true"].quiero { background: var(--flag-bg); color: var(--flag-fg); border-color: var(--accent); }
   .marca-btn[aria-pressed="true"].visitado { background: var(--chip-active-bg); color: var(--chip-active-fg); border-color: var(--chip-active-bg); }
-  .card-otros { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  .card-otros { margin: 6px 0 0; font-size: 0.7812rem; color: var(--ink-soft); }
   .card-horario.abierto { color: var(--green); }
   .card-horario.cerrado { color: var(--ink-soft); font-weight: 400; }
   .msg-ia { background: var(--flag-bg); color: var(--flag-fg); padding: 9px 11px; border-radius: 8px; }
   #abierto-chip { flex: 0 0 auto; }
   .marcador-aprox { fill-opacity: 0.55; stroke-dasharray: 3 3; }
-  .popup-aprox { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--warn-fg); background: var(--warn-bg); padding: 5px 8px; border-radius: 7px; }
+  .popup-aprox { margin: 6px 0 0; font-size: 0.75rem; line-height: 1.4; color: var(--warn-fg); background: var(--warn-bg); padding: 5px 8px; border-radius: 7px; }
 
   /* Sin clave de CARTO se usa OpenStreetMap, que solo tiene versión clara:
      en tema oscuro se invierte. Con clave, el mapa oscuro ya viene oscuro
@@ -671,33 +684,42 @@
     border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px;
   }
   .sede-block .sede-nombre {
-    font-family: 'Newsreader', serif; font-weight: 500; font-size: 15px; margin: 0 0 6px;
+    font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.9375rem; margin: 0 0 6px;
   }
 
   /* ---- Aviso flotante ---- */
   .toast {
     position: fixed;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, 0);
     bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
     z-index: 50;
     max-width: min(560px, calc(100vw - 32px));
-    background: var(--toast-bg);
+    /* Material translúcido: la lista se intuye por detrás sin restar lectura */
+    background: color-mix(in srgb, var(--toast-bg) 86%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
     color: var(--toast-fg);
     border-radius: 12px;
     padding: 12px 14px;
-    font-size: 14px;
+    font-size: 0.875rem;
     line-height: 1.4;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
     display: flex;
     align-items: center;
     gap: 14px;
+    /* Entra desde abajo y sale por el mismo camino */
+    transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out);
   }
+  @starting-style {
+    .toast { opacity: 0; transform: translate(-50%, 16px) scale(var(--toast-scale)); }
+  }
+  .toast.saliendo { opacity: 0; transform: translate(-50%, 16px) scale(var(--toast-scale)); }
   .toast button {
     background: none;
     border: none;
     color: inherit;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 3px;
@@ -707,8 +729,58 @@
     white-space: nowrap;
   }
 
+  /* ---- Respuesta al pulsar ----
+     Todo lo pulsable reacciona en el mismo instante del toque (no al
+     soltar). Va al final para sumar «transform» a las transiciones de
+     cada componente. */
+  .add-btn, .theme-btn, .btn, .chip, .dado-btn, .card-link, .marca-btn,
+  .sedes-toggle, .vista-toggle button, .confirm-row button, .filter-clear {
+    transition: transform var(--dur-press) ease-out, background-color 0.15s ease,
+                color 0.15s ease, border-color 0.15s ease, opacity var(--dur-press) ease-out;
+  }
+  .add-btn:active, .theme-btn:active, .btn:active, .chip:active, .dado-btn:active,
+  .card-link:active, .marca-btn:active, .sedes-toggle:active,
+  .vista-toggle button:active, .confirm-row button:active, .filter-clear:active {
+    transform: scale(var(--press-scale));
+  }
+  .btn-secondary:active, .theme-btn:active, .marca-btn:active { background: var(--chip-bg); }
+  /* Los botones-enlace (subrayados) no escalan: se atenúan */
+  .card-actions button, .clear-filters, .empty button, .toast button,
+  .sede-list .sede-quitar, .sede-list .sede-editar {
+    transition: opacity var(--dur-press) ease-out;
+  }
+  .card-actions button:active, .clear-filters:active, .empty button:active,
+  .toast button:active, .sede-list .sede-quitar:active, .sede-list .sede-editar:active {
+    opacity: 0.55;
+  }
+
+  /* Con ratón o trackpad, un indicio al pasar por encima */
+  @media (hover: hover) {
+    .btn-secondary:hover, .theme-btn:hover, .dado-btn:hover, .card-link:hover,
+    .marca-btn[aria-pressed="false"]:hover, .sedes-toggle:hover { border-color: var(--ink-soft); }
+    .chip[aria-pressed="false"]:hover { border-color: var(--line-input); }
+    .add-btn:hover, .btn-primary:hover { opacity: 0.92; }
+  }
+
+  /* Menos movimiento no es «sin respuesta»: sin desplazamientos ni
+     escalados, pero se conservan los fundidos y cambios de color. */
   @media (prefers-reduced-motion: reduce) {
-    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+    :root { --press-scale: 1; --enter-shift: 0px; --toast-scale: 1; }
+    .toast.saliendo { transform: translate(-50%, 0); }
+    @starting-style { .toast { transform: translate(-50%, 0); } }
+    .sedes-toggle::after { transition: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .toast { background: var(--toast-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+
+  @media (prefers-contrast: more) {
+    .toast { background: var(--toast-bg); -webkit-backdrop-filter: none; backdrop-filter: none;
+             border: 1px solid var(--toast-fg); }
+    .panel, li.card, .sede-list li, .sede-block, .mapa, footer.note { border-color: var(--line-input); }
+    .dot { color: var(--ink-soft); }
   }
 
   @media print {
@@ -1075,6 +1147,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=25"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>

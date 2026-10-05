@@ -52,8 +52,15 @@
 
   function $(id) { return document.getElementById(id); }
 
+  // Safari en iOS no aplica :active si nadie escucha touchstart; sin esto
+  // los botones no responden al tocar, solo al soltar.
+  document.addEventListener("touchstart", function () {}, { passive: true });
+
+  var menosMovimiento = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+
   function desplazarA(el, opciones) {
     if (!el || typeof el.scrollIntoView !== "function") return;
+    if (opciones && menosMovimiento && menosMovimiento.matches) opciones.behavior = "auto";
     try { el.scrollIntoView(opciones); } catch (e) { /* cosmético */ }
   }
 
@@ -686,6 +693,7 @@
      ============================================================ */
 
   var temporizadorToast = null;
+  var temporizadorSalida = null;
   var toast, toastText, toastAction;
   function refsToast() {
     if (!toast) { toast = $("toast"); toastText = $("toast-text"); toastAction = $("toast-action"); }
@@ -703,14 +711,24 @@
       toastAction.hidden = true;
       toastAction.onclick = null;
     }
+    // Si estaba saliendo, se da la vuelta desde donde esté, sin saltos
+    clearTimeout(temporizadorSalida);
+    toast.classList.remove("saliendo");
     toast.hidden = false;
     temporizadorToast = setTimeout(ocultarToast, accion ? 7000 : 3200);
   }
   function ocultarToast() {
     clearTimeout(temporizadorToast);
     if (!refsToast()) return;
-    toast.hidden = true;
     toastAction.onclick = null;
+    if (toast.hidden) return;
+    // Sale por donde entró; se oculta del todo al acabar la transición
+    toast.classList.add("saliendo");
+    clearTimeout(temporizadorSalida);
+    temporizadorSalida = setTimeout(function () {
+      toast.hidden = true;
+      toast.classList.remove("saliendo");
+    }, 340);
   }
 
   /* ============================================================
