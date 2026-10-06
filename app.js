@@ -368,6 +368,8 @@
     return sb.from("restaurantes").select("*").eq("lista_id", pedida).order("created_at", { ascending: true }).then(function (res) {
       if (res.error) throw res.error;
       if (pedida !== listaActual) return;       // cambiaste de lista mientras cargaba
+      // select("*") trae todas las columnas: si no viene «carta_info», falta la migración
+      if (res.data.length) cartasDisponibles = Object.prototype.hasOwnProperty.call(res.data[0], "carta_info");
       data = res.data.map(registroDesdeFila)
         .filter(function (d) { return !borradosPendientes[d.id]; });   // borrados aún en espera
       soloLectura = false;
@@ -3546,6 +3548,7 @@
   var CARTA_REINTENTO_MS = 14 * 864e5;         // si no se pudo leer, se reintenta a las dos semanas
   var cartasDisponibles = true;                // falta la columna en Supabase → se esconde
   var cartasEnMarcha = false, cartasIntentadas = Object.create(null), cartasLeidasSesion = 0;
+  var cartasUltimoError = "";                  // por qué no avanza (p. ej., Gemini saturado)
 
   /** Enlaces de carta del restaurante y de sus locales, sin repetir (hasta 4). */
   function urlsCarta(d) {
@@ -3585,7 +3588,8 @@
     btn.textContent = cartasEnMarcha ? "Leyendo cartas…" : "Leer las cartas que faltan";
     el.textContent = !e.total ? "Ningún restaurante tiene todavía un enlace a su carta."
       : e.leidas + " de " + e.total + " cartas leídas. Escribe un plato en la búsqueda («cachopo», «sin gluten») " +
-        "para ver dónde lo tienen" + (e.pendientes ? "; las que faltan se van leyendo solas, poco a poco." : ".");
+        "para ver dónde lo tienen" + (e.pendientes ? "; las que faltan se van leyendo solas, poco a poco." : ".") +
+        (cartasUltimoError && e.pendientes ? " Ahora no se ha podido: " + cartasUltimoError : "");
   }
 
   function procesarCartas(manual) {
@@ -3612,9 +3616,14 @@
         return llamarAsistente({ accion: "leer_carta", nombre: d.nombre, urls: urlsCarta(d) });
       }).then(function (r) {
         fallosSeguidos = 0;
+        cartasUltimoError = "";
         var l = (r && r.lectura) || {};
         return guardarCartaInfo(d.id, normalizarCartaInfo({ platos: l.platos, dietas: l.dietas, firma: firma, t: Date.now() }));
-      }, function () { fallosSeguidos++; })
+      }, function (err) {
+        fallosSeguidos++;
+        cartasIntentadas[d.id] = false;            // no se pudo ni intentar: vale para el botón y la próxima vez
+        cartasUltimoError = (err && err.message) || "el asistente no responde.";
+      })
         .catch(function () {})
         .then(function () { siguiente(i + 1); });
     })(0);
