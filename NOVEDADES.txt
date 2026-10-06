@@ -1,7 +1,7 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · 6 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -41,8 +41,9 @@ Cabecera
     · Botón "+": añade un restaurante.
 - El nombre de la lista ("Casa ⌄") aparece encima del título; tócalo
   para cambiar de lista.
-- Al bajar, "Dónde comer" aparece en pequeño en una barra translúcida
-  arriba del todo. Tocar esa barra te devuelve al principio.
+- Al bajar, la barra de resultados (cuántos se ven y Lista / Mapa) se
+  queda pegada justo debajo de la hora, sin hueco encima (v39). Para
+  volver al principio, toca la hora, como en cualquier app del iPhone.
 - En el iPhone, al tirar hacia abajo estando arriba del todo, el
   título grande se estira un poco, como en las apps de Apple.
 

@@ -142,7 +142,7 @@
 
   html {
     /* deja sitio a la barra fija de resultados al desplazar hasta algo */
-    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 6.75rem);
+    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 4.25rem);
   }
 
   body {
@@ -600,28 +600,27 @@
   }
   .dado-btn svg { width: 1.125rem; height: 1.125rem; flex: none; }
 
-  /* ---- Barra del título compacto (como la de navegación de iOS) ---- */
+  /* ---- Fondo de la zona de la hora ----
+     Al bajar, la barra de resultados se pega justo debajo de la hora: es
+     la barra de navegación (sin un escalón de título encima). Si la página
+     se dibuja bajo la hora (zona segura), esa franja se cubre con el mismo
+     material para que no se vean pasar las tarjetas. Volver arriba: tocar
+     la hora, como en cualquier app de iOS. */
   .barra-titulo {
     position: fixed; top: 0; left: 0; right: 0; z-index: 20;
-    height: calc(env(safe-area-inset-top, 0px) + 2.75rem);
-    padding-top: env(safe-area-inset-top, 0px);
-    display: flex; align-items: center; justify-content: center;
+    height: env(safe-area-inset-top, 0px);
     background: var(--material);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
-    font-size: var(--t-body); font-weight: 600; color: var(--label);
-    opacity: 0; pointer-events: none; cursor: pointer;
+    opacity: 0; pointer-events: none;
     transition: opacity 0.2s ease;
   }
-  /* El título llega desde abajo, desde donde estaba el grande */
-  .barra-titulo span { transform: translateY(6px); transition: transform var(--dur-ui) var(--ease-out); }
-  html.titulo-compacto .barra-titulo { opacity: 1; pointer-events: auto; }
-  html.titulo-compacto .barra-titulo span { transform: none; }
+  html.titulo-compacto .barra-titulo { opacity: 1; }
 
   /* ---- Barra de resultados: material translúcido, fija al desplazar ---- */
   .result-line {
     position: sticky;
-    top: calc(env(safe-area-inset-top, 0px) + 2.75rem);   /* justo bajo la barra del título */
+    top: env(safe-area-inset-top, 0px);   /* justo bajo la hora */
     z-index: 10;
     margin: var(--s5) calc(var(--s5) * -1) 0;
     padding: var(--s2) var(--s5);
@@ -1197,7 +1196,6 @@
     .toast.saliendo { transform: translate(-50%, 0); }
     @starting-style { .toast { transform: translate(-50%, 0); } }
     .sedes-toggle::after, details.tools summary::before { transition: none; }
-    .barra-titulo span { transform: none; transition: none; }
     html { scroll-behavior: auto; }
   }
 
@@ -1232,7 +1230,7 @@
 <body>
 <!-- Barra que aparece al bajar, cuando el título grande ya no se ve.
      Es decorativa (el h1 sigue ahí): tocarla vuelve arriba. -->
-<div class="barra-titulo" id="barra-titulo" aria-hidden="true"><span>Dónde comer</span></div>
+<div class="barra-titulo" id="barra-titulo" aria-hidden="true"></div>
 
 <div class="wrap">
 
@@ -1670,6 +1668,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=38"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>
