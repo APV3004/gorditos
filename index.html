@@ -953,7 +953,7 @@
     background: var(--label-2);
     -webkit-mask: var(--i-chevron) center / contain no-repeat;
     mask: var(--i-chevron) center / contain no-repeat;
-    transform: rotate(90deg); transition: transform 0.2s var(--ease-out);
+    transform: rotate(90deg); transition: transform 0.35s var(--ease-out);   /* lo que tarda el muelle de los locales */
   }
   .sedes-toggle[aria-expanded="true"]::after { transform: rotate(-90deg); }
   .sedes-pista { color: var(--label-2); font-weight: 400; font-size: var(--t-footnote); flex: 1; text-align: right; }
@@ -1654,6 +1654,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=33"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>

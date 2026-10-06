@@ -2172,6 +2172,73 @@
     return frag;
   }
 
+  /* Desplegar y plegar los locales de un restaurante. La altura la mueve
+     un muelle sin rebote (no hay gesto con inercia que lo justifique) y
+     siempre parte de la altura que se ve en ese momento: si vuelves a
+     tocar a medio camino, se da la vuelta desde ahí, sin saltos y sin
+     perder la velocidad. Cada local aparece cuando la altura llega a él,
+     bajando un poco, como si se descubriera; al plegar, el mismo camino
+     al revés. Con «Reducir movimiento», un fundido. */
+  var MUELLE_SEDES = { zeta: 1, respuesta: 0.35 };
+
+  function desplegarSedes(grupo, abrir, alTerminar) {
+    var quieto = menosMovimiento && menosMovimiento.matches;
+    var hijos = Array.prototype.slice.call(grupo.children);
+
+    if (quieto || !grupo.animate) {
+      if (grupo._muelle) grupo._muelle.parar();
+      if (grupo._fundido) grupo._fundido.cancel();
+      if (abrir) {
+        grupo.hidden = false;
+        if (grupo.animate) grupo._fundido = grupo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+        if (alTerminar) alTerminar();
+        return;
+      }
+      if (!grupo.animate) { grupo.hidden = true; if (alTerminar) alTerminar(); return; }
+      var f = grupo._fundido = grupo.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" });
+      f.onfinish = function () { if (grupo._fundido === f) { grupo.hidden = true; f.cancel(); grupo._fundido = null; if (alTerminar) alTerminar(); } };
+      return;
+    }
+
+    var estaba = grupo.hidden;
+    grupo.hidden = false;
+    // El hueco de arriba se lee una vez, antes de que lo toque la animación
+    if (grupo._margen == null) grupo._margen = parseFloat(getComputedStyle(grupo).marginTop) || 0;
+    grupo.style.overflow = "hidden";
+    // La altura completa se mide sin el límite que pueda llevar ya
+    var limite = grupo.style.height;
+    grupo.style.height = "auto";
+    var alto = grupo.offsetHeight;
+    grupo.style.height = limite;
+    var base = grupo.offsetTop;
+    var tramos = hijos.map(function (h) { return { el: h, desde: h.offsetTop - base, alto: h.offsetHeight || 1 }; });
+
+    grupo._pintar = function (y) {
+      var p = alto ? Math.max(0, Math.min(1, y / alto)) : 1;
+      grupo.style.height = Math.max(0, y).toFixed(2) + "px";
+      grupo.style.marginTop = (grupo._margen * p).toFixed(2) + "px";   // el hueco de arriba también crece
+      tramos.forEach(function (t) {
+        var visto = Math.max(0, Math.min(1, (y - t.desde) / (t.alto * 0.7)));
+        t.el.style.opacity = visto.toFixed(3);
+        t.el.style.transform = visto >= 1 ? "" : "translate3d(0," + ((visto - 1) * 8).toFixed(2) + "px,0)";
+      });
+    };
+    if (!grupo._muelle) grupo._muelle = crearMuelle(function (y) { grupo._pintar(y); });
+
+    // Parte de lo que se ve: cerrado, abierto del todo, o a medio camino
+    // (y entonces conserva la velocidad que llevaba)
+    if (estaba) grupo._muelle.fijar(0);
+    else if (!grupo._animando) grupo._muelle.fijar(alto);
+    grupo._animando = true;
+    grupo._muelle.ir(abrir ? alto : 0, MUELLE_SEDES, function () {
+      grupo._animando = false;
+      if (!abrir) grupo.hidden = true;
+      grupo.style.height = ""; grupo.style.overflow = ""; grupo.style.marginTop = "";
+      hijos.forEach(function (h) { h.style.opacity = ""; h.style.transform = ""; });
+      if (alTerminar) alTerminar();
+    });
+  }
+
   function crearTarjeta(d) {
     var li = document.createElement("li");
     li.className = "card";
@@ -2341,8 +2408,9 @@
       toggle.addEventListener("click", function () {
         abierto = !abierto;
         if (abierto) idsSedesAbiertas[d.id] = true; else delete idsSedesAbiertas[d.id];
-        grupo.hidden = !abierto;
-        if (abierto) aparecer(grupo);
+        // Si el foco estaba en un local que se pliega, vuelve al botón
+        if (!abierto && grupo.contains(document.activeElement)) toggle.focus();
+        desplegarSedes(grupo, abierto);
         pintarToggle();
       });
 

@@ -1,7 +1,7 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · 6 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -85,6 +85,15 @@ Transiciones
 
 3. TARJETAS DE RESTAURANTE
 --------------------------
+
+Locales de una cadena (nuevo en la v34)
+- "Ver los N locales" se despliega con suavidad: la tarjeta crece y
+  los locales van apareciendo a medida que hay sitio, bajando un poco.
+  Al ocultarlos, hacen el mismo camino al revés.
+- Si vuelves a tocar a mitad del movimiento, se da la vuelta desde
+  donde esté, sin saltos. Las tarjetas de debajo se desplazan con ella
+  en vez de saltar de golpe.
+- Con "Reducir movimiento", un fundido.
 
 Más compactas (nuevo en la v33)
 - Caben unas 4 tarjetas por pantalla, antes unas 2 y media.
