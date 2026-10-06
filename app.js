@@ -4429,9 +4429,10 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarMenu(); });
   window.addEventListener("resize", cerrarMenu);
 
-  // Mantener pulsado medio segundo sin moverse (dedo o lápiz). Mientras
-  // tanto la tarjeta se va hundiendo, para anunciar que va a pasar algo;
-  // si mueves el dedo o lo levantas antes, vuelve desde donde esté.
+  // Mantener pulsado sin moverse (dedo o lápiz) unos 400 ms, lo que tarda
+  // iOS. Mientras tanto la tarjeta se va hundiendo, para anunciar que va a
+  // pasar algo; si mueves el dedo o lo levantas antes, vuelve desde donde esté.
+  var ESPERA_MENU_MS = 400;
   var liPulsada = null;
   function soltarPulsada() {
     if (liPulsada && liPulsada !== menuTarjeta) escalar(liPulsada, 1000, 0.25);
@@ -4443,12 +4444,12 @@
     if (!li || e.pointerType === "mouse" || e.target.closest(".card-deslizar")) return;
     inicioMenu = { x: e.clientX, y: e.clientY };
     liPulsada = li;
-    escalar(li, 970, 0.5);
+    escalar(li, 970, ESPERA_MENU_MS / 1000);     // llega al fondo cuando sale el menú
     temporizadorMenu = setTimeout(function () {
       gesto = null;                           // ya no es un deslizamiento
       suprimirClic();
       abrirMenu(li, inicioMenu.x, inicioMenu.y);
-    }, 500);
+    }, ESPERA_MENU_MS);
   });
   lista.addEventListener("pointermove", function (e) {
     if (inicioMenu && (Math.abs(e.clientX - inicioMenu.x) > 10 || Math.abs(e.clientY - inicioMenu.y) > 10)) {
