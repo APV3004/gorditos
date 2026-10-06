@@ -1,7 +1,7 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · Locales con animación (v34) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · 6 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -48,6 +48,14 @@ Cabecera
 
 Búsqueda
 - Escribe un nombre y la lista se filtra al momento, como siempre.
+- Buscar por platos (nuevo en la v35): escribe un plato ("cachopo",
+  "tiramisú") y salen los restaurantes que lo tienen en la carta. La
+  tarjeta dice "En su carta: …" para que se entienda por qué sale.
+- Con una frase ("algo sin gluten en Chamberí") la IA busca también en
+  las cartas; aparece el chip "Carta: sin gluten ✕", que se quita
+  tocándolo o escribiendo otra cosa.
+- Las cartas se leen solas, poco a poco. En "Listas y ajustes → Buscar
+  por platos" se ve cuántas hay leídas y se pueden leer las que faltan.
 - Ya no hay botón "Interpretar". Si escribes una petición ("italiano
   barato en Chamberí") y pulsas Buscar en el teclado, la app la
   convierte sola en filtros cuando no hay ningún restaurante con ese

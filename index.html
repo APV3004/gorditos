@@ -576,6 +576,10 @@
     flex-wrap: wrap; overflow: visible; margin: 0; padding: 0;
     -webkit-mask-image: none; mask-image: none;
   }
+  /* Chip de la búsqueda en las cartas: marcado, con su ✕ para quitarlo */
+  .chip-carta { gap: var(--s1); background: var(--tint-solid); color: #FFFFFF; font-weight: 600; }
+  .chip-carta svg { width: 0.875rem; height: 0.875rem; flex: none; }
+  .grupo:has(> [hidden]:only-child) { display: none; }
   .filter-block.en-hoja .chip { background: var(--surface); }
   .filter-block.en-hoja .chip[aria-pressed="true"] { background: var(--tint-solid); }
   .hoja-sub { display: block; font-size: var(--t-footnote); font-weight: 400; color: var(--label-2); }
@@ -801,6 +805,10 @@
     border-radius: var(--r-sm);
     display: inline-block;
   }
+
+  /* «En su carta: …» cuando sale por un plato */
+  .card-carta { margin: var(--s1) 0 0; font-size: var(--t-footnote); color: var(--label); line-height: 1.35; overflow-wrap: anywhere; }
+  .card-carta-etq { color: var(--label-2); }
 
   .card-links { margin-top: var(--s3); display: flex; flex-wrap: wrap; gap: var(--s2); }
   /* En las tarjetas, los enlaces van en una sola fila. Si no caben (iPhone
@@ -1290,6 +1298,7 @@
       <button class="chip filtros-btn" id="filtros-btn" type="button" aria-haspopup="dialog"
               aria-controls="panel-filtros" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg><span>Filtros</span><span class="insignia" id="filtros-n" hidden></span></button>
       <button class="chip clear-filters" id="clear-filters" type="button" hidden aria-label="Quitar todos los filtros y la búsqueda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"></path></svg></button>
+      <button class="chip chip-carta" id="carta-chip" type="button" hidden></button>
       <button class="chip" id="abierto-chip" type="button" aria-pressed="false">Abierto ahora</button>
       <button class="dado-btn chip-accion" id="random-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"></rect><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"></circle></svg><span>Sorpréndeme</span></button>
     </div>
@@ -1471,6 +1480,12 @@
     </div>
 
     <p class="msg grupo-msg" id="pl-msg" aria-live="polite"></p>
+
+    <h3 class="grupo-titulo">Buscar por platos</h3>
+    <div class="grupo">
+      <button class="fila-g fila-boton" id="cartas-btn" type="button" hidden>Leer las cartas que faltan</button>
+    </div>
+    <p class="grupo-pie" id="cartas-estado" aria-live="polite"></p>
 
     <h3 class="grupo-titulo">Apariencia</h3>
     <div class="segmentado ancho" id="tema-seg" role="group" aria-label="Apariencia">
@@ -1654,6 +1669,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=34"></script>
+<script src="app.js?v=35"></script>
 </body>
 </html>

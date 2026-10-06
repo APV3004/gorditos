@@ -253,7 +253,23 @@
     var creado = fila.created_at ? Date.parse(fila.created_at) : NaN;
     r.creado = isFinite(creado) ? creado : 0;
     r.actualizadoPor = texto(fila.updated_by);
+    r.cartaInfo = normalizarCartaInfo(fila.carta_info);
     return r;
+  }
+
+  /** Lo que se sacó de sus cartas para buscar por platos. «firma» son los
+   *  enlaces que se leyeron: si cambian, hay que volver a leer. */
+  function normalizarCartaInfo(c) {
+    if (!c || typeof c !== "object") return null;
+    var lista = function (v, max, largo) {
+      return (Array.isArray(v) ? v : []).map(function (x) { return texto(x).slice(0, largo); })
+        .filter(Boolean).slice(0, max);
+    };
+    var t = Number(c.t);
+    var info = { platos: lista(c.platos, 60, 60), dietas: lista(c.dietas, 10, 40),
+                 firma: texto(c.firma), t: isFinite(t) && t > 0 ? t : 0 };
+    if (c.nf || !info.platos.length) info.nf = true;   // se intentó y no había nada legible
+    return info;
   }
 
   /* ============================================================
@@ -526,6 +542,7 @@
         render();
         procesarGeo();       // en segundo plano: cuando abras el mapa, ya estará todo situado
         procesarHorarios();
+        procesarCartas();    // y lo que hay en sus cartas, para buscar por platos
       }, function () {
         cargando = false;
         // Sin red ahora mismo: la última copia vista, sin permitir escribir.
@@ -649,6 +666,9 @@
   // Dentro de un grupo cuenta cualquiera («Chamberí o Malasaña»); entre
   // grupos, todos a la vez («…y además Italiana o Pizza»).
   var state = { search: "", zonas: [], tipos: [], precios: [], marcas: [], sort: "nombre", vista: "lista", abiertoAhora: false };
+  // Búsqueda por platos hecha por la IA: { que: "cachopo", ids: { id: ["Cachopo de ternera", …] } }.
+  // No se guarda entre sesiones, como la búsqueda escrita.
+  var porCarta = null;
 
   function enFiltro(seleccion, valor) {
     return !seleccion.length || seleccion.indexOf(valor) !== -1;
@@ -1379,11 +1399,12 @@
 
   function hayFiltros() {
     return state.zonas.length > 0 || state.tipos.length > 0 || state.precios.length > 0 ||
-           state.marcas.length > 0 || state.search !== "" || state.abiertoAhora;
+           state.marcas.length > 0 || state.search !== "" || state.abiertoAhora || !!porCarta;
   }
 
   $("clear-filters").addEventListener("click", function () {
     state.zonas = []; state.tipos = []; state.precios = []; state.marcas = []; state.search = ""; state.abiertoAhora = false;
+    porCarta = null;
     $("abierto-chip").setAttribute("aria-pressed", "false");
     $("search").value = "";
     firmasChips = {};
@@ -1453,7 +1474,7 @@
   $("search").addEventListener("input", function (e) {
     var v = e.target.value;
     clearTimeout(debounceBusqueda);
-    debounceBusqueda = setTimeout(function () { state.search = plano(v); render(); }, 110);
+    debounceBusqueda = setTimeout(function () { state.search = plano(v); porCarta = null; render(); }, 110);
   });
   $("search").addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
@@ -2109,14 +2130,31 @@
     return a;
   }
 
+  /** Platos de su carta que contienen lo buscado (desde 3 letras). */
+  function platosQueCoinciden(d, q) {
+    if (!q || q.length < 3 || !d.cartaInfo) return [];
+    return d.cartaInfo.platos.concat(d.cartaInfo.dietas)
+      .filter(function (x) { return plano(x).indexOf(q) !== -1; });
+  }
+
+  function coincideNombre(d) {
+    var heno = plano(d.nombre) + " " + plano(d.tipo) + " " + plano(d.zona);
+    (d.sedes || []).forEach(function (s) {
+      heno += " " + plano(s.nombre) + " " + plano(s.zona) + " " + plano(s.direccion);
+    });
+    return heno.indexOf(state.search) !== -1;
+  }
+
+  /** Por qué sale por su carta (para la tarjeta), o [] si no es por eso. */
+  function motivoCarta(d) {
+    if (porCarta) return porCarta.ids[d.id] || [];
+    if (state.search && !coincideNombre(d)) return platosQueCoinciden(d, state.search);
+    return [];
+  }
+
   function coincide(d) {
-    if (state.search) {
-      var heno = plano(d.nombre) + " " + plano(d.tipo) + " " + plano(d.zona);
-      (d.sedes || []).forEach(function (s) {
-        heno += " " + plano(s.nombre) + " " + plano(s.zona) + " " + plano(s.direccion);
-      });
-      if (heno.indexOf(state.search) === -1) return false;
-    }
+    if (state.search && !coincideNombre(d) && !platosQueCoinciden(d, state.search).length) return false;
+    if (porCarta && !porCarta.ids[d.id]) return false;
     if (state.zonas.length && !zonasDe(d).some(function (z) { return state.zonas.indexOf(z) !== -1; })) return false;
     if (!enFiltro(state.tipos, d.tipo || "Sin especificar")) return false;
     if (!enFiltro(state.precios, etiquetaPrecio[d.precio])) return false;
@@ -2308,6 +2346,19 @@
       meta.appendChild(sep2); meta.appendChild(distEl);
     }
     li.appendChild(meta);
+
+    // Si sale por algo de su carta, se dice qué: así se entiende el resultado
+    var enCarta = motivoCarta(d);
+    if (enCarta.length) {
+      var lineaCarta = document.createElement("p");
+      lineaCarta.className = "card-carta";
+      var etiquetaCarta = document.createElement("span");
+      etiquetaCarta.className = "card-carta-etq";
+      etiquetaCarta.textContent = "En su carta: ";
+      lineaCarta.appendChild(etiquetaCarta);
+      lineaCarta.appendChild(document.createTextNode(enCarta.slice(0, 3).join(" · ")));
+      li.appendChild(lineaCarta);
+    }
 
     if (d.flag) {
       var nota = document.createElement("p");
@@ -2518,6 +2569,8 @@
     contador.appendChild(document.createTextNode(" de " + data.length + (data.length === 1 ? " restaurante" : " restaurantes")));
 
     btnLimpiar.hidden = !hayFiltros();
+    pintarChipCarta();
+    pintarEstadoCartas();
     pintarEstadoFiltros(items.length);
 
     aplicarVista();
@@ -2541,7 +2594,11 @@
         b.addEventListener("click", function () { abrirPanel(null); });
         vacio.appendChild(p); vacio.appendChild(b);
       } else {
-        p.textContent = "Ningún restaurante coincide con esos filtros.";
+        p.textContent = porCarta
+          ? "Ninguna de las " + porCarta.leidas + " cartas leídas tiene «" + porCarta.que + "»" +
+            (state.zonas.length || state.tipos.length || state.precios.length || state.marcas.length || state.abiertoAhora
+              ? " con esos filtros." : ".")
+          : "Ningún restaurante coincide con esos filtros.";
         vacio.appendChild(p);
         var frase = $("search").value.trim();
         if (frase) {
@@ -3475,6 +3532,126 @@
       render();
     });
   }
+
+  /* ---- Cartas: lo que hay en ellas, para buscar por platos ----
+     La función «asistente» lee sus cartas (web, PDF o foto) con Gemini y
+     devuelve una lista de platos y dietas. Se guarda en «carta_info», que
+     no se edita a mano: la comparte toda la lista. Se lee en segundo plano
+     y de pocas en pocas, para no gastar la cuota del modelo; si los
+     enlaces de la carta cambian, se vuelve a leer, y cada dos meses se
+     refresca. */
+  var CARTAS_POR_SESION = 8;
+  var CARTAS_PAUSA_MS = 4000;
+  var CARTA_VIGENCIA_MS = 60 * 864e5;          // 60 días
+  var CARTA_REINTENTO_MS = 14 * 864e5;         // si no se pudo leer, se reintenta a las dos semanas
+  var cartasDisponibles = true;                // falta la columna en Supabase → se esconde
+  var cartasEnMarcha = false, cartasIntentadas = Object.create(null), cartasLeidasSesion = 0;
+
+  /** Enlaces de carta del restaurante y de sus locales, sin repetir (hasta 4). */
+  function urlsCarta(d) {
+    var urls = [];
+    [d.carta].concat((d.sedes || []).map(function (s) { return s.carta; })).forEach(function (c) {
+      var a = c ? analizarUrl(c) : null;
+      if (a && a.valida && urls.indexOf(a.href) === -1) urls.push(a.href);
+    });
+    return urls.slice(0, 4);
+  }
+  function firmaCartas(d) { return urlsCarta(d).slice().sort().join("|"); }
+
+  function cartaPendiente(d) {
+    if (!urlsCarta(d).length) return false;
+    var c = d.cartaInfo;
+    if (!c || c.firma !== firmaCartas(d)) return true;
+    return Date.now() - c.t > (c.nf ? CARTA_REINTENTO_MS : CARTA_VIGENCIA_MS);
+  }
+
+  function estadoCartas() {
+    var conCarta = data.filter(function (d) { return urlsCarta(d).length; });
+    var leidas = conCarta.filter(function (d) { return d.cartaInfo && !d.cartaInfo.nf && d.cartaInfo.firma === firmaCartas(d); });
+    return { total: conCarta.length, leidas: leidas.length, pendientes: conCarta.filter(cartaPendiente).length };
+  }
+
+  function pintarEstadoCartas() {
+    var el = $("cartas-estado"), btn = $("cartas-btn");
+    if (!el || !btn) return;
+    if (!cartasDisponibles) {
+      el.textContent = "Falta preparar la base de datos para guardar lo leído de las cartas (columna «carta_info»).";
+      btn.hidden = true;
+      return;
+    }
+    var e = estadoCartas();
+    btn.hidden = !e.pendientes || soloLectura;
+    btn.disabled = cartasEnMarcha;
+    btn.textContent = cartasEnMarcha ? "Leyendo cartas…" : "Leer las cartas que faltan";
+    el.textContent = !e.total ? "Ningún restaurante tiene todavía un enlace a su carta."
+      : e.leidas + " de " + e.total + " cartas leídas. Escribe un plato en la búsqueda («cachopo», «sin gluten») " +
+        "para ver dónde lo tienen" + (e.pendientes ? "; las que faltan se van leyendo solas, poco a poco." : ".");
+  }
+
+  function procesarCartas(manual) {
+    if (cartasEnMarcha || !cartasDisponibles || soloLectura || !sb || !sb.functions) return;
+    var cupo = manual ? CARTAS_POR_SESION : CARTAS_POR_SESION - cartasLeidasSesion;
+    var tareas = data.filter(function (d) { return cartaPendiente(d) && (manual || !cartasIntentadas[d.id]); }).slice(0, Math.max(0, cupo));
+    if (!tareas.length) { pintarEstadoCartas(); return; }
+    cartasEnMarcha = true;
+    pintarEstadoCartas();
+    var fallosSeguidos = 0;
+    (function siguiente(i) {
+      if (i >= tareas.length || fallosSeguidos >= 2 || !cartasDisponibles) {
+        cartasEnMarcha = false;
+        pintarEstadoCartas();
+        if (manual && fallosSeguidos >= 2) avisar("No se han podido leer las cartas ahora. Se reintentará más tarde.");
+        return;
+      }
+      var d = tareas[i];
+      if (!data.some(function (x) { return x.id === d.id; })) { siguiente(i + 1); return; }
+      cartasIntentadas[d.id] = true;
+      cartasLeidasSesion++;
+      var firma = firmaCartas(d);
+      new Promise(function (r) { setTimeout(r, i ? CARTAS_PAUSA_MS : 0); }).then(function () {
+        return llamarAsistente({ accion: "leer_carta", nombre: d.nombre, urls: urlsCarta(d) });
+      }).then(function (r) {
+        fallosSeguidos = 0;
+        var l = (r && r.lectura) || {};
+        return guardarCartaInfo(d.id, normalizarCartaInfo({ platos: l.platos, dietas: l.dietas, firma: firma, t: Date.now() }));
+      }, function () { fallosSeguidos++; })
+        .catch(function () {})
+        .then(function () { siguiente(i + 1); });
+    })(0);
+  }
+
+  function guardarCartaInfo(id, info) {
+    var d = null;
+    for (var i = 0; i < data.length; i++) if (data[i].id === id) { d = data[i]; break; }
+    if (!d || !info) return null;
+    d.cartaInfo = info;                                   // se usa ya, aunque no se pueda guardar
+    guardarCache();
+    if (state.search || porCarta) render();
+    pintarEstadoCartas();
+    return sb.from("restaurantes").update({ carta_info: info }).eq("id", id).then(function (res) {
+      if (!res || !res.error) return;
+      // Sin la columna, no se insiste: se avisa en Ajustes y se deja de leer
+      var c = String(res.error.code || ""), m = String(res.error.message || "");
+      if (c === "42703" || c === "PGRST204" || /carta_info/.test(m)) { cartasDisponibles = false; pintarEstadoCartas(); }
+    });
+  }
+
+  $("cartas-btn").addEventListener("click", function () { procesarCartas(true); });
+
+  // Chip «Carta: cachopo ✕»: lo que la IA ha buscado en las cartas; tocarlo lo quita
+  var chipCarta = $("carta-chip");
+  function pintarChipCarta() {
+    chipCarta.hidden = !porCarta;
+    if (!porCarta) return;
+    chipCarta.replaceChildren(document.createTextNode("Carta: " + porCarta.que));
+    chipCarta.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"></path></svg>');
+    chipCarta.setAttribute("aria-label", "Quitar la búsqueda en las cartas: " + porCarta.que);
+  }
+  chipCarta.addEventListener("click", function () {
+    porCarta = null;
+    render();
+    $("filtros-btn").focus({ preventScroll: true });
+  });
 
   function aplicarGeoLocal(d, t, geo) {
     if (t.sede === -1) d.geo = geo;
@@ -4618,11 +4795,29 @@
       if (tipos.indexOf(t) === -1) tipos.push(t);
     });
 
+    // Lo leído de sus cartas, para que pueda buscar platos («cachopo», «sin gluten»)
+    var cartas = data.filter(function (d) { return d.cartaInfo && !d.cartaInfo.nf; }).slice(0, 80)
+      .map(function (d) { return { id: d.id, n: d.nombre, p: d.cartaInfo.platos.slice(0, 40), d: d.cartaInfo.dietas }; });
+
     interpretando = true;
     avisar("Interpretando «" + frase + "»…");
 
-    llamarAsistente({ accion: "buscar", texto: frase, zonas: zonas, tipos: tipos, marcas: marcasDisponibles }).then(function (r) {
+    llamarAsistente({ accion: "buscar", texto: frase, zonas: zonas, tipos: tipos, marcas: marcasDisponibles, cartas: cartas }).then(function (r) {
       var f = r.filtros || {};
+      // Si pedía un plato: solo los restaurantes que lo tienen en la carta
+      // (y solo ids que existen), con los platos que lo demuestran
+      var porId = Object.create(null);
+      data.forEach(function (d) { porId[d.id] = true; });
+      var enCartas = (Array.isArray(f.carta) ? f.carta : []).filter(function (c) { return c && porId[c.id]; });
+      var que = texto(f.que);
+      porCarta = null;
+      if (que && cartas.length) {
+        porCarta = { que: que, ids: Object.create(null), leidas: cartas.length };
+        enCartas.forEach(function (c) {
+          porCarta.ids[c.id] = (Array.isArray(c.platos) ? c.platos : []).map(texto).filter(Boolean).slice(0, 3);
+          if (!porCarta.ids[c.id].length) porCarta.ids[c.id] = [que];
+        });
+      }
       // Solo se aplican valores que existen de verdad: el servidor ya los
       // filtra y aquí se vuelve a comprobar.
       state.zonas = (f.zonas || []).map(grupoZona).filter(function (z, i, a) {
@@ -4649,6 +4844,7 @@
 
       var puestos = state.zonas.concat(state.tipos, state.precios, state.marcas);
       if (state.abiertoAhora) puestos.push("abierto ahora");
+      if (porCarta) puestos.unshift("«" + porCarta.que + "» en la carta");
       avisar(puestos.length ? "Filtrado por " + puestos.join(", ") + "." : "No he sabido traducir eso a filtros.");
     }).catch(function (e) {
       avisar(e.message || "No se pudo interpretar la frase.");

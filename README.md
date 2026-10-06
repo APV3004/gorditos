@@ -75,11 +75,11 @@ entráis los dos.
 Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
 ```html
 <!-- index.html, al final -->
-<script src="app.js?v=34"></script>   <!-- -> ?v=35 -->
+<script src="app.js?v=35"></script>   <!-- -> ?v=36 -->
 ```
 ```js
 // sw.js
-var CACHE = "gorditos-v34";   // -> "gorditos-v35"
+var CACHE = "gorditos-v35";   // -> "gorditos-v36"
 ```
 Cada vez que la app vuelve a primer plano mira qué versión hay
 publicada. Si es otra, se recarga sola (o, si tienes un formulario a
@@ -177,6 +177,30 @@ se escribió: un restaurante en «Chueca» sale al filtrar por «Centro» y
 su tarjeta sigue diciendo «Chueca». La tabla de barrios está en
 `DISTRITO_DE` (`app.js`, sección 8); lo que no aparece ahí se queda tal
 cual. Mayúsculas, tildes, espacios y guiones no cuentan.
+
+## Buscar por platos
+
+La función `asistente` lee las cartas de cada restaurante (su web, un PDF
+o una foto) con Gemini y la app guarda los platos y las dietas que
+encuentra en la columna `carta_info`. No se edita a mano y la comparte
+toda la lista. Se leen en segundo plano, como mucho 8 por sesión y de una
+en una, para no gastar la cuota del modelo; si cambian los enlaces de la
+carta se vuelven a leer, y cada dos meses se refrescan. En «Listas y
+ajustes → Buscar por platos» se ve cuántas hay leídas y se pueden leer las
+que faltan.
+
+- Escribir un plato en la búsqueda («cachopo», «tiramisú») encuentra al
+  instante los restaurantes que lo tienen; la tarjeta dice «En su carta: …».
+- Una frase («algo sin gluten en Chamberí») va a la IA con lo leído de
+  las cartas, y aparece el chip «Carta: sin gluten ✕» para quitarlo.
+- Cartas que se pintan con JavaScript no se pueden leer: mejor enlazar el
+  PDF o una foto de la carta.
+
+Si la columna no existiera, la app lo dice en Ajustes y no lo intenta.
+Se crea así (se puede ejecutar más de una vez):
+```sql
+alter table public.restaurantes add column if not exists carta_info jsonb;
+```
 
 ## Asistente (rellenar desde un enlace y buscar con una frase)
 
