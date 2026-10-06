@@ -352,7 +352,8 @@
     return sb.from("restaurantes").select("*").eq("lista_id", pedida).order("created_at", { ascending: true }).then(function (res) {
       if (res.error) throw res.error;
       if (pedida !== listaActual) return;       // cambiaste de lista mientras cargaba
-      data = res.data.map(registroDesdeFila);
+      data = res.data.map(registroDesdeFila)
+        .filter(function (d) { return !borradosPendientes[d.id]; });   // borrados aún en espera
       soloLectura = false;
       guardarCache();
       mostrarBanner(null);
@@ -451,6 +452,7 @@
         quitarLocal(payload.old && payload.old.id);
       } else {
         var fila = payload.new || {};
+        if (borradosPendientes[fila.id]) return;      // lo acabas de borrar: no lo resucites
         if (fila.lista_id && fila.lista_id !== lista) quitarLocal(fila.id);
         else upsertLocal(registroDesdeFila(fila));
       }
@@ -1154,6 +1156,7 @@
   })();
 
   $("logout-btn").addEventListener("click", function () {
+    confirmarBorradosPendientes();     // antes de cerrar la sesión, con permiso todavía
     if (canal && sb) { sb.removeChannel(canal); canal = null; }
     // scope global: invalida también en el servidor; sin red, la sesión local se descarta igual.
     if (sb) sb.auth.signOut({ scope: "global" }).catch(function () {});
@@ -1894,34 +1897,86 @@
     if (typeof cerrarDeslizado === "function") cerrarDeslizado();
   }
 
+  /* Borrar como en Mail: desaparece al momento, pero en Supabase no se
+     borra hasta que pasa el aviso de «Deshacer». Así deshacer no tiene que
+     volver a crear nada y se conserva todo: el id, la fecha de alta y las
+     marcas «Quiero ir / Ya he ido» de todos (que la base de datos borraría
+     junto con el restaurante). */
+  var ESPERA_BORRADO_MS = 7500;                       // algo más que el aviso (7 s)
+  var borradosPendientes = Object.create(null);       // id -> { item, lista, timer, enviado }
+
+  function restaurarLocal(p) {
+    if (listaActual !== p.lista) return;
+    upsertLocal(p.item);
+    guardarCache();
+    refrescarFuentesChips();
+    render();
+  }
+
+  function confirmarBorrado(id) {
+    var p = borradosPendientes[id];
+    if (!p || p.enviado) return;
+    clearTimeout(p.timer);
+    p.enviado = true;
+    Promise.resolve(sb.from("restaurantes").delete().eq("id", id)).then(function (res) {
+      if (res && res.error) throw res.error;
+      delete borradosPendientes[id];
+    }).catch(function () {
+      // No se pudo: vuelve a aparecer, que no parezca borrado sin estarlo
+      delete borradosPendientes[id];
+      restaurarLocal(p);
+      avisar("No se pudo eliminar «" + p.item.nombre + "»: revisa la conexión.");
+    });
+  }
+
+  function confirmarBorradosPendientes() {
+    Object.keys(borradosPendientes).forEach(confirmarBorrado);
+  }
+
+  // Si cierras la app o la mandas al fondo durante esos segundos, se borra ya.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") confirmarBorradosPendientes();
+  });
+  window.addEventListener("pagehide", confirmarBorradosPendientes);
+
   function eliminar(item) {
     if (requiereConexion()) return;
     cerrarTodasLasConfirmaciones();
-    var listaDelBorrado = listaActual;   // «Deshacer» lo devuelve a SU lista, aunque cambies de lista antes
+    var p = { item: item, lista: listaActual, timer: null, enviado: false };
+    borradosPendientes[item.id] = p;
+    p.timer = setTimeout(function () { confirmarBorrado(item.id); }, ESPERA_BORRADO_MS);
 
-    sb.from("restaurantes").delete().eq("id", item.id).then(function (res) {
-      if (res.error) { avisar("No se pudo eliminar: inténtalo de nuevo."); render(); return; }
-      quitarLocal(item.id);
-      guardarCache();
-      refrescarFuentesChips();
-      render();
+    quitarLocal(item.id);
+    guardarCache();
+    refrescarFuentesChips();
+    render();
 
-      avisar("«" + item.nombre + "» eliminado.", {
-        etiqueta: "Deshacer",
-        alPulsar: function () {
-          var fila = Object.assign({}, filaDesde(item), { lista_id: listaDelBorrado });
-          sb.from("restaurantes").insert(fila).select().single().then(function (r2) {
-            if (r2.error) { avisar("No se pudo restaurar."); return; }
-            if (listaActual !== listaDelBorrado) { avisar("Restaurado en su lista."); return; }
-            upsertLocal(registroDesdeFila(r2.data));
-            guardarCache();
-            refrescarFuentesChips();
-            render();
-            avisar("Restaurado.");
-          });
+    avisar("«" + item.nombre + "» eliminado.", {
+      etiqueta: "Deshacer",
+      alPulsar: function () {
+        if (!p.enviado) {
+          // Aún no se había borrado en el servidor: basta con volver a enseñarlo
+          clearTimeout(p.timer);
+          delete borradosPendientes[item.id];
+          restaurarLocal(p);
+          avisar("Restaurado.");
+          return;
         }
-      });
-    }).catch(function () { avisar("No se pudo eliminar: revisa la conexión."); render(); });
+        // Ya se había borrado (p. ej. se fue la app al fondo): se vuelve a
+        // crear con el mismo id y la misma fecha. Las marcas no vuelven.
+        var fila = Object.assign({}, filaDesde(item), { id: item.id, lista_id: p.lista });
+        if (item.creado) fila.created_at = new Date(item.creado).toISOString();
+        sb.from("restaurantes").insert(fila).select().single().then(function (r2) {
+          if (r2.error) { avisar("No se pudo restaurar."); return; }
+          if (listaActual !== p.lista) { avisar("Restaurado en su lista."); return; }
+          upsertLocal(registroDesdeFila(r2.data));
+          guardarCache();
+          refrescarFuentesChips();
+          render();
+          avisar("Restaurado.");
+        });
+      }
+    });
   }
 
   /* ============================================================
