@@ -654,6 +654,30 @@
     return !seleccion.length || seleccion.indexOf(valor) !== -1;
   }
 
+  /* Zonas: el filtro agrupa por distrito (o municipio), pero la tarjeta
+     sigue diciendo lo que se escribió («Chueca»). Las claves van sin
+     mayúsculas, tildes, espacios ni guiones, así «Fuencarral-ElPardo» y
+     «fuencarral el pardo» son lo mismo. Lo que no está aquí se queda tal
+     cual, con la primera letra en mayúscula. */
+  function claveZona(v) { return plano(v).replace(/[^a-z0-9]/g, ""); }
+  var DISTRITO_DE = Object.create(null);
+  [
+    // Los 21 distritos de Madrid: así se unifica cómo se escriben
+    ["Centro"], ["Arganzuela"], ["Retiro"], ["Salamanca"], ["Chamartín"], ["Tetuán"], ["Chamberí"],
+    ["Fuencarral-El Pardo", "Fuencarral", "El Pardo", "Mirasierra"],
+    ["Moncloa-Aravaca", "Moncloa", "Aravaca", "Argüelles", "Casa de Campo"],
+    ["Latina"], ["Carabanchel"], ["Usera"], ["Puente de Vallecas"], ["Moratalaz"], ["Ciudad Lineal"],
+    ["Hortaleza"], ["Villaverde"], ["Villa de Vallecas"], ["Vicálvaro"], ["San Blas-Canillejas"], ["Barajas"],
+    // Barrios que se suelen escribir en lugar del distrito
+    ["Centro", "Chueca", "La Latina", "Plaza de España", "Sol", "Malasaña", "Lavapiés", "Huertas", "Ópera"],
+    ["Salamanca", "Goya"],
+    ["Chamartín", "Bernabeu", "Bernabéu"],
+    // Municipios: se quedan como están; La Moraleja va con Alcobendas
+    ["Alcobendas", "La Moraleja"], ["Majadahonda"], ["Pozuelo", "Pozuelo de Alarcón"]
+  ].forEach(function (grupo) {
+    grupo.forEach(function (nombre) { DISTRITO_DE[claveZona(nombre)] = grupo[0]; });
+  });
+
   (function restaurarFiltros() {
     var g = parsearJson(leerCrudo(CLAVE_FILTROS));
     if (!g || typeof g !== "object") return;
@@ -662,7 +686,8 @@
       if (Array.isArray(nuevo)) return nuevo.filter(function (v) { return typeof v === "string" && v; });
       return typeof viejo === "string" && viejo && viejo !== todos ? [viejo] : [];
     }
-    state.zonas = lista(g.zonas, g.zona, "Todas");
+    // Filtros guardados con barrios («Chueca») pasan a su distrito («Centro»)
+    state.zonas = lista(g.zonas, g.zona, "Todas").map(grupoZona).filter(function (z, i, a) { return a.indexOf(z) === i; });
     state.tipos = lista(g.tipos, g.tipo, "Todos");
     state.precios = lista(g.precios, g.precio, "Todos");
     state.marcas = lista(g.marcas, null, "Todas");
@@ -1195,7 +1220,9 @@
     if (!v) return "Sin especificar";
     if (v.indexOf("Varias zonas") === 0) return "Varias zonas";
     if (v === "Sin confirmar") return "Sin confirmar";
-    return v.split(/[(\/]/)[0].trim() || "Sin especificar";
+    var base = v.split(/[(\/]/)[0].trim();
+    if (!base) return "Sin especificar";
+    return DISTRITO_DE[claveZona(base)] || base.charAt(0).toUpperCase() + base.slice(1);
   }
 
   /**
@@ -1226,7 +1253,9 @@
   function construirChips(contenedorId, etiquetaId, todos, valores, clave) {
     var contenedor = $(contenedorId);
     // Si algo elegido ya no existe (se borró el último de esa zona), se olvida.
-    state[clave] = state[clave].filter(function (v) { return valores.indexOf(v) !== -1; });
+    // Sin datos todavía (primera carga sin copia guardada) no se puede saber:
+    // se conserva lo elegido hasta que lleguen.
+    if (data.length) state[clave] = state[clave].filter(function (v) { return valores.indexOf(v) !== -1; });
 
     var firma = valores.join("\u0000") + "|" + state[clave].join("\u0000");
     actualizarEtiquetaFiltro(etiquetaId, clave);
@@ -2062,6 +2091,8 @@
     tel:     svgBase + '<path d="M16.5 21A13.5 13.5 0 0 1 3 7.5 2.5 2.5 0 0 1 5.5 5h1.8a1 1 0 0 1 1 .78l.7 3.1a1 1 0 0 1-.42 1.05l-1.4.95a11 11 0 0 0 4.94 4.94l.95-1.4a1 1 0 0 1 1.05-.42l3.1.7a1 1 0 0 1 .78 1v1.8A2.5 2.5 0 0 1 16.5 21Z"></path></svg>',
     mapa:    svgBase + '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>',
     lapiz:   svgBase + '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"></path><path d="m13.5 6.5 4 4"></path></svg>',
+    marcador: svgBase + '<path class="relleno" d="M6.5 3.5h11a1 1 0 0 1 1 1V21l-6.5-4.6L5.5 21V4.5a1 1 0 0 1 1-1Z"></path></svg>',
+    hecho:    svgBase + '<circle class="relleno" cx="12" cy="12" r="9"></circle><path class="trazo" d="m8 12.3 2.7 2.7L16.2 9.5"></path></svg>',
     papelera: svgBase + '<path d="M4 7h16M10 11v6M14 11v6"></path><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"></path><path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"></path></svg>'
   };
 
@@ -2105,7 +2136,7 @@
   function ordenar(items) {
     var s = state.sort;
     return items.sort(function (a, b) {
-      if (s === "zona") return comparar(a.zona, b.zona) || comparar(a.nombre, b.nombre);
+      if (s === "zona") return comparar(grupoZona(a.zona), grupoZona(b.zona)) || comparar(a.zona, b.zona) || comparar(a.nombre, b.nombre);
       if (s === "tipo") return comparar(a.tipo, b.tipo) || comparar(a.nombre, b.nombre);
       if (s === "precio") return (a.precio - b.precio) || comparar(a.nombre, b.nombre);
       if (s === "recientes") return (b.creado - a.creado) || comparar(a.nombre, b.nombre);
@@ -2158,8 +2189,29 @@
     var precioSr = document.createElement("span");
     precioSr.className = "sr-only";
     precioSr.textContent = nombrePrecio[d.precio] || "precio medio";
-    top.appendChild(nombre); top.appendChild(precio); top.appendChild(precioSr);
+    var derecha = document.createElement("div");
+    derecha.className = "card-top-der";
+    derecha.appendChild(precio); derecha.appendChild(precioSr);
+    top.appendChild(nombre); top.appendChild(derecha);
     li.appendChild(top);
+
+    // «Quiero ir» y «Ya he ido»: dos iconos junto al precio, en lugar de
+    // una fila propia. Se ven pequeños, pero se tocan en 44 × 44 pt.
+    if (marcasDisponibles) {
+      var actual = miMarca(d);
+      [["quiero", ICONOS.marcador], ["visitado", ICONOS.hecho]].forEach(function (par) {
+        var estado = par[0];
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "marca-btn " + estado;
+        b.innerHTML = par[1];
+        b.title = ETIQUETA_MARCA[estado];
+        b.setAttribute("aria-pressed", actual === estado ? "true" : "false");
+        b.setAttribute("aria-label", ETIQUETA_MARCA[estado] + " a " + d.nombre);
+        b.addEventListener("click", function () { cambiarMarca(d, estado); });
+        derecha.appendChild(b);
+      });
+    }
 
     var meta = document.createElement("p");
     meta.className = "card-meta";
@@ -2329,21 +2381,6 @@
         lineaOtros.textContent = frases.join(" · ");
         li.appendChild(lineaOtros);
       }
-
-      var filaMarcas = document.createElement("div");
-      filaMarcas.className = "card-marcas";
-      var actual = miMarca(d);
-      ["quiero", "visitado"].forEach(function (estado) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "marca-btn " + estado;
-        b.textContent = ETIQUETA_MARCA[estado];
-        b.setAttribute("aria-pressed", actual === estado ? "true" : "false");
-        b.setAttribute("aria-label", ETIQUETA_MARCA[estado] + " a " + d.nombre);
-        b.addEventListener("click", function () { cambiarMarca(d, estado); });
-        filaMarcas.appendChild(b);
-      });
-      li.appendChild(filaMarcas);
     }
 
     var acciones = document.createElement("div");
@@ -3880,6 +3917,9 @@
     var li = e.target.closest("li.card:not(.silueta)");
     if (deslizada && deslizada !== li) cerrarDeslizado();
     if (e.pointerType === "mouse" || !li || e.target.closest(".card-deslizar")) return;
+    // La fila de enlaces que no cabe se desliza ella sola, no la tarjeta
+    var fila = e.target.closest(".card-links");
+    if (fila && fila.scrollWidth > fila.clientWidth + 1) return;
     gesto = { li: li, id: e.pointerId, x0: e.clientX, y0: e.clientY, decidido: false,
               tocarParaCerrar: deslizada === li, muestras: [] };
   });
@@ -4517,7 +4557,9 @@
       var f = r.filtros || {};
       // Solo se aplican valores que existen de verdad: el servidor ya los
       // filtra y aquí se vuelve a comprobar.
-      state.zonas = (f.zonas || []).filter(function (z) { return zonas.indexOf(z) !== -1; });
+      state.zonas = (f.zonas || []).map(grupoZona).filter(function (z, i, a) {
+        return zonas.indexOf(z) !== -1 && a.indexOf(z) === i;
+      });
       state.tipos = (f.tipos || []).filter(function (t) { return tipos.indexOf(t) !== -1; });
       state.precios = (f.precios || []).filter(function (p) { return ["€", "€€", "€€€"].indexOf(p) !== -1; });
       state.abiertoAhora = f.abiertoAhora === true;

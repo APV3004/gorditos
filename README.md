@@ -14,6 +14,7 @@ real, con Supabase como backend. Funciona sin conexión en modo lectura
 | `sw.js` | Service worker: trae siempre la última versión y abre sin red |
 | `manifest.webmanifest` | Nombre, icono y modo pantalla completa |
 | `icon-512.png` | El icono |
+| `icon-maskable-512.png` | El icono para Android, con el dibujo al 80 % para que la máscara no lo recorte |
 | `config.js` | Tu URL y tu clave de Supabase — se sube una vez y no se vuelve a tocar |
 | `supabase.sql` | Crea la tabla, la seguridad y el tiempo real — se pega una vez en el SQL Editor de Supabase |
 
@@ -74,11 +75,11 @@ entráis los dos.
 Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
 ```html
 <!-- index.html, al final -->
-<script src="app.js?v=32"></script>   <!-- -> ?v=33 -->
+<script src="app.js?v=33"></script>   <!-- -> ?v=34 -->
 ```
 ```js
 // sw.js
-var CACHE = "gorditos-v32";   // -> "gorditos-v33"
+var CACHE = "gorditos-v33";   // -> "gorditos-v34"
 ```
 Cada vez que la app vuelve a primer plano mira qué versión hay
 publicada. Si es otra, se recarga sola (o, si tienes un formulario a
@@ -166,6 +167,16 @@ Cada persona marca por su cuenta. Los demás miembros de la lista ven
 tus marcas («Quiere ir: adrian») pero solo tú puedes cambiarlas: lo
 garantizan las políticas de `supabase-migracion-marcas.sql`, no la app.
 Sin esa migración, los botones y el filtro simplemente no aparecen.
+En la tarjeta son dos iconos junto al precio: el marcador («Quiero ir»)
+y el check («Ya he ido»).
+
+## Zonas
+
+El filtro agrupa por distrito (o municipio) y la tarjeta enseña lo que
+se escribió: un restaurante en «Chueca» sale al filtrar por «Centro» y
+su tarjeta sigue diciendo «Chueca». La tabla de barrios está en
+`DISTRITO_DE` (`app.js`, sección 8); lo que no aparece ahí se queda tal
+cual. Mayúsculas, tildes, espacios y guiones no cuentan.
 
 ## Asistente (rellenar desde un enlace y buscar con una frase)
 

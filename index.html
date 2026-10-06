@@ -766,7 +766,10 @@
   .dado-btn.girando svg { animation: giro 0.75s cubic-bezier(0.32, 0.72, 0, 1); }
   li.card:focus { outline: none; }
 
-  .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
+  /* El nombre ocupa lo que pueda; si con texto grande no le quedan ni
+     9 rem, el precio y las marcas bajan a su propia línea, como en iOS */
+  .card-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--s3); }
+  .card-top .card-name { flex: 1 1 9rem; }
   .card-name {
     font-weight: 600;
     font-size: var(--t-body);
@@ -800,6 +803,21 @@
   }
 
   .card-links { margin-top: var(--s3); display: flex; flex-wrap: wrap; gap: var(--s2); }
+  /* En las tarjetas, los enlaces van en una sola fila. Si no caben (iPhone
+     pequeño, texto grande), la fila se desliza en horizontal y llega hasta
+     el borde, para que se vea que hay más. El relleno vertical deja sitio
+     a la zona de toque de 44 pt, que el desplazamiento recortaría. */
+  li.card .card-links {
+    --borde: var(--s4);
+    margin: calc(var(--s3) - 0.3125rem) calc(-1 * var(--borde)) -0.3125rem;
+    padding: 0.3125rem var(--borde);
+    flex-wrap: nowrap; gap: 0.375rem;
+    overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    scroll-padding-inline: var(--borde);
+    touch-action: pan-x pan-y;     /* aquí el horizontal es de la fila */
+  }
+  li.card .sede-block .card-links { --borde: var(--s3); }
+  li.card .card-links::-webkit-scrollbar { display: none; }
 
   .card-actions { margin-top: var(--s1); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s5); }
   /* En pantallas táctiles, Editar/Eliminar están al deslizar y al mantener
@@ -823,21 +841,25 @@
   .card-actions button.danger { color: var(--red); }
 
   .card-link {
+    position: relative;
     display: inline-flex;
+    flex: none;
     align-items: center;
-    gap: var(--s2);
-    min-height: var(--tap);
-    padding: 0 var(--s4);
+    gap: 0.25rem;
+    min-height: 2.125rem;          /* se ve de 34 pt… */
+    padding: 0 0.5625rem;
     border-radius: 999px;
     border: none;
     background: var(--fill);
     color: var(--label);
-    font-size: var(--t-subhead);
+    font-size: 0.875rem;          /* 14 pt: caben Carta, Reservar y Cómo llegar desde 375 pt */
     font-weight: 500;
     text-decoration: none;
     white-space: nowrap;
   }
   .card-link svg { width: 1rem; height: 1rem; flex: 0 0 auto; color: var(--tint); }
+  /* …pero se toca en 44 pt de alto */
+  .card-link::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
 
   .empty { text-align: center; color: var(--label-2); padding: var(--s8) var(--s3); font-size: var(--t-subhead); line-height: 1.6; }
   .empty p { margin: 0; }
@@ -1036,15 +1058,25 @@
   .card-dist { color: var(--tint); font-weight: 600; }
   .card-horario { font-weight: 600; }
 
-  /* Marcas personales */
-  .card-marcas { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
-  .marca-btn {
-    min-height: 2.5rem; padding: 0 var(--s3); border-radius: 999px;
-    border: none; background: var(--fill); color: var(--label-2);
-    font-size: var(--t-footnote); font-weight: 600; cursor: pointer;
+  /* Marcas personales: dos iconos junto al precio. El dibujo mide 22 pt,
+     pero el botón ocupa 44 × 44; los márgenes negativos hacen que no
+     ensanche la fila del nombre. Marcados, se rellenan con su color. */
+  .card-top-der {
+    display: flex; align-items: center; flex: none;
+    margin: calc((var(--tap) - 1.375rem) / -2) calc((var(--tap) - 1.375rem) / -2) calc((var(--tap) - 1.375rem) / -2) 0;
   }
-  .marca-btn[aria-pressed="true"].quiero { background: var(--orange-fill); color: var(--orange); }
-  .marca-btn[aria-pressed="true"].visitado { background: var(--green-fill); color: var(--green); }
+  .card-top-der .card-price { margin-right: var(--s1); }
+  .marca-btn {
+    width: var(--tap); height: var(--tap); padding: 0; flex: none;
+    display: grid; place-items: center;
+    border: none; border-radius: 50%; background: transparent; color: var(--label-2); cursor: pointer;
+  }
+  .marca-btn svg { width: 1.375rem; height: 1.375rem; }
+  .marca-btn .relleno { fill: transparent; transition: fill 0.15s ease; }
+  .marca-btn[aria-pressed="true"].quiero { color: var(--orange); }
+  .marca-btn[aria-pressed="true"].visitado { color: var(--green); }
+  .marca-btn[aria-pressed="true"] .relleno { fill: currentColor; }
+  .marca-btn[aria-pressed="true"] .trazo { stroke: var(--surface); }
   .card-otros { margin: var(--s2) 0 0; font-size: var(--t-footnote); color: var(--label-2); }
   .card-horario.abierto { color: var(--green); }
   .card-horario.cerrado { color: var(--label-2); font-weight: 400; }
@@ -1178,7 +1210,7 @@
     .hoja, li.card, .grupo, .sede-list, .sede-block, .mapa { border: 1px solid var(--separator); }
     .fila-g + .fila-g::before, .sede-list li + li::before { transform: none; background: var(--label-2); }
     .field input, .field select, input.search, textarea,
-    .btn-secondary, .chip, .dado-btn, .card-link, .icon-btn, .marca-btn, .sedes-toggle { border: 1px solid var(--label-2); }
+    .btn-secondary, .chip, .dado-btn, .card-link, .icon-btn, .sedes-toggle { border: 1px solid var(--label-2); }
   }
 
   @media print {
@@ -1622,6 +1654,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=32"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>

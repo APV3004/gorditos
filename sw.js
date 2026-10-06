@@ -13,7 +13,7 @@
    Al publicar cambios sube CACHE una versión: al activarse borra las
    cachés antiguas.                                                  */
 
-var CACHE = "gorditos-v32";
+var CACHE = "gorditos-v33";
 
 // Cuánto se espera a la red antes de tirar de la copia guardada.
 var ESPERA_RED_MS = 4000;
@@ -24,7 +24,8 @@ var ESPERA_RED_MS = 4000;
    archivo o en qué subcarpeta viva. */
 var PRECARGA = [
   "./manifest.webmanifest",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./icon-maskable-512.png"
 ];
 
 // Orígenes externos que se guardan para poder abrir la app sin red:
