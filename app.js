@@ -4378,7 +4378,7 @@
       var p = puntosDe(d, false)[0] || {};
       var destino = p.direccion ? { nombre: d.nombre, zona: "", direccion: p.direccion } : { nombre: d.nombre, zona: d.zona, direccion: "" };
       items.push(itemMenu("Cómo llegar", ICONOS.mapa, null, { href: urlMapa(destino), externo: true }));
-      if (p.carta && analizarUrl(p.carta).valida) {
+      ime (p.carta && analizarUrl(p.carta).valida) {
         items.push(itemMenu("Ver la carta", ICONOS.carta, null, { href: analizarUrl(p.carta).href, externo: true }));
       }
       var res = analizarReserva(p.reserva);
@@ -4432,7 +4432,7 @@
   // Mantener pulsado sin moverse (dedo o lápiz) unos 400 ms, lo que tarda
   // iOS. Mientras tanto la tarjeta se va hundiendo, para anunciar que va a
   // pasar algo; si mueves el dedo o lo levantas antes, vuelve desde donde esté.
-  var ESPERA_MENU_MS = 400;
+  var ESPERA_MENU_MS = 300;
   var liPulsada = null;
   function soltarPulsada() {
     if (liPulsada && liPulsada !== menuTarjeta) escalar(liPulsada, 1000, 0.25);
