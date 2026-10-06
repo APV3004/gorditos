@@ -1,7 +1,7 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · Pantalla de entrar (v40) · 6 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -34,6 +34,15 @@ todo lo nuevo, agrupado por pantallas, con cómo se usa.
 
 2. PANTALLA PRINCIPAL
 ---------------------
+
+Entrar (nuevo en la v40)
+- El icono y el nombre de la app, y Email y Contraseña en un grupo como
+  los de Ajustes del iPhone.
+- "Siguiente" en el teclado pasa del email a la contraseña. Mientras
+  comprueba, el botón dice "Entrando…".
+- Si el email o la contraseña no son correctos, el grupo se sacude un
+  poco (como en el Mac) y la contraseña queda seleccionada para volver a
+  escribirla. Con "Reducir movimiento" no se mueve.
 
 Cabecera
 - Más corta: el título "Dónde comer" y dos botones redondos.

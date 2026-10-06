@@ -635,18 +635,42 @@
       return;
     }
 
+    // «Siguiente» en el teclado del email pasa a la contraseña
+    $("login-email").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); $("login-pass").focus(); }
+    });
+
+    // Contraseña o email incorrectos: el grupo se sacude, como en el Mac, y
+    // la contraseña queda seleccionada para volver a escribirla
+    function sacudirLogin() {
+      var g = $("login-grupo");
+      if (g.animate && !(menosMovimiento && menosMovimiento.matches)) {
+        g.animate([{ transform: "none" }, { transform: "translateX(-10px)" }, { transform: "translateX(9px)" },
+                   { transform: "translateX(-6px)" }, { transform: "translateX(4px)" }, { transform: "translateX(-2px)" },
+                   { transform: "none" }], { duration: 420, easing: "ease-out" });
+      }
+      try { $("login-pass").select(); } catch (err) {}
+    }
+
     $("login-form").addEventListener("submit", function (e) {
       e.preventDefault();
       var email = $("login-email").value.trim();
       var pass = $("login-pass").value;
       var btn = $("login-btn");
+      if (!email || !pass) {
+        mostrarLogin(!email ? "Escribe tu email." : "Escribe la contraseña.");
+        $(!email ? "login-email" : "login-pass").focus();
+        return;
+      }
       btn.disabled = true;
+      btn.textContent = "Entrando…";            // que se vea que está en ello
+      function listo() { btn.disabled = false; btn.textContent = "Entrar"; }
       sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
-        btn.disabled = false;
-        if (res.error) { mostrarLogin("No se pudo entrar: revisa el email y la contraseña."); return; }
+        listo();
+        if (res.error) { mostrarLogin("El email o la contraseña no son correctos."); sacudirLogin(); return; }
         iniciarApp(res.data && res.data.session);
       }).catch(function () {
-        btn.disabled = false;
+        listo();
         mostrarLogin("No se pudo conectar. Revisa tu conexión e inténtalo otra vez.");
       });
     });

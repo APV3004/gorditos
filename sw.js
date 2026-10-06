@@ -13,7 +13,7 @@
    Al publicar cambios sube CACHE una versión: al activarse borra las
    cachés antiguas.                                                  */
 
-var CACHE = "gorditos-v39";
+var CACHE = "gorditos-v40";
 
 // Cuánto se espera a la red antes de tirar de la copia guardada.
 var ESPERA_RED_MS = 4000;

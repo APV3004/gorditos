@@ -271,10 +271,25 @@
   .fila-inline .btn { flex: 0 0 auto; }
   /* Campo a lo ancho y el botón debajo: en el móvil no cabe al lado */
 
-  .login-screen { max-width: 340px; margin: 15vh auto 0; padding: 0 var(--s1); }
-  .login-screen h1 { margin: 0 0 var(--s2); }
-  .login-screen .sub { margin-bottom: var(--s5); }
-  .login-screen .btn { width: 100%; }
+  /* ---- Entrar: el icono y el nombre de la app, y un grupo como los de
+     Ajustes (el mismo que los formularios de la propia app) ---- */
+  .login-screen {
+    max-width: 26rem; margin: max(9vh, var(--s6)) auto 0; padding: 0;   /* el margen lateral ya lo pone la página */
+    text-align: center;
+  }
+  .login-icono {
+    display: block; width: 80px; height: 80px; margin: 0 auto var(--s4);   /* los iconos no crecen con el texto */
+    border-radius: 22.5%;                    /* la forma de los iconos de iOS */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+  .login-screen h1 {
+    margin: 0 0 var(--s6);
+    font-size: var(--t-large); line-height: 1.1; letter-spacing: -0.02em; font-weight: 700;
+  }
+  .login-screen form { text-align: left; }
+  .login-grupo .fila-g > label { flex-basis: 6.75rem; }
+  .login-error { margin: var(--s3) var(--s4) 0; }
+  .login-screen .btn { width: 100%; margin-top: var(--s5); }
 
   /* ---- Hojas inferiores (alta / edición, listas y ajustes) ----
      Las mueve app.js con un muelle; aquí solo su aspecto. */
@@ -1235,19 +1250,22 @@
 <div class="wrap">
 
   <div class="login-screen" id="login-screen" hidden>
-    <p class="kicker">Gorditos</p>
-    <h1>Entrar</h1>
-    <p class="sub">Lista compartida — solo vosotros dos.</p>
+    <img class="login-icono" src="./icon-512.png" alt="" width="80" height="80">
+    <h1>Gorditos</h1>
     <form id="login-form" novalidate>
-      <div class="field">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" autocomplete="username" enterkeyhint="next" required>
+      <div class="grupo login-grupo" id="login-grupo">
+        <div class="fila-g">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" autocomplete="username" enterkeyhint="next" required
+                 placeholder="nombre@ejemplo.com" autocapitalize="none" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="fila-g">
+          <label for="login-pass">Contraseña</label>
+          <input type="password" id="login-pass" autocomplete="current-password" enterkeyhint="go" required
+                 placeholder="Obligatoria">
+        </div>
       </div>
-      <div class="field">
-        <label for="login-pass">Contraseña</label>
-        <input type="password" id="login-pass" autocomplete="current-password" enterkeyhint="done" required>
-      </div>
-      <p class="msg msg-error" id="login-error" hidden></p>
+      <p class="msg msg-error login-error" id="login-error" role="alert" hidden></p>
       <button class="btn btn-primary" id="login-btn" type="submit">Entrar</button>
     </form>
   </div>
@@ -1668,6 +1686,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=39"></script>
+<script src="app.js?v=40"></script>
 </body>
 </html>
