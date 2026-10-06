@@ -1,0 +1,222 @@
+GORDITOS — NOVEDADES
+Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
+Borrar con intención (v31 y v32) · 6 de octubre de 2026
+=====================================================================
+
+La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
+colores y letra del sistema, hojas que suben desde abajo, gestos que
+siguen al dedo y animaciones que se pueden interrumpir. Abajo está
+todo lo nuevo, agrupado por pantallas, con cómo se usa.
+
+
+1. ASPECTO GENERAL
+------------------
+
+- Colores de Apple: fondo gris claro de iOS con tarjetas blancas, o
+  negro con tarjetas gris oscuro en el tema oscuro. El color de acento
+  es el azul de Apple. Todos los colores de texto cumplen el contraste
+  mínimo de accesibilidad.
+- Letra del sistema (San Francisco en el iPhone y el Mac) en lugar de
+  las fuentes anteriores. Seis tamaños, los mismos que usa iOS.
+- Botones al estilo iOS: azul relleno para la acción principal y gris
+  con texto azul para el resto. Los campos de texto son rellenos grises
+  sin borde.
+- Iconos dibujados todos con el mismo trazo: añadir, ajustes, lupa,
+  cerrar, dado, ubicación, flechas, editar, borrar, filtros...
+- Todo responde en el instante del toque: los botones se hunden un
+  poco al pulsarlos, no al soltar.
+- Nuevo icono de la app: el mismo dibujo del skyline de Madrid, en
+  blanco sobre el azul de la app. Para verlo en el iPhone hay que
+  quitar la app de la pantalla de inicio y volver a añadirla desde
+  Safari.
+
+
+2. PANTALLA PRINCIPAL
+---------------------
+
+Cabecera
+- Más corta: el título "Dónde comer" y dos botones redondos.
+    · Botón de la persona: abre "Listas y ajustes".
+    · Botón "+": añade un restaurante.
+- El nombre de la lista ("Casa ⌄") aparece encima del título; tócalo
+  para cambiar de lista.
+- Al bajar, "Dónde comer" aparece en pequeño en una barra translúcida
+  arriba del todo. Tocar esa barra te devuelve al principio.
+- En el iPhone, al tirar hacia abajo estando arriba del todo, el
+  título grande se estira un poco, como en las apps de Apple.
+
+Búsqueda
+- Escribe un nombre y la lista se filtra al momento, como siempre.
+- Ya no hay botón "Interpretar". Si escribes una petición ("italiano
+  barato en Chamberí") y pulsas Buscar en el teclado, la app la
+  convierte sola en filtros cuando no hay ningún restaurante con ese
+  nombre.
+- Si una búsqueda no da resultados, aparece también el botón
+  "Buscar «…» como filtros".
+
+Fila de acciones rápidas (se desliza en horizontal)
+- "Filtros": abre la hoja de filtros. Si hay alguno elegido, muestra
+  un número.
+- ✕ (solo si hay filtros puestos): quita todos los filtros y la
+  búsqueda de una vez.
+- "Abierto ahora": enseña solo los que están abiertos en este momento.
+- "Sorpréndeme": elige uno al azar. Antes de pararse, un anillo
+  recorre rápidamente las tarjetas que se ven, como un dado que rueda.
+
+Barra de resultados
+- Se queda fija arriba al bajar por la lista y es translúcida. Muestra
+  cuántos restaurantes se ven y el selector Lista / Mapa.
+- Un indicador pequeño que gira avisa de que están llegando datos
+  nuevos.
+
+Carga
+- Al abrir la app se ve al instante la última copia guardada, y se
+  actualiza sola cuando llegan los datos frescos.
+- La primera vez, sin copia guardada, aparecen siluetas de tarjeta
+  mientras carga, en lugar de una lista vacía.
+
+Transiciones
+- Al filtrar u ordenar, las tarjetas que siguen se deslizan a su nuevo
+  sitio y las nuevas aparecen con un fundido.
+- Cambiar entre Lista y Mapa, o entre tema claro y oscuro, hace un
+  fundido de toda la pantalla en lugar de un salto brusco.
+
+
+3. TARJETAS DE RESTAURANTE
+--------------------------
+
+Deslizar a la izquierda (como en Mail)
+- Aparecen dos botones: "Editar" (gris) y "Eliminar" (rojo).
+- Deslizar nunca borra por sí solo: si sigues deslizando más allá de
+  los botones, la tarjeta resiste como una goma y, al soltar, se queda
+  con los botones a la vista.
+- Un deslizamiento rápido abre los botones; deslizar a la derecha o
+  tocar la tarjeta los cierra.
+
+Borrar pide siempre dos pasos (nuevo en la v32)
+- Botón rojo al deslizar: el primer toque lo ensancha y pregunta
+  "¿Eliminar?"; el segundo borra. Si no vuelves a tocar en 3 segundos,
+  tocas fuera, haces scroll o cierras los botones, no pasa nada.
+- Menú de mantener pulsada: "Eliminar…" no borra. El menú cambia, en
+  el mismo sitio, a "Eliminar «Nombre»" en rojo y "Cancelar".
+- Con teclado o en el ordenador: el primer clic en "Eliminar" cambia
+  el texto a "¿Seguro? Eliminar" durante 5 segundos; el segundo
+  borra. VoiceOver lo anuncia.
+
+Y después aún se puede deshacer
+- Al eliminar, el aviso de abajo ofrece "Deshacer". Mientras el aviso
+  se ve, el restaurante no se borra de verdad: deshacer lo devuelve
+  tal cual, con su fecha de alta y las marcas "Quiero ir / Ya he ido"
+  de todos.
+- Si mantienes el aviso agarrado con el dedo, sigue valiendo.
+- Si borras varios seguidos, el aviso los junta ("2 restaurantes
+  eliminados · Deshacer") y deshacer los devuelve todos.
+- Si cierras la app o la mandas al fondo con el aviso a la vista, el
+  borrado se hace en ese momento. Deshacer después también lo
+  devuelve, pero sin las marcas.
+
+Mantener pulsada (o clic derecho en el ordenador)
+- La tarjeta se eleva, el fondo se difumina y aparece un menú con:
+  Editar, Cómo llegar, Ver la carta, Llamar o Reservar (según los
+  datos que tenga) y Eliminar…
+
+Editar / Eliminar en el pie de la tarjeta
+- En el iPhone ya no se ven: se hace deslizando o manteniendo pulsada
+  la tarjeta.
+- Con teclado aparecen al llegar con el tabulador, y en el ordenador
+  siguen visibles.
+
+
+4. HOJAS QUE SUBEN DESDE ABAJO
+------------------------------
+
+"Añadir restaurante", "Editar", "Filtros" y "Listas y ajustes" ya no
+aparecen dentro de la página: suben desde abajo como las hojas de iOS.
+
+- Se arrastran con el dedo, desde la parte de arriba o desde el
+  contenido cuando ya está arriba del todo.
+- Al soltar, una hoja lanzada hacia abajo se cierra y una soltada
+  despacio vuelve a su sitio. La decisión depende de la velocidad del
+  gesto, no solo de la posición.
+- Si la agarras mientras se mueve, sigue desde donde esté.
+- Detrás, la pantalla se oscurece y en el móvil se echa un poco hacia
+  atrás.
+- También se cierran tocando la zona oscura, con su botón (Cancelar,
+  OK) o con la tecla Escape.
+- "Filtros" y "Listas y ajustes" abren a media pantalla; arrástralas
+  hacia arriba para verlas enteras. Al tocar un campo para escribir,
+  suben solas.
+- Con el teclado abierto, la hoja se ajusta a lo que queda visible
+  para que el campo no quede tapado.
+
+Añadir / Editar restaurante
+- Formulario como el de Ajustes de iOS: filas agrupadas con la
+  etiqueta a la izquierda.
+- "Cancelar" y "Guardar" están arriba, en la cabecera de la hoja.
+- Si el nombre ya existe en la lista, el aviso sale mientras escribes,
+  no al guardar. Si es otro sitio con el mismo nombre, basta con
+  pulsar Guardar.
+- Los avisos de enlace mal escrito desaparecen en cuanto lo corriges.
+
+Filtros
+- Zona, tipo de cocina, precio, mis marcas y el orden, todo en esta
+  hoja.
+- Al estar a media pantalla, ves detrás cómo cambia la lista al elegir.
+- Arriba indica cuántos restaurantes quedan. "Restablecer" quita los
+  filtros de la hoja.
+
+Listas y ajustes
+- Cambiar el nombre de la lista, ver quién la ve, añadir a alguien por
+  email (con un interruptor para que también pueda gestionarla), crear
+  una lista nueva y cambiar la contraseña.
+- Apariencia: Automático / Claro / Oscuro.
+- Cerrar sesión, al final.
+
+
+5. MAPA
+-------
+
+- Mapa de estilo más parecido al de Mapas de Apple, con chinchetas
+  rojas.
+- Al tocar una chincheta sube una ficha translúcida con el nombre, el
+  tipo, la distancia y los botones (Carta, Llamar o Reservar, Cómo
+  llegar).
+    · Se cierra con su ✕, tocando el mapa o deslizándola hacia abajo.
+    · La chincheta elegida se agranda, y si la ficha la iba a tapar, el
+      mapa se mueve un poco para que se vea.
+- Controles de zoom con el mismo estilo translúcido. La atribución del
+  mapa va pequeña, arriba a la derecha.
+
+
+6. AVISOS
+---------
+
+- El aviso de abajo es translúcido, entra desde abajo y sale por el
+  mismo camino.
+- Se puede descartar deslizándolo hacia abajo; mientras lo tienes
+  agarrado, no desaparece.
+
+
+7. ACCESIBILIDAD
+----------------
+
+- Reducir movimiento (Ajustes del iPhone): sin desplazamientos ni
+  rebotes, pero con fundidos suaves, para que se siga viendo qué pasa.
+- Reducir transparencia: las barras y fichas translúcidas pasan a ser
+  sólidas.
+- Aumentar contraste: textos secundarios más oscuros y bordes en los
+  controles.
+- Texto grande: la app crece con el tamaño de letra del sistema. Con
+  tamaños muy grandes, las etiquetas de los formularios se ponen
+  encima del campo y los títulos de las hojas bajan a su propia línea,
+  como en iOS.
+- Todo se puede usar con teclado, y el foco siempre se ve.
+
+
+8. A TENER EN CUENTA
+--------------------
+
+- En iPhones con una versión de iOS anterior a la 17.5, la app se ve
+  siempre en tema claro.
+- Las fuentes de Google ya no se cargan: la app usa la letra del
+  sistema.

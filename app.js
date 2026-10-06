@@ -680,7 +680,6 @@
 
   var editandoId = null;
   var pendienteConfirmarDuplicado = false;
-  var idsExpandidosBorrado = Object.create(null);
   var cargando = false;          // pidiendo datos frescos a Supabase
   var idsSedesAbiertas = Object.create(null);
 
@@ -727,18 +726,29 @@
   var temporizadorToast = null;
   var temporizadorSalida = null;
   var toast, toastText, toastAction;
+  // Lo que hay que hacer cuando este aviso deja de verse sin que se haya
+  // pulsado su acción (se oculta solo, se descarta deslizando o lo
+  // sustituye otro). Así «Deshacer» vale exactamente mientras se ve.
+  var alOcultarToast = null;
+  function soltarAlOcultar() {
+    var f = alOcultarToast; alOcultarToast = null;
+    if (f) f();
+  }
   function refsToast() {
     if (!toast) { toast = $("toast"); toastText = $("toast-text"); toastAction = $("toast-action"); }
     return !!(toast && toastText && toastAction);
   }
   function avisar(mensaje, accion) {
-    if (!refsToast()) return;
+    var nuevo = (accion && accion.alOcultar) || null;
+    if (alOcultarToast !== nuevo) soltarAlOcultar();   // el aviso anterior deja de verse
+    alOcultarToast = nuevo;
+    if (!refsToast()) { soltarAlOcultar(); return; }
     clearTimeout(temporizadorToast);
     toastText.textContent = mensaje;
     if (accion) {
       toastAction.textContent = accion.etiqueta;
       toastAction.hidden = false;
-      toastAction.onclick = function () { ocultarToast(); accion.alPulsar(); };
+      toastAction.onclick = function () { alOcultarToast = null; ocultarToast(); accion.alPulsar(); };
     } else {
       toastAction.hidden = true;
       toastAction.onclick = null;
@@ -751,6 +761,7 @@
   }
   function ocultarToast() {
     clearTimeout(temporizadorToast);
+    soltarAlOcultar();
     if (!refsToast()) return;
     toastAction.onclick = null;
     if (toast.hidden) return;
@@ -1103,6 +1114,7 @@
         muelle.ir(alto * 2.5, { zeta: 1, respuesta: 0.25, velocidad: v }, function () {
           toast.hidden = true;
           toastAction.onclick = null;
+          soltarAlOcultar();
           toast.classList.remove("arrastrando");
           muelle.fijar(0);
         });
@@ -1893,17 +1905,55 @@
      ============================================================ */
 
   function cerrarTodasLasConfirmaciones() {
-    idsExpandidosBorrado = Object.create(null);
+    cancelarConfirmacionBoton();
     if (typeof cerrarDeslizado === "function") cerrarDeslizado();
   }
 
+  // Lo lee el lector de pantalla sin mover el foco
+  function anunciar(texto) {
+    var el = $("anuncio");
+    if (!el) return;
+    el.textContent = "";
+    requestAnimationFrame(function () { el.textContent = texto; });
+  }
+
+  /* «Eliminar» del pie de la tarjeta (teclado, ordenador, VoiceOver): el
+     primer clic cambia el texto a «¿Seguro? Eliminar» y lo anuncia; el
+     segundo borra. Se cancela solo a los 5 s (algo más que en la bandeja,
+     para dar tiempo a escuchar el aviso) o al salir del botón. */
+  var botonConfirmando = null;     // { boton, nombre, timer }
+
+  function cancelarConfirmacionBoton() {
+    var c = botonConfirmando;
+    if (!c) return;
+    botonConfirmando = null;
+    clearTimeout(c.timer);
+    c.boton.textContent = "Eliminar";
+    c.boton.setAttribute("aria-label", "Eliminar " + c.nombre);
+  }
+
+  function pulsarBorrarAcciones(d, boton) {
+    if (botonConfirmando && botonConfirmando.boton === boton) {
+      cancelarConfirmacionBoton();
+      eliminar(d);
+      return;
+    }
+    cancelarConfirmacionBoton();
+    boton.textContent = "¿Seguro? Eliminar";
+    boton.setAttribute("aria-label", "Confirmar: eliminar " + d.nombre);
+    botonConfirmando = { boton: boton, nombre: d.nombre, timer: setTimeout(cancelarConfirmacionBoton, 5000) };
+    anunciar("Pulsa otra vez para eliminar «" + d.nombre + "».");
+  }
+
   /* Borrar como en Mail: desaparece al momento, pero en Supabase no se
-     borra hasta que pasa el aviso de «Deshacer». Así deshacer no tiene que
+     borra mientras se vea el aviso con «Deshacer». Así deshacer no tiene que
      volver a crear nada y se conserva todo: el id, la fecha de alta y las
      marcas «Quiero ir / Ya he ido» de todos (que la base de datos borraría
-     junto con el restaurante). */
-  var ESPERA_BORRADO_MS = 7500;                       // algo más que el aviso (7 s)
-  var borradosPendientes = Object.create(null);       // id -> { item, lista, timer, enviado }
+     junto con el restaurante). El borrado se envía cuando el aviso deja de
+     verse: se oculta solo, lo descartas deslizando o lo sustituye otro. Si
+     lo mantienes agarrado, se sigue pudiendo deshacer. */
+  var borradosPendientes = Object.create(null);       // id -> { item, lista, enviado }
+  var loteBorrado = null;                              // borrados del aviso que se ve ahora
 
   function restaurarLocal(p) {
     if (listaActual !== p.lista) return;
@@ -1916,7 +1966,6 @@
   function confirmarBorrado(id) {
     var p = borradosPendientes[id];
     if (!p || p.enviado) return;
-    clearTimeout(p.timer);
     p.enviado = true;
     Promise.resolve(sb.from("restaurantes").delete().eq("id", id)).then(function (res) {
       if (res && res.error) throw res.error;
@@ -1933,50 +1982,73 @@
     Object.keys(borradosPendientes).forEach(confirmarBorrado);
   }
 
-  // Si cierras la app o la mandas al fondo durante esos segundos, se borra ya.
+  // Si cierras la app o la mandas al fondo con el aviso a la vista, se borra ya.
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") confirmarBorradosPendientes();
   });
   window.addEventListener("pagehide", confirmarBorradosPendientes);
 
+  // Vuelve a poner uno de los borrados del aviso
+  function deshacerBorrado(p) {
+    if (!p.enviado) {
+      // Aún no se había borrado en el servidor: basta con volver a enseñarlo
+      delete borradosPendientes[p.item.id];
+      restaurarLocal(p);
+      return;
+    }
+    // Ya se había borrado (p. ej. se fue la app al fondo): se vuelve a
+    // crear con el mismo id y la misma fecha. Las marcas no vuelven.
+    var item = p.item;
+    var fila = Object.assign({}, filaDesde(item), { id: item.id, lista_id: p.lista });
+    if (item.creado) fila.created_at = new Date(item.creado).toISOString();
+    sb.from("restaurantes").insert(fila).select().single().then(function (r2) {
+      if (r2.error) { avisar("No se pudo restaurar «" + item.nombre + "»."); return; }
+      if (listaActual !== p.lista) return;
+      upsertLocal(registroDesdeFila(r2.data));
+      guardarCache();
+      refrescarFuentesChips();
+      render();
+    });
+  }
+
+  function avisarLote(lote) {
+    var n = lote.pendientes.length;
+    var texto = n === 1 ? "«" + lote.pendientes[0].item.nombre + "» eliminado."
+                        : n + " restaurantes eliminados.";
+    avisar(texto, {
+      etiqueta: "Deshacer",
+      alOcultar: lote.alOcultar,
+      alPulsar: function () {
+        if (loteBorrado === lote) loteBorrado = null;
+        lote.pendientes.forEach(deshacerBorrado);
+        avisar(n === 1 ? "Restaurado." : n + " restaurantes restaurados.");
+      }
+    });
+  }
+
   function eliminar(item) {
     if (requiereConexion()) return;
     cerrarTodasLasConfirmaciones();
-    var p = { item: item, lista: listaActual, timer: null, enviado: false };
+    var p = { item: item, lista: listaActual, enviado: false };
     borradosPendientes[item.id] = p;
-    p.timer = setTimeout(function () { confirmarBorrado(item.id); }, ESPERA_BORRADO_MS);
 
     quitarLocal(item.id);
     guardarCache();
     refrescarFuentesChips();
     render();
 
-    avisar("«" + item.nombre + "» eliminado.", {
-      etiqueta: "Deshacer",
-      alPulsar: function () {
-        if (!p.enviado) {
-          // Aún no se había borrado en el servidor: basta con volver a enseñarlo
-          clearTimeout(p.timer);
-          delete borradosPendientes[item.id];
-          restaurarLocal(p);
-          avisar("Restaurado.");
-          return;
-        }
-        // Ya se había borrado (p. ej. se fue la app al fondo): se vuelve a
-        // crear con el mismo id y la misma fecha. Las marcas no vuelven.
-        var fila = Object.assign({}, filaDesde(item), { id: item.id, lista_id: p.lista });
-        if (item.creado) fila.created_at = new Date(item.creado).toISOString();
-        sb.from("restaurantes").insert(fila).select().single().then(function (r2) {
-          if (r2.error) { avisar("No se pudo restaurar."); return; }
-          if (listaActual !== p.lista) { avisar("Restaurado en su lista."); return; }
-          upsertLocal(registroDesdeFila(r2.data));
-          guardarCache();
-          refrescarFuentesChips();
-          render();
-          avisar("Restaurado.");
-        });
-      }
-    });
+    // Si el aviso de un borrado anterior sigue a la vista, se suma a él:
+    // «2 restaurantes eliminados · Deshacer» deshace los dos.
+    if (!loteBorrado || loteBorrado.lista !== listaActual) {
+      var lote = { lista: listaActual, pendientes: [] };
+      lote.alOcultar = function () {
+        if (loteBorrado === lote) loteBorrado = null;
+        lote.pendientes.forEach(function (q) { confirmarBorrado(q.item.id); });
+      };
+      loteBorrado = lote;
+    }
+    loteBorrado.pendientes.push(p);
+    avisarLote(loteBorrado);
   }
 
   /* ============================================================
@@ -2284,8 +2356,11 @@
     var btnBorrar = document.createElement("button");
     btnBorrar.type = "button"; btnBorrar.className = "danger"; btnBorrar.textContent = "Eliminar";
     btnBorrar.setAttribute("aria-label", "Eliminar " + d.nombre);
-    // Sin «¿Seguro?»: el aviso trae «Deshacer», que es más rápido y perdona igual
-    btnBorrar.addEventListener("click", function () { eliminar(d); });
+    // Dos clics para borrar, y después aún queda «Deshacer» en el aviso
+    btnBorrar.addEventListener("click", function () { pulsarBorrarAcciones(d, btnBorrar); });
+    btnBorrar.addEventListener("blur", function () {
+      if (botonConfirmando && botonConfirmando.boton === btnBorrar) cancelarConfirmacionBoton();
+    });
 
     acciones.appendChild(btnEditar); acciones.appendChild(btnBorrar);
     li.appendChild(acciones);
@@ -2303,7 +2378,7 @@
     var dBorrar = document.createElement("button");
     dBorrar.type = "button"; dBorrar.tabIndex = -1; dBorrar.className = "deslizar-borrar";
     dBorrar.innerHTML = ICONOS.papelera + "<span>Eliminar</span>";
-    dBorrar.addEventListener("click", function () { borrarDeslizando(li, d, 0); });
+    dBorrar.addEventListener("click", function () { pulsarBorrarBandeja(li, d, dBorrar); });
     capa.appendChild(dEditar); capa.appendChild(dBorrar);
     li.appendChild(capa);
 
@@ -3719,7 +3794,8 @@
      16 bis bis. Deslizar una tarjeta
      Sigue al dedo en horizontal (tras 10 px que deciden si es scroll o
      deslizar). Al soltar, el sentido del lanzamiento decide si se queda
-     abierta; pasado el 60 % del ancho, borra.
+     abierta. Deslizar nunca borra: pasado el ancho de los botones, la
+     tarjeta resiste como una goma, y «Eliminar» pide un segundo toque.
      ============================================================ */
 
   var ANCHO_ACCIONES = 168;      // dos botones de 80 + hueco
@@ -3733,7 +3809,6 @@
         var capa = li.querySelector(".card-deslizar");
         if (capa) {
           capa.style.width = Math.max(ANCHO_ACCIONES, -x - 8) + "px";
-          capa.classList.toggle("todo", -x > li.offsetWidth * 0.6);
         }
       });
     }
@@ -3742,8 +3817,39 @@
 
   function cerrarDeslizado() {
     if (!deslizada) return;
+    cancelarConfirmacionBandeja();
     muelleDe(deslizada).ir(0, { zeta: 1, respuesta: 0.3 });
     deslizada = null;
+  }
+
+  /* «Eliminar» de la bandeja, en dos toques como en iOS: el primero lo
+     ensancha hasta ocupar la bandeja y pregunta «¿Eliminar?»; el segundo
+     borra. Se cancela solo a los 3 s, al tocar fuera, al hacer scroll o al
+     cerrar la bandeja. */
+  var ESPERA_CONFIRMAR_MS = 3000;
+  var bandejaConfirmando = null;     // { capa, boton, timer }
+
+  function cancelarConfirmacionBandeja() {
+    var c = bandejaConfirmando;
+    if (!c) return;
+    bandejaConfirmando = null;
+    clearTimeout(c.timer);
+    c.capa.classList.remove("confirmando");
+    c.boton.querySelector("span").textContent = "Eliminar";
+  }
+
+  function pulsarBorrarBandeja(li, d, boton) {
+    var capa = boton.parentNode;
+    if (bandejaConfirmando && bandejaConfirmando.boton === boton) {
+      cancelarConfirmacionBandeja();
+      borrarDeslizando(li, d, 0);
+      return;
+    }
+    cancelarConfirmacionBandeja();
+    capa.classList.add("confirmando");
+    boton.querySelector("span").textContent = "¿Eliminar?";
+    bandejaConfirmando = { capa: capa, boton: boton,
+                           timer: setTimeout(cancelarConfirmacionBandeja, ESPERA_CONFIRMAR_MS) };
   }
 
   // Tras un arrastre, el navegador manda un clic al soltar: se descarta
@@ -3790,8 +3896,11 @@
       deslizada = gesto.li;
     }
     var bruto = gesto.base + dx;
-    // A la derecha no hay nada: resiste como una goma
-    muelleDe(gesto.li).fijar(bruto > 0 ? gomaElastica(bruto, 120) : bruto);
+    // A la derecha no hay nada, y más allá de los botones tampoco: resiste como una goma
+    var exceso = -bruto - ANCHO_ACCIONES;
+    muelleDe(gesto.li).fijar(bruto > 0 ? gomaElastica(bruto, 120)
+                           : exceso > 0 ? -ANCHO_ACCIONES - gomaElastica(exceso, gesto.li.offsetWidth)
+                           : bruto);
     var ahora = performance.now();
     gesto.muestras.push({ x: e.clientX, t: ahora });
     while (gesto.muestras.length > 2 && ahora - gesto.muestras[0].t > 100) gesto.muestras.shift();
@@ -3810,12 +3919,6 @@
       v = (ult.x - m[0].x) / (ult.t - m[0].t) * 1000;
     }
     var muelle = muelleDe(g.li), x = muelle.valor();
-    if (-x > g.li.offsetWidth * 0.6 && v < 300) {
-      var id = g.li.dataset.id;
-      for (var i = 0; i < data.length; i++) {
-        if (String(data[i].id) === id) { borrarDeslizando(g.li, data[i], v); return; }
-      }
-    }
     var abrir = Math.abs(v) > 300 ? v < 0 : x + proyectar(v) < -ANCHO_ACCIONES / 2;
     deslizada = abrir ? g.li : null;
     muelle.ir(abrir ? -ANCHO_ACCIONES : 0, { zeta: abrir ? 0.85 : 1, respuesta: 0.3, velocidad: v });
@@ -3852,8 +3955,50 @@
     t.textContent = texto;
     el.appendChild(t);
     el.insertAdjacentHTML("beforeend", icono);
-    el.addEventListener("click", function () { cerrarMenu(); if (accion) accion(); });
+    el.addEventListener("click", function () {
+      if (!opciones.mantener) cerrarMenu();
+      if (accion) accion();
+    });
     return el;
+  }
+
+  // Coloca el menú junto a la tarjeta (debajo si cabe, si no encima), sin
+  // salirse, y hace que crezca desde el punto donde has pulsado
+  var puntoMenu = null;
+  function colocarMenu(li, x, y) {
+    puntoMenu = { x: x, y: y };
+    var r = li.getBoundingClientRect();
+    var w = menuEl.offsetWidth, h = menuEl.offsetHeight, m = 12;
+    var izq = Math.min(Math.max(m, x - w / 2), window.innerWidth - w - m);
+    var arriba = r.bottom + 8 + h < window.innerHeight - m ? r.bottom + 8
+               : r.top - 8 - h > m ? r.top - 8 - h
+               : Math.min(Math.max(m, y - h / 2), window.innerHeight - h - m);
+    menuEl.style.left = Math.round(izq) + "px";
+    menuEl.style.top = Math.round(arriba) + "px";
+    menuEl.style.transformOrigin = Math.round(x - izq) + "px " + Math.round(y - arriba) + "px";
+  }
+
+  /* «Eliminar» del menú no borra: el menú se transforma, en el mismo sitio,
+     en una confirmación como la hoja de acciones de iOS, con «Eliminar
+     «Nombre»» en rojo y «Cancelar». El foco va a «Cancelar», que es lo seguro. */
+  function confirmarEnMenu(d) {
+    var titulo = document.createElement("p");
+    titulo.className = "menu-titulo";
+    titulo.id = "menu-titulo";
+    titulo.textContent = "Se quitará de la lista para todos los que la ven.";
+    var si = itemMenu("Eliminar «" + d.nombre + "»", ICONOS.papelera, function () { eliminar(d); }, { peligro: true });
+    var no = itemMenu("Cancelar", "", null);
+    no.classList.add("menu-cancelar");
+    menuEl.replaceChildren(titulo, si, no);
+    menuEl.setAttribute("aria-label", "¿Eliminar " + d.nombre + "?");
+    menuEl.setAttribute("aria-describedby", "menu-titulo");
+    if (menuTarjeta && puntoMenu) colocarMenu(menuTarjeta, puntoMenu.x, puntoMenu.y);
+    if (menuEl.animate && !(menosMovimiento && menosMovimiento.matches)) {
+      menuEl.animate([{ transform: "scale(0.96)" }, { transform: "none" }],
+                     { duration: 220, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+    }
+    try { no.focus({ preventScroll: true }); } catch (e) {}
+    anunciar("¿Eliminar «" + d.nombre + "»? Se quitará de la lista para todos.");
   }
 
   function abrirMenu(li, x, y) {
@@ -3881,24 +4026,16 @@
     var sep = document.createElement("div");
     sep.className = "menu-sep"; sep.setAttribute("role", "separator");
     items.push(sep);
-    items.push(itemMenu("Eliminar", ICONOS.papelera, function () { eliminar(d); }, { peligro: true }));
+    items.push(itemMenu("Eliminar…", ICONOS.papelera, function () { confirmarEnMenu(d); }, { peligro: true, mantener: true }));
     menuEl.replaceChildren.apply(menuEl, items);
     menuEl.setAttribute("aria-label", "Acciones para " + d.nombre);
+    menuEl.removeAttribute("aria-describedby");
 
     menuCapa.hidden = false;
     menuEl.hidden = false;
     li.classList.add("alzada");
 
-    // Junto a la tarjeta (debajo si cabe, si no encima), sin salirse
-    var r = li.getBoundingClientRect();
-    var w = menuEl.offsetWidth, h = menuEl.offsetHeight, m = 12;
-    var izq = Math.min(Math.max(m, x - w / 2), window.innerWidth - w - m);
-    var arriba = r.bottom + 8 + h < window.innerHeight - m ? r.bottom + 8
-               : r.top - 8 - h > m ? r.top - 8 - h
-               : Math.min(Math.max(m, y - h / 2), window.innerHeight - h - m);
-    menuEl.style.left = Math.round(izq) + "px";
-    menuEl.style.top = Math.round(arriba) + "px";
-    menuEl.style.transformOrigin = Math.round(x - izq) + "px " + Math.round(y - arriba) + "px";
+    colocarMenu(li, x, y);
 
     var quieto = menosMovimiento && menosMovimiento.matches;
     if (menuEl.animate) {

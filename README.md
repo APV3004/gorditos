@@ -74,11 +74,11 @@ entráis los dos.
 Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
 ```html
 <!-- index.html, al final -->
-<script src="app.js?v=31"></script>   <!-- -> ?v=32 -->
+<script src="app.js?v=32"></script>   <!-- -> ?v=33 -->
 ```
 ```js
 // sw.js
-var CACHE = "gorditos-v31";   // -> "gorditos-v32"
+var CACHE = "gorditos-v32";   // -> "gorditos-v33"
 ```
 Cada vez que la app vuelve a primer plano mira qué versión hay
 publicada. Si es otra, se recarga sola (o, si tienes un formulario a

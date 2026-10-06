@@ -13,7 +13,7 @@
    Al publicar cambios sube CACHE una versión: al activarse borra las
    cachés antiguas.                                                  */
 
-var CACHE = "gorditos-v31";
+var CACHE = "gorditos-v32";
 
 // Cuánto se espera a la red antes de tirar de la copia guardada.
 var ESPERA_RED_MS = 4000;
@@ -28,10 +28,10 @@ var PRECARGA = [
 ];
 
 // Orígenes externos que se guardan para poder abrir la app sin red:
-// las fuentes y las librerías (Supabase y Leaflet vienen de jsDelivr).
+// las librerías (Supabase y Leaflet vienen de jsDelivr).
 // Las teselas del mapa y Nominatim NO: la política de OpenStreetMap
 // desaconseja cachearlas en masa, y sin red tampoco servirían de mucho.
-var FUENTES = ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"];
+var FUENTES = ["https://cdn.jsdelivr.net"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
