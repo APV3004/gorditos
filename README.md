@@ -74,11 +74,11 @@ entráis los dos.
 Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
 ```html
 <!-- index.html, al final -->
-<script src="app.js?v=24"></script>   <!-- -> ?v=25 -->
+<script src="app.js?v=31"></script>   <!-- -> ?v=32 -->
 ```
 ```js
 // sw.js
-var CACHE = "gorditos-v24";   // -> "gorditos-v25"
+var CACHE = "gorditos-v31";   // -> "gorditos-v32"
 ```
 Cada vez que la app vuelve a primer plano mira qué versión hay
 publicada. Si es otra, se recarga sola (o, si tienes un formulario a
@@ -99,7 +99,7 @@ seguridad manual: pie de página → Copia de seguridad → Crear copia.
 
 ## El mapa
 
-Botón «Mapa» junto al contador. Salen los restaurantes (o cada local,
+Selector «Lista / Mapa» en la barra de resultados. Salen los restaurantes (o cada local,
 si tiene varios) que tengan **dirección** puesta, y tu posición.
 
 - Las direcciones se convierten en coordenadas con Nominatim
