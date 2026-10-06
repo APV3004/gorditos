@@ -3543,7 +3543,7 @@
      enlaces de la carta cambian, se vuelve a leer, y cada dos meses se
      refresca. */
   var CARTAS_POR_SESION = 8;
-  var CARTAS_PAUSA_MS = 4000;
+  var CARTAS_PAUSA_MS = 15000;                 // la función prueba varios modelos por carta: cada intento cuenta en la cuota
   var CARTA_VIGENCIA_MS = 60 * 864e5;          // 60 días
   var CARTA_REINTENTO_MS = 14 * 864e5;         // si no se pudo leer, se reintenta a las dos semanas
   var cartasDisponibles = true;                // falta la columna en Supabase → se esconde
@@ -3623,6 +3623,8 @@
         fallosSeguidos++;
         cartasIntentadas[d.id] = false;            // no se pudo ni intentar: vale para el botón y la próxima vez
         cartasUltimoError = (err && err.message) || "el asistente no responde.";
+        // Si Gemini ya ha dicho que no (cuota agotada), insistir solo gasta más
+        if (/limitad|cuota|quota|429/i.test(cartasUltimoError)) fallosSeguidos = 2;
       })
         .catch(function () {})
         .then(function () { siguiente(i + 1); });

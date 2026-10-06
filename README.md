@@ -75,11 +75,11 @@ entráis los dos.
 Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
 ```html
 <!-- index.html, al final -->
-<script src="app.js?v=36"></script>   <!-- -> ?v=37 -->
+<script src="app.js?v=37"></script>   <!-- -> ?v=38 -->
 ```
 ```js
 // sw.js
-var CACHE = "gorditos-v36";   // -> "gorditos-v37"
+var CACHE = "gorditos-v37";   // -> "gorditos-v38"
 ```
 Cada vez que la app vuelve a primer plano mira qué versión hay
 publicada. Si es otra, se recarga sola (o, si tienes un formulario a
@@ -183,8 +183,9 @@ cual. Mayúsculas, tildes, espacios y guiones no cuentan.
 La función `asistente` lee las cartas de cada restaurante (su web, un PDF
 o una foto) con Gemini y la app guarda los platos y las dietas que
 encuentra en la columna `carta_info`. No se edita a mano y la comparte
-toda la lista. Se leen en segundo plano, como mucho 8 por sesión y de una
-en una, para no gastar la cuota del modelo; si cambian los enlaces de la
+toda la lista. Se leen en segundo plano, como mucho 8 por sesión, de una
+en una y con 15 s entre cada una, para no gastar la cuota del modelo (si Gemini
+dice que se ha agotado, se para hasta la próxima vez); si cambian los enlaces de la
 carta se vuelven a leer, y cada dos meses se refrescan. En «Listas y
 ajustes → Buscar por platos» se ve cuántas hay leídas y se pueden leer las
 que faltan.
