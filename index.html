@@ -698,11 +698,12 @@
   @media (hover: none) {
     li.card { -webkit-user-select: none; user-select: none; }
   }
+  /* Al abrir su menú la tarjeta se eleva: la escala la mueve un muelle
+     desde app.js (empieza hundiéndose mientras mantienes pulsado) */
   li.card.alzada {
     z-index: 56;
-    transform: scale(1.03);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
-    transition: transform var(--dur-ui) var(--ease-out), box-shadow var(--dur-ui) var(--ease-out);
+    transition: box-shadow var(--dur-ui) var(--ease-out);
   }
 
   /* ---- Menú contextual ---- */
@@ -1190,7 +1191,7 @@
      escalados, pero se conservan los fundidos y cambios de color. */
   @media (prefers-reduced-motion: reduce) {
     :root { --press-scale: 1; --enter-shift: 0px; --toast-scale: 1; --empuje: 0; }
-    li.card.alzada { transform: none; }
+    li.card.alzada { scale: none; }
     .giro, .sil-linea, .sil-pildoras span { animation: none; }
     .scrim { transition: opacity 200ms ease; }
     .toast.saliendo { transform: translate(-50%, 0); }
@@ -1669,6 +1670,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=37"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>

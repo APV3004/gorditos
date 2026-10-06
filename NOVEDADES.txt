@@ -1,7 +1,7 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · 6 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -119,6 +119,9 @@ Deslizar a la izquierda (como en Mail)
   con los botones a la vista.
 - Un deslizamiento rápido abre los botones; deslizar a la derecha o
   tocar la tarjeta los cierra.
+- Si vuelves a agarrar una tarjeta mientras rebota, sigue desde donde
+  la ves, sin dar un saltito (nuevo en la v38). Lo mismo con las hojas,
+  la ficha del mapa y el aviso de abajo.
 
 Borrar pide siempre dos pasos (nuevo en la v32)
 - Botón rojo al deslizar: el primer toque lo ensancha y pregunta
@@ -143,9 +146,15 @@ Y después aún se puede deshacer
   devuelve, pero sin las marcas.
 
 Mantener pulsada (o clic derecho en el ordenador)
+- Mientras la mantienes pulsada, la tarjeta se va hundiendo un poco:
+  así sabes que va a pasar algo. Si mueves el dedo o lo levantas antes,
+  vuelve a su sitio (nuevo en la v38).
 - La tarjeta se eleva, el fondo se difumina y aparece un menú con:
   Editar, Cómo llegar, Ver la carta, Llamar o Reservar (según los
   datos que tenga) y Eliminar…
+- El menú nace del punto donde has pulsado y, al cerrarse, vuelve a ese
+  mismo punto. Si lo vuelves a abrir mientras se cierra, se da la vuelta
+  desde donde esté (nuevo en la v38).
 
 Editar / Eliminar en el pie de la tarjeta
 - En el iPhone ya no se ven: se hace deslizando o manteniendo pulsada

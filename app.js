@@ -880,6 +880,12 @@
     var c = 0.55;
     return (exceso * dimension * c) / (dimension + c * Math.abs(exceso));
   }
+  // La inversa: cuánto habría que tirar para que se vea «visible». Al volver
+  // a agarrar algo que está estirado, el arrastre parte de ahí y no salta.
+  function gomaInversa(visible, dimension) {
+    var c = 0.55, g = Math.min(visible, dimension * 0.999);
+    return g * dimension / (c * (dimension - g));
+  }
   // Dónde acabaría lo lanzado, como la deceleración del scroll de iOS
   function proyectar(velocidad) {
     var d = 0.998;
@@ -984,7 +990,8 @@
       if (fundido) return;
       alCerrar = null;
       altura = el.offsetHeight;
-      arrastre = { inicio: y, base: muelle.parar(), muestras: [{ y: y, t: performance.now() }] };
+      var visto = muelle.parar();
+      arrastre = { inicio: y, base: visto < 0 ? -gomaInversa(-visto, altura) : visto, muestras: [{ y: y, t: performance.now() }] };
       el.classList.add("arrastrando");
     }
     function mover(y) {
@@ -1140,7 +1147,8 @@
       clearTimeout(temporizadorSalida);
       toast.classList.remove("saliendo");
       toast.classList.add("arrastrando");
-      g = { id: e.pointerId, y0: e.clientY, base: muelle.parar(), muestras: [{ y: e.clientY, t: performance.now() }] };
+      var visto = muelle.parar();
+      g = { id: e.pointerId, y0: e.clientY, base: visto < 0 ? -gomaInversa(-visto, 60) : visto, muestras: [{ y: e.clientY, t: performance.now() }] };
       try { toast.setPointerCapture(e.pointerId); } catch (err) {}
     });
     toast.addEventListener("pointermove", function (e) {
@@ -4058,7 +4066,8 @@
       if (!g.movido) {
         if (Math.abs(dy) < 6) return;
         g.movido = true;
-        g.base = muelleFicha.parar() - dy;
+        var vistoF = muelleFicha.parar();
+        g.base = (vistoF < 0 ? -gomaInversa(-vistoF, 80) : vistoF) - dy;
         try { ficha.setPointerCapture(e.pointerId); } catch (err) {}
       }
       var b = g.base + dy;
@@ -4187,7 +4196,12 @@
       if (Math.abs(dy) >= Math.abs(dx)) { gesto = null; return; }   // es scroll
       gesto.decidido = true;
       try { gesto.li.setPointerCapture(e.pointerId); } catch (err) {}
-      gesto.base = muelleDe(gesto.li).parar() - dx;                  // sigue desde donde esté
+      // Sigue desde donde se ve, aunque esté estirada como una goma
+      var vistoT = muelleDe(gesto.li).parar();
+      var crudoT = vistoT > 0 ? gomaInversa(vistoT, 120)
+                 : -vistoT > ANCHO_ACCIONES ? -ANCHO_ACCIONES - gomaInversa(-vistoT - ANCHO_ACCIONES, gesto.li.offsetWidth)
+                 : vistoT;
+      gesto.base = crudoT - dx;
       gesto.li.classList.add("deslizando");
       deslizada = gesto.li;
     }
@@ -4297,6 +4311,37 @@
     anunciar("¿Eliminar «" + d.nombre + "»? Se quitará de la lista para todos.");
   }
 
+  /* Escala de la tarjeta, con su propio muelle (en milésimas, que es la
+     unidad con la que se detiene). Va en «scale», aparte del «transform»
+     con el que se desliza, así que las dos cosas se suman sin pisarse. */
+  function escalaDe(li) {
+    if (!li._escala) {
+      li._escala = crearMuelle(function (x) {
+        li.style.scale = Math.abs(x - 1000) < 0.5 ? "" : (x / 1000).toFixed(4);
+      });
+      li._escala.fijar(1000);
+    }
+    return li._escala;
+  }
+  function escalar(li, milesimas, respuesta) {
+    if (!li) return;
+    if (menosMovimiento && menosMovimiento.matches) { escalaDe(li).fijar(1000); return; }
+    escalaDe(li).ir(milesimas, { zeta: 1, respuesta: respuesta });
+  }
+
+  /* El menú crece desde el punto donde has pulsado y vuelve a él al
+     cerrarse, por el mismo camino. Lo mueve un muelle (0 = cerrado,
+     1000 = abierto): si lo vuelves a abrir mientras se cierra, se da la
+     vuelta desde donde esté. Con «Reducir movimiento», solo se funde. */
+  var muelleMenu = crearMuelle(function (p) {
+    var f = Math.max(0, Math.min(1, p / 1000));
+    var quieto = menosMovimiento && menosMovimiento.matches;
+    menuEl.style.opacity = f >= 1 ? "" : f.toFixed(3);
+    menuEl.style.transform = quieto || f >= 1 ? "" : "scale(" + (0.5 + 0.5 * f).toFixed(4) + ")";
+    menuCapa.style.opacity = f >= 1 ? "" : f.toFixed(3);
+  });
+  muelleMenu.fijar(0);
+
   function abrirMenu(li, x, y) {
     var d = null;
     for (var i = 0; i < data.length; i++) if (String(data[i].id) === li.dataset.id) { d = data[i]; break; }
@@ -4327,19 +4372,17 @@
     menuEl.setAttribute("aria-label", "Acciones para " + d.nombre);
     menuEl.removeAttribute("aria-describedby");
 
+    var estabaOculto = menuEl.hidden;
     menuCapa.hidden = false;
     menuEl.hidden = false;
     li.classList.add("alzada");
+    escalar(li, 1030, 0.3);                      // se eleva, siguiendo con lo que llevaba del hundimiento
 
     colocarMenu(li, x, y);
 
-    var quieto = menosMovimiento && menosMovimiento.matches;
-    if (menuEl.animate) {
-      menuEl.animate(quieto ? [{ opacity: 0 }, { opacity: 1 }]
-                            : [{ opacity: 0, transform: "scale(0.5)" }, { opacity: 1, transform: "none" }],
-                     { duration: 340, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
-      menuCapa.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220 });
-    }
+    if (estabaOculto) muelleMenu.fijar(0);
+    menuEl.style.pointerEvents = ""; menuCapa.style.pointerEvents = "";
+    muelleMenu.ir(1000, { zeta: 1, respuesta: 0.32 });
     var primero = menuEl.querySelector(".menu-item");
     if (primero) try { primero.focus({ preventScroll: true }); } catch (e) {}
   }
@@ -4347,13 +4390,14 @@
   function cerrarMenu() {
     if (menuEl.hidden) return;
     var li = menuTarjeta; menuTarjeta = null;
-    if (li) li.classList.remove("alzada");
-    function fin() { menuEl.hidden = true; menuCapa.hidden = true; menuEl.replaceChildren(); }
-    if (!menuEl.animate || (menosMovimiento && menosMovimiento.matches)) { fin(); return; }
-    menuCapa.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, fill: "forwards" });
-    var an = menuEl.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(0.8)" }],
-                            { duration: 180, easing: "ease-in", fill: "forwards" });
-    an.onfinish = function () { an.cancel(); menuCapa.getAnimations().forEach(function (a) { a.cancel(); }); fin(); };
+    if (li) { li.classList.remove("alzada"); escalar(li, 1000, 0.3); }
+    // Vuelve al punto de donde salió (su transform-origin) y entonces se oculta.
+    // Desde ya deja pasar los toques: lo de debajo responde aunque aún se vea.
+    menuEl.style.pointerEvents = "none"; menuCapa.style.pointerEvents = "none";
+    muelleMenu.ir(0, { zeta: 1, respuesta: 0.24 }, function () {
+      menuEl.hidden = true; menuCapa.hidden = true; menuEl.replaceChildren();
+      menuEl.style.pointerEvents = ""; menuCapa.style.pointerEvents = "";
+    });
   }
 
   menuCapa.addEventListener("click", cerrarMenu);
@@ -4361,12 +4405,21 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarMenu(); });
   window.addEventListener("resize", cerrarMenu);
 
-  // Mantener pulsado medio segundo sin moverse (dedo o lápiz)
+  // Mantener pulsado medio segundo sin moverse (dedo o lápiz). Mientras
+  // tanto la tarjeta se va hundiendo, para anunciar que va a pasar algo;
+  // si mueves el dedo o lo levantas antes, vuelve desde donde esté.
+  var liPulsada = null;
+  function soltarPulsada() {
+    if (liPulsada && liPulsada !== menuTarjeta) escalar(liPulsada, 1000, 0.25);
+    liPulsada = null;
+  }
   lista.addEventListener("pointerdown", function (e) {
     clearTimeout(temporizadorMenu);
     var li = e.target.closest("li.card:not(.silueta)");
     if (!li || e.pointerType === "mouse" || e.target.closest(".card-deslizar")) return;
     inicioMenu = { x: e.clientX, y: e.clientY };
+    liPulsada = li;
+    escalar(li, 970, 0.5);
     temporizadorMenu = setTimeout(function () {
       gesto = null;                           // ya no es un deslizamiento
       suprimirClic();
@@ -4376,6 +4429,7 @@
   lista.addEventListener("pointermove", function (e) {
     if (inicioMenu && (Math.abs(e.clientX - inicioMenu.x) > 10 || Math.abs(e.clientY - inicioMenu.y) > 10)) {
       clearTimeout(temporizadorMenu); inicioMenu = null;
+      soltarPulsada();
     }
   });
   ["pointerup", "pointercancel"].forEach(function (t) {
@@ -4383,6 +4437,7 @@
       // Si el menú se abrió con esta pulsación, el clic al soltar no cuenta
       if (!menuEl.hidden && inicioMenu) suprimirClic();
       clearTimeout(temporizadorMenu); inicioMenu = null;
+      soltarPulsada();
     });
   });
   // Clic derecho (y la pulsación larga de Android, que llega como contextmenu)
@@ -4391,7 +4446,8 @@
     if (!li) return;
     e.preventDefault();
     clearTimeout(temporizadorMenu);
-    if (menuEl.hidden) abrirMenu(li, e.clientX, e.clientY);
+    // También mientras se está cerrando: se da la vuelta desde donde esté
+    if (!menuTarjeta) abrirMenu(li, e.clientX, e.clientY);
   });
 
   /* ============================================================
