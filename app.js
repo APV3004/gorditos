@@ -57,6 +57,61 @@
   document.addEventListener("touchstart", function () {}, { passive: true });
 
   var menosMovimiento = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  var menosTransparencia = window.matchMedia ? window.matchMedia("(prefers-reduced-transparency: reduce)") : null;
+
+  // iPhone o iPad (el iPad se presenta como un Mac, pero táctil)
+  var esIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+              (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+
+  /* Tamaño del texto del iPhone (Ajustes → Pantalla y brillo → Tamaño del
+     texto). Safari no lo aplica al rem, así que todo el CSS, que está en
+     rem, se quedaría igual. Se lee con la fuente -apple-system-body (17 px
+     en el tamaño por defecto) y la raíz se escala en proporción: crecen el
+     texto y los espacios a la vez. Se vuelve a mirar al volver a la app,
+     que es cuando se puede haber cambiado. */
+  (function tamanoDelTexto() {
+    if (!esIOS) return;
+    var sonda = document.createElement("span");
+    sonda.setAttribute("aria-hidden", "true");
+    sonda.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;font:-apple-system-body";
+    if (!sonda.style.font) return;               // este Safari no la conoce
+    function medir() {
+      document.body.appendChild(sonda);
+      var px = parseFloat(getComputedStyle(sonda).fontSize);
+      sonda.remove();
+      if (!(px > 0)) return;
+      // De «Muy pequeño» (14 px) al doble: más allá, las tarjetas ya no caben
+      var f = Math.min(Math.max(px / 17, 0.8), 2);
+      document.documentElement.style.fontSize = Math.abs(f - 1) < 0.005 ? "" : (f * 100).toFixed(2) + "%";
+    }
+    medir();
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) medir(); });
+  })();
+
+  /* Vibración breve, solo en los momentos que lo merecen (sale el menú,
+     una hoja cambia de altura, se pasa el punto de no retorno de un gesto,
+     un error al entrar). Va en el mismo instante que lo que se ve.
+     Android tiene la Vibration API. Safari no, pero desde iOS 18 un
+     interruptor (<input switch>) vibra al cambiar: se pulsa uno escondido.
+     Hay que llamarla ANTES de suprimirClic(), que se tragaría ese clic. */
+  function vibrar() {
+    if (typeof navigator.vibrate === "function") {
+      try { navigator.vibrate(8); } catch (e) {}
+      return;
+    }
+    if (!esIOS) return;
+    var etiqueta = document.createElement("label");
+    etiqueta.setAttribute("aria-hidden", "true");
+    etiqueta.style.display = "none";
+    var interruptor = document.createElement("input");
+    interruptor.type = "checkbox";
+    interruptor.setAttribute("switch", "");
+    interruptor.tabIndex = -1;
+    etiqueta.appendChild(interruptor);
+    document.head.appendChild(etiqueta);
+    etiqueta.click();
+    etiqueta.remove();
+  }
 
   // Lo que se despliega al pulsar baja un poco desde quien lo abre, con la
   // misma curva que los paneles. Solo se llama desde el clic: si fuera CSS
@@ -644,6 +699,7 @@
     // la contraseña queda seleccionada para volver a escribirla
     function sacudirLogin() {
       var g = $("login-grupo");
+      vibrar();
       if (g.animate && !(menosMovimiento && menosMovimiento.matches)) {
         g.animate([{ transform: "none" }, { transform: "translateX(-10px)" }, { transform: "translateX(9px)" },
                    { transform: "translateX(-6px)" }, { transform: "translateX(4px)" }, { transform: "translateX(-2px)" },
@@ -895,6 +951,9 @@
         raf = 0; alLlegar = null; x = valor; v = 0;
         alPintar(x);
       },
+      // Mueve la posición sin tocar la velocidad (lo que tenga debajo se
+      // ha movido, pero lo que se ve sigue igual de rápido)
+      saltar: function (valor) { x = valor; alPintar(x); },
       valor: function () { return x; }
     };
   }
@@ -1015,7 +1074,8 @@
       alCerrar = null;
       altura = el.offsetHeight;
       var visto = muelle.parar();
-      arrastre = { inicio: y, base: visto < 0 ? -gomaInversa(-visto, altura) : visto, muestras: [{ y: y, t: performance.now() }] };
+      arrastre = { inicio: y, base: visto < 0 ? -gomaInversa(-visto, altura) : visto, desde: visto,
+                   muestras: [{ y: y, t: performance.now() }] };
       el.classList.add("arrastrando");
     }
     function mover(y) {
@@ -1030,20 +1090,24 @@
       var dt = b.t - a.t;
       var v = dt > 8 ? (b.y - a.y) / dt * 1000 : 0;     // px/s, hacia abajo positivo
       if (performance.now() - b.t > 80) v = 0;          // se paró antes de soltar
+      var desde = arrastre.desde;
       arrastre = null;
       el.classList.remove("arrastrando");
       // Se proyecta adónde iría a parar el lanzamiento y se elige el punto
       // de anclaje más cercano a esa proyección (completa, media o cerrada)
-      var proyectado = muelle.valor() + proyectar(v);
       var anclas = opciones.medio ? [0, posMedia(), altura] : [0, altura];
-      var destino = anclas[0];
-      for (var i = 1; i < anclas.length; i++) {
-        if (Math.abs(anclas[i] - proyectado) < Math.abs(destino - proyectado)) destino = anclas[i];
+      function masCercana(y) {
+        var a = anclas[0];
+        for (var i = 1; i < anclas.length; i++) if (Math.abs(anclas[i] - y) < Math.abs(a - y)) a = anclas[i];
+        return a;
       }
+      var destino = masCercana(muelle.valor() + proyectar(v));
       if (destino === altura) {
         velocidadSalida = v;
         opciones.alDescartar();
       } else {
+        // Cambia de altura (de media a completa o al revés): se nota en la mano
+        if (destino !== masCercana(desde)) vibrar();
         // Va a su sitio con la velocidad del dedo y un leve rebote
         muelle.ir(destino, { zeta: 0.8, respuesta: 0.3, velocidad: v });
       }
@@ -1245,6 +1309,122 @@
     }
     aplicar(actual);
   })();
+
+  /* ============================================================
+     11 bis. Controles segmentados (Lista / Mapa, y el tema)
+     El fondo blanco del elegido es una sola píldora que se desliza con
+     un muelle hasta el segmento nuevo, como en iOS, en vez de saltar.
+     Sigue a aria-pressed, lo cambie quien lo cambie. Además se puede
+     agarrar y arrastrar: al soltar, va al segmento hacia el que iba
+     (proyectando la velocidad) y lo elige como si lo hubieras tocado.
+     ============================================================ */
+
+  function crearSegmentado(el) {
+    if (!el) return;
+    var botones = el.querySelectorAll("button");
+    var pildora = document.createElement("span");
+    pildora.className = "segmentado-pildora";
+    pildora.setAttribute("aria-hidden", "true");
+    el.insertBefore(pildora, el.firstChild);
+    el.classList.add("con-pildora");
+
+    var colocada = false;
+    var mx = crearMuelle(function (x) { pildora.style.transform = "translate3d(" + x.toFixed(2) + "px,0,0)"; });
+    var mw = crearMuelle(function (w) { pildora.style.width = w.toFixed(2) + "px"; });
+    var MUELLE = { zeta: 1, respuesta: 0.3 };
+
+    function elegido() {
+      for (var i = 0; i < botones.length; i++) if (botones[i].getAttribute("aria-pressed") === "true") return botones[i];
+      return null;
+    }
+    function colocar() {
+      var b = elegido();
+      if (!b || !el.offsetWidth) return;          // oculto: ya se colocará al verse
+      if (!colocada || (menosMovimiento && menosMovimiento.matches)) {
+        mx.fijar(b.offsetLeft); mw.fijar(b.offsetWidth); colocada = true;
+        return;
+      }
+      if (arrastre && arrastre.movido) return;     // manda el dedo
+      mx.ir(b.offsetLeft, MUELLE);                  // conserva la velocidad que lleve
+      mw.ir(b.offsetWidth, MUELLE);
+    }
+    new MutationObserver(colocar).observe(el, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
+    if (window.ResizeObserver) new ResizeObserver(colocar).observe(el);
+    colocar();
+
+    // El segmento cuyo centro queda más cerca de x (centro de la píldora)
+    function segmentoEn(x) {
+      var mejor = botones[0], dist = Infinity;
+      for (var i = 0; i < botones.length; i++) {
+        var c = botones[i].offsetLeft + botones[i].offsetWidth / 2;
+        if (Math.abs(c - x) < dist) { dist = Math.abs(c - x); mejor = botones[i]; }
+      }
+      return mejor;
+    }
+
+    var arrastre = null, ignorarClic = false;
+    el.addEventListener("pointerdown", function (e) {
+      var b = e.target.closest("button");
+      if (!b || b.getAttribute("aria-pressed") !== "true" || !colocada) return;
+      arrastre = { id: e.pointerId, x0: e.clientX, base: mx.valor(), movido: false, bajo: b,
+                   muestras: [{ x: e.clientX, t: performance.now() }] };
+      el.classList.add("agarrada");
+    });
+    el.addEventListener("pointermove", function (e) {
+      if (!arrastre || e.pointerId !== arrastre.id) return;
+      var dx = e.clientX - arrastre.x0;
+      if (!arrastre.movido) {
+        if (Math.abs(dx) < 6) return;
+        arrastre.movido = true;
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        mx.parar(); arrastre.base = mx.valor() - dx;
+      }
+      var min = botones[0].offsetLeft;
+      var ultimo = botones[botones.length - 1];
+      var max = ultimo.offsetLeft + ultimo.offsetWidth - mw.valor();
+      var bruto = arrastre.base + dx;
+      // Por los extremos resiste como una goma
+      mx.fijar(bruto < min ? min - gomaElastica(min - bruto, 60)
+             : bruto > max ? max + gomaElastica(bruto - max, 60) : bruto);
+      // Bajo la píldora cambia de segmento: toma su ancho y se nota en la mano
+      var bajo = segmentoEn(mx.valor() + mw.valor() / 2);
+      if (bajo !== arrastre.bajo) {
+        arrastre.bajo = bajo;
+        mw.ir(bajo.offsetWidth, MUELLE);
+        vibrar();
+      }
+      var ahora = performance.now();
+      arrastre.muestras.push({ x: e.clientX, t: ahora });
+      while (arrastre.muestras.length > 2 && ahora - arrastre.muestras[0].t > 100) arrastre.muestras.shift();
+    });
+    function soltar() {
+      if (!arrastre) return;
+      var a = arrastre; arrastre = null;
+      el.classList.remove("agarrada");
+      if (!a.movido) return;                     // fue un toque: el clic hace lo suyo
+      var m = a.muestras, v = 0, ult = m[m.length - 1];
+      if (m.length > 1 && ult.t - m[0].t > 8 && performance.now() - ult.t < 80) {
+        v = (ult.x - m[0].x) / (ult.t - m[0].t) * 1000;
+      }
+      // La proyección del scroll (0.998) lanzaría la píldora muy lejos para
+      // un control de dos o tres segmentos: se usa un 30 %
+      var b = segmentoEn(mx.valor() + proyectar(v) * 0.3 + mw.valor() / 2);
+      mx.ir(b.offsetLeft, { zeta: 1, respuesta: 0.3, velocidad: v });
+      mw.ir(b.offsetWidth, MUELLE);
+      if (b.getAttribute("aria-pressed") !== "true") b.click();
+      // El clic que el navegador manda al soltar ya no cuenta
+      ignorarClic = true;
+      setTimeout(function () { ignorarClic = false; }, 0);
+    }
+    el.addEventListener("pointerup", soltar);
+    el.addEventListener("pointercancel", soltar);
+    el.addEventListener("click", function (e) {
+      if (ignorarClic) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
+  }
+
+  crearSegmentado(document.querySelector(".vista-toggle"));
+  crearSegmentado($("tema-seg"));
 
   $("logout-btn").addEventListener("click", function () {
     confirmarBorradosPendientes();     // antes de cerrar la sesión, con permiso todavía
@@ -2572,6 +2752,23 @@
     capa.appendChild(dEditar); capa.appendChild(dBorrar);
     li.appendChild(capa);
 
+    // A la izquierda, al deslizar hacia la derecha: «Quiero ir» (o quitarlo).
+    // También duplica un botón de arriba, así que tampoco se anuncia.
+    if (marcasDisponibles) {
+      var yaQuiere = miMarca(d) === "quiero";
+      var izq = document.createElement("div");
+      izq.className = "card-deslizar izq";
+      izq.setAttribute("aria-hidden", "true");
+      var dMarca = document.createElement("button");
+      dMarca.type = "button"; dMarca.tabIndex = -1;
+      dMarca.className = "deslizar-marca" + (yaQuiere ? " quitar" : "");
+      dMarca.innerHTML = '<span class="deslizar-contenido">' + ICONOS.marcador +
+                         "<span>" + (yaQuiere ? "Ya no" : "Quiero ir") + "</span></span>";
+      dMarca.addEventListener("click", function () { marcarDeslizando(li, d, 0); });
+      izq.appendChild(dMarca);
+      li.appendChild(izq);
+    }
+
     return li;
   }
 
@@ -2654,7 +2851,30 @@
 
   /* Al filtrar u ordenar, cada tarjeta que sigue se desliza desde donde
      estaba hasta su nuevo sitio (FLIP) y las nuevas aparecen fundiéndose.
-     Solo se miden las que están cerca de la pantalla. */
+     Solo se miden las que están cerca de la pantalla. El deslizamiento lo
+     lleva un muelle por restaurante (en «translate», aparte del «transform»
+     de deslizar y del «scale» del menú), que sobrevive a cada repintado:
+     si escribes deprisa en la búsqueda, cada tarjeta sale desde donde se
+     ve y con la velocidad que llevaba, sin frenazos. */
+  var desplazadas = Object.create(null);   // id → { li, muelle }
+
+  function desplazarTarjeta(li, dy) {
+    var id = li.dataset.id;
+    var e = desplazadas[id];
+    if (!e) {
+      if (Math.abs(dy) <= 1) return;
+      e = desplazadas[id] = { li: li };
+      e.muelle = crearMuelle(function (y) {
+        e.li.style.translate = Math.abs(y) < 0.5 ? "" : "0 " + y.toFixed(2) + "px";
+      });
+      e.muelle.fijar(dy);
+    } else {
+      e.li = li;
+      e.muelle.saltar(dy);
+    }
+    e.muelle.ir(0, { zeta: 1, respuesta: 0.38 }, function () { delete desplazadas[id]; });
+  }
+
   function medirTarjetas() {
     if (!lista.firstElementChild || !lista.animate) return null;
     var pos = Object.create(null), alto = window.innerHeight;
@@ -2675,18 +2895,18 @@
         c.animate(quieto ? [{ opacity: 0 }, { opacity: 1 }]
                          : [{ opacity: 0, transform: "scale(0.97)" }, { opacity: 1, transform: "none" }],
                   { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
-      } else if (!quieto && Math.abs(y0 - r.top) > 1) {
-        c.animate([{ transform: "translateY(" + (y0 - r.top).toFixed(1) + "px)" }, { transform: "none" }],
-                  { duration: 380, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+      } else if (!quieto) {
+        desplazarTarjeta(c, y0 - r.top);
       }
     }
   }
 
   // Fundido de toda la pantalla (cambio de tema, lista ↔ mapa) donde el
   // navegador lo sabe hacer; si no, o con menos movimiento, cambio directo.
+  // Devuelve la transición (o null) por si alguien quiere saber cuándo acaba.
   function conFundido(fn) {
-    if (!document.startViewTransition || (menosMovimiento && menosMovimiento.matches)) { fn(); return; }
-    document.startViewTransition(fn);
+    if (!document.startViewTransition || (menosMovimiento && menosMovimiento.matches)) { fn(); return null; }
+    return document.startViewTransition(fn);
   }
 
   /* ============================================================
@@ -3985,7 +4205,14 @@
     if (v === "mapa") reiniciarEncuadre();       // al abrir el mapa, siempre encuadrado en todo
     else cerrarFicha(true);
     guardarFiltros();
-    conFundido(render);
+    // Mapa está a la derecha de Lista: el mapa entra por la derecha y la
+    // lista sale por la izquierda, y al volver, al revés (el CSS mira
+    // data-cambio-vista mientras dura la transición)
+    var raiz = document.documentElement;
+    raiz.setAttribute("data-cambio-vista", v);
+    var t = conFundido(render);
+    function fin() { if (raiz.getAttribute("data-cambio-vista") === v) raiz.removeAttribute("data-cambio-vista"); }
+    if (t) t.finished.then(fin, fin); else fin();
     // Leaflet calcula su tamaño al crearse: si el contenedor estuvo oculto,
     // hay que avisarle de que ya se ve.
     if (v === "mapa" && mapa) setTimeout(function () { mapa.invalidateSize(); }, 0);
@@ -4015,8 +4242,16 @@
   var ficha = $("ficha-mapa");
   var fichaContenido = $("ficha-contenido");
   var fichaActual = null;          // { id, marcador }
+  // El cristal se materializa con la subida: el desenfoque va de 0 a 24 px
+  // según asoma, y se deshace igual al bajarla (con el dedo también).
+  // Lo lleva el mismo muelle, así que se interrumpe y se da la vuelta con él.
   var muelleFicha = crearMuelle(function (y) {
     ficha.style.transform = Math.abs(y) < 0.5 ? "" : "translate3d(0," + y.toFixed(2) + "px,0)";
+    if (menosTransparencia && menosTransparencia.matches) return;
+    var f = y <= 0.5 ? 1 : Math.max(0, 1 - y / (ficha.offsetHeight + 16));
+    var filtro = f >= 1 ? "" : "blur(" + (24 * f).toFixed(1) + "px) saturate(" + Math.round(100 + 80 * f) + "%)";
+    ficha.style.webkitBackdropFilter = filtro;
+    ficha.style.backdropFilter = filtro;
   });
 
   function marcarElegido(m, si) {
@@ -4122,23 +4357,63 @@
      deslizar). Al soltar, el sentido del lanzamiento decide si se queda
      abierta. Deslizar nunca borra: pasado el ancho de los botones, la
      tarjeta resiste como una goma, y «Eliminar» pide un segundo toque.
+     Hacia la derecha está «Quiero ir»: se puede dejar abierta y tocarlo,
+     o llevarla más allá de la mitad y soltar, que marca sin más (no
+     destruye nada y se deshace igual que se hace).
      ============================================================ */
 
   var ANCHO_ACCIONES = 168;      // dos botones de 80 + hueco
+  var ANCHO_MARCA = 88;          // el botón de «Quiero ir», a la izquierda
   var deslizada = null;
   var gesto = null;
+
+  // A la derecha, pasada la mitad de la tarjeta, soltar ya marca (como
+  // archivar en Mail deslizando hasta el final)
+  function umbralMarca(li) { return li.offsetWidth * 0.5; }
 
   function muelleDe(li) {
     if (!li._muelle) {
       li._muelle = crearMuelle(function (x) {
         li.style.transform = Math.abs(x) < 0.5 ? "" : "translate3d(" + x.toFixed(2) + "px,0,0)";
-        var capa = li.querySelector(".card-deslizar");
+        var capa = li.querySelector(".card-deslizar:not(.izq)");
         if (capa) {
           capa.style.width = Math.max(ANCHO_ACCIONES, -x - 8) + "px";
+        }
+        var izq = li.querySelector(".card-deslizar.izq");
+        if (izq) {
+          var w = Math.max(ANCHO_MARCA, x - 8);
+          izq.style.width = w + "px";
+          // El icono espera en su sitio; pasado el umbral se pega al borde
+          // de la tarjeta y viaja con ella: soltar ahí marca
+          izq.style.setProperty("--empuje-marca", (izq.classList.contains("lista") ? w - ANCHO_MARCA : 0) + "px");
         }
       });
     }
     return li._muelle;
+  }
+
+  function datoDe(li) {
+    for (var i = 0; i < data.length; i++) if (String(data[i].id) === li.dataset.id) return data[i];
+    return null;
+  }
+
+  // «Quiero ir» al deslizar: la tarjeta vuelve a su sitio con la velocidad
+  // del dedo y, al llegar, se guarda. El icono de la tarjeta cambia ya,
+  // para que se vea la respuesta en el instante.
+  function marcarDeslizando(li, d, velocidad) {
+    if (deslizada === li) deslizada = null;
+    var izq = li.querySelector(".card-deslizar.izq");
+    var vuelve = { zeta: 1, respuesta: 0.3, velocidad: velocidad };
+    if (requiereConexion()) {
+      muelleDe(li).ir(0, vuelve, function () { if (izq) izq.classList.remove("lista"); });
+      return;
+    }
+    var boton = li.querySelector(".marca-btn.quiero");
+    if (boton) boton.setAttribute("aria-pressed", boton.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    muelleDe(li).ir(0, vuelve, function () {
+      if (izq) izq.classList.remove("lista");
+      cambiarMarca(d, "quiero");
+    });
   }
 
   function cerrarDeslizado() {
@@ -4190,15 +4465,11 @@
     if (requiereConexion()) { muelleDe(li).ir(0, { zeta: 1, respuesta: 0.3 }); return; }
     var quieto = menosMovimiento && menosMovimiento.matches;
     if (quieto || !li.animate) { eliminar(d); return; }
+    // Sale por la izquierda y, ya fuera, se quita: las de debajo suben a
+    // ocupar el hueco con su muelle (animarTarjetas), solo con transform,
+    // sin animar la altura (que recalcularía la página en cada fotograma)
     muelleDe(li).ir(-li.offsetWidth * 1.4, { zeta: 1, respuesta: 0.25, velocidad: velocidad }, function () {
-      // La fila se cierra antes de que conteste el servidor: sin saltos
-      var cs = getComputedStyle(li);
-      li.style.overflow = "hidden";
-      var an = li.animate([
-        { height: li.offsetHeight + "px", marginTop: "0px", paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom },
-        { height: "0px", marginTop: "-0.75rem", paddingTop: "0px", paddingBottom: "0px" }
-      ], { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "forwards" });
-      an.onfinish = function () { eliminar(d); };
+      eliminar(d);
     });
   }
 
@@ -4220,9 +4491,13 @@
       if (Math.abs(dy) >= Math.abs(dx)) { gesto = null; return; }   // es scroll
       gesto.decidido = true;
       try { gesto.li.setPointerCapture(e.pointerId); } catch (err) {}
+      // A la derecha está «Quiero ir» (si hay marcas): llega hasta el ancho
+      // de la tarjeta. Sin marcas, a la derecha no hay nada.
+      gesto.izq = gesto.li.querySelector(".card-deslizar.izq");
+      gesto.maxDer = gesto.izq ? gesto.li.offsetWidth : 0;
       // Sigue desde donde se ve, aunque esté estirada como una goma
       var vistoT = muelleDe(gesto.li).parar();
-      var crudoT = vistoT > 0 ? gomaInversa(vistoT, 120)
+      var crudoT = vistoT > gesto.maxDer ? gesto.maxDer + gomaInversa(vistoT - gesto.maxDer, 120)
                  : -vistoT > ANCHO_ACCIONES ? -ANCHO_ACCIONES - gomaInversa(-vistoT - ANCHO_ACCIONES, gesto.li.offsetWidth)
                  : vistoT;
       gesto.base = crudoT - dx;
@@ -4230,11 +4505,20 @@
       deslizada = gesto.li;
     }
     var bruto = gesto.base + dx;
-    // A la derecha no hay nada, y más allá de los botones tampoco: resiste como una goma
+    // Más allá de los botones, a cada lado, resiste como una goma
     var exceso = -bruto - ANCHO_ACCIONES;
-    muelleDe(gesto.li).fijar(bruto > 0 ? gomaElastica(bruto, 120)
-                           : exceso > 0 ? -ANCHO_ACCIONES - gomaElastica(exceso, gesto.li.offsetWidth)
-                           : bruto);
+    var x = bruto > gesto.maxDer ? gesto.maxDer + gomaElastica(bruto - gesto.maxDer, 120)
+          : exceso > 0 ? -ANCHO_ACCIONES - gomaElastica(exceso, gesto.li.offsetWidth)
+          : bruto;
+    // Al cruzar el umbral de «Quiero ir», en un sentido o en el otro, se nota
+    if (gesto.izq) {
+      var pasa = x > umbralMarca(gesto.li);
+      if (pasa !== gesto.izq.classList.contains("lista")) {
+        gesto.izq.classList.toggle("lista", pasa);
+        vibrar();
+      }
+    }
+    muelleDe(gesto.li).fijar(x);
     var ahora = performance.now();
     gesto.muestras.push({ x: e.clientX, t: ahora });
     while (gesto.muestras.length > 2 && ahora - gesto.muestras[0].t > 100) gesto.muestras.shift();
@@ -4253,6 +4537,18 @@
       v = (ult.x - m[0].x) / (ult.t - m[0].t) * 1000;
     }
     var muelle = muelleDe(g.li), x = muelle.valor();
+    if (g.izq && x > 0) {
+      // Se soltó pasado el umbral (lo que se veía al soltar): marca
+      if (g.izq.classList.contains("lista") && v > -300) {
+        var d = datoDe(g.li);
+        if (d) { marcarDeslizando(g.li, d, v); return; }
+      }
+      g.izq.classList.remove("lista");
+      var abrirIzq = Math.abs(v) > 300 ? v > 0 : x + proyectar(v) > ANCHO_MARCA / 2;
+      deslizada = abrirIzq ? g.li : null;
+      muelle.ir(abrirIzq ? ANCHO_MARCA : 0, { zeta: abrirIzq ? 0.85 : 1, respuesta: 0.3, velocidad: v });
+      return;
+    }
     var abrir = Math.abs(v) > 300 ? v < 0 : x + proyectar(v) < -ANCHO_ACCIONES / 2;
     deslizada = abrir ? g.li : null;
     muelle.ir(abrir ? -ANCHO_ACCIONES : 0, { zeta: abrir ? 0.85 : 1, respuesta: 0.3, velocidad: v });
@@ -4378,7 +4674,7 @@
       var p = puntosDe(d, false)[0] || {};
       var destino = p.direccion ? { nombre: d.nombre, zona: "", direccion: p.direccion } : { nombre: d.nombre, zona: d.zona, direccion: "" };
       items.push(itemMenu("Cómo llegar", ICONOS.mapa, null, { href: urlMapa(destino), externo: true }));
-      ime (p.carta && analizarUrl(p.carta).valida) {
+      if (p.carta && analizarUrl(p.carta).valida) {
         items.push(itemMenu("Ver la carta", ICONOS.carta, null, { href: analizarUrl(p.carta).href, externo: true }));
       }
       var res = analizarReserva(p.reserva);
@@ -4429,7 +4725,7 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarMenu(); });
   window.addEventListener("resize", cerrarMenu);
 
-  // Mantener pulsado sin moverse (dedo o lápiz) unos 400 ms, lo que tarda
+  // Mantener pulsado sin moverse (dedo o lápiz) unos 300 ms, algo menos que
   // iOS. Mientras tanto la tarjeta se va hundiendo, para anunciar que va a
   // pasar algo; si mueves el dedo o lo levantas antes, vuelve desde donde esté.
   var ESPERA_MENU_MS = 300;
@@ -4447,6 +4743,7 @@
     escalar(li, 970, ESPERA_MENU_MS / 1000);     // llega al fondo cuando sale el menú
     temporizadorMenu = setTimeout(function () {
       gesto = null;                           // ya no es un deslizamiento
+      vibrar();                               // antes de suprimirClic, que se tragaría su clic
       suprimirClic();
       abrirMenu(li, inicioMenu.x, inicioMenu.y);
     }, ESPERA_MENU_MS);

@@ -69,6 +69,7 @@
     --green-fill: light-dark(rgba(36, 138, 61, 0.12), rgba(48, 209, 88, 0.16));
     --orange: light-dark(#A84B00, #FF9F0A);
     --orange-fill: light-dark(rgba(255, 149, 0, 0.14), rgba(255, 159, 10, 0.16));
+    --orange-solid: #C75300;                        /* relleno con texto blanco: 4.5:1 */
     --pin: light-dark(#FF3B30, #FF453A);            /* chinchetas, como en Mapas */
     --me: light-dark(#007AFF, #0A84FF);
     --focus-ring: light-dark(rgba(0, 113, 227, 0.3), rgba(41, 151, 255, 0.45));
@@ -778,6 +779,21 @@
   .card-deslizar.confirmando .deslizar-editar { flex-grow: 0; opacity: 0; padding: 0; margin-right: calc(-1 * var(--s2)); pointer-events: none; }
   .card-deslizar.confirmando .deslizar-borrar { flex-grow: 1; }
 
+  /* «Quiero ir», a la izquierda, al deslizar hacia la derecha. El icono
+     espera en su sitio; pasada la mitad (.lista) crece y se pega al borde
+     de la tarjeta (--empuje-marca, desde app.js): soltar ahí marca. */
+  .card-deslizar.izq { left: auto; right: calc(100% + var(--s2)); width: 88px; }
+  .card-deslizar .deslizar-marca { flex-direction: row; justify-content: flex-start; padding: 0; background: var(--orange-solid); }
+  .card-deslizar .deslizar-marca.quitar { background: #8E8E93; background: light-dark(#8E8E93, #636366); }
+  .deslizar-contenido {
+    flex: none; width: 88px;
+    display: flex; flex-direction: column; align-items: center; gap: var(--s1);
+    translate: var(--empuje-marca, 0px) 0;
+    transition: translate 0.22s var(--ease-out);
+  }
+  .deslizar-contenido svg { transition: scale 0.22s var(--ease-out); }
+  .card-deslizar.izq.lista .deslizar-contenido svg { scale: 1.2; }
+
   /* Tarjeta elegida por el botón del azar */
   li.card.destacada { box-shadow: 0 0 0 2px var(--tint), 0 0 0 6px var(--focus-ring); }
   /* «Sorpréndeme»: la tarjeta por la que pasa el dado */
@@ -1003,6 +1019,44 @@
     background: var(--segment-on); font-weight: 600;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
   }
+  /* Con app.js, el fondo del elegido es una píldora aparte que se desliza
+     (y se arrastra) por debajo de los textos */
+  .segmentado { position: relative; }
+  .segmentado.con-pildora { touch-action: pan-y; }
+  .segmentado.con-pildora button { position: relative; z-index: 1; }
+  .segmentado.con-pildora button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+  .segmentado-pildora {
+    position: absolute; top: 2px; bottom: 2px; left: 0; width: 0;
+    border-radius: 7px; background: var(--segment-on);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+    pointer-events: none; will-change: transform;
+    transition: scale 0.2s var(--ease-out);
+  }
+  /* Agarrada, se encoge un poco, como el pulgar de iOS */
+  .segmentado.agarrada .segmentado-pildora { scale: var(--press-scale); }
+  /* En los fundidos de pantalla (tema, Lista / Mapa) la píldora no puede
+     verse a la vez en el sitio viejo y en el nuevo: se queda solo la viva */
+  .vista-toggle { view-transition-name: seg-vista; }
+  #tema-seg { view-transition-name: seg-tema; }
+  ::view-transition-old(seg-vista), ::view-transition-old(seg-tema) { display: none; }
+  ::view-transition-new(seg-vista), ::view-transition-new(seg-tema),
+  ::view-transition-group(seg-vista), ::view-transition-group(seg-tema) { animation: none; }
+
+  /* Lista ↔ Mapa: el contenido sale y entra de lado, por el mismo camino
+     a la ida y a la vuelta (Mapa está a la derecha de Lista) */
+  html[data-cambio-vista] .contenido { view-transition-name: contenido; }
+  ::view-transition-group(contenido) { animation-duration: 0.35s; animation-timing-function: var(--ease-out); }
+  ::view-transition-old(contenido), ::view-transition-new(contenido) {
+    animation-duration: 0.35s; animation-timing-function: var(--ease-out); animation-fill-mode: both;
+  }
+  html[data-cambio-vista="mapa"]::view-transition-old(contenido) { animation-name: salir-izq; }
+  html[data-cambio-vista="mapa"]::view-transition-new(contenido) { animation-name: entrar-der; }
+  html[data-cambio-vista="lista"]::view-transition-old(contenido) { animation-name: salir-der; }
+  html[data-cambio-vista="lista"]::view-transition-new(contenido) { animation-name: entrar-izq; }
+  @keyframes salir-izq { to { opacity: 0; transform: translateX(-12%); } }
+  @keyframes salir-der { to { opacity: 0; transform: translateX(12%); } }
+  @keyframes entrar-der { from { opacity: 0; transform: translateX(12%); } }
+  @keyframes entrar-izq { from { opacity: 0; transform: translateX(-12%); } }
 
   .mapa-wrap { margin-top: var(--s3); }
   .mapa-marco { position: relative; }
@@ -1332,6 +1386,8 @@
     </div>
   </div>
 
+  <!-- Lo que cambia entre Lista y Mapa: entra y sale de lado -->
+  <div class="contenido">
   <div class="mapa-wrap" id="mapa-wrap" hidden>
     <div class="mapa-marco">
       <div id="map" class="mapa" role="region" aria-label="Mapa de los restaurantes con dirección"></div>
@@ -1350,6 +1406,7 @@
 
   <ul class="list" id="list"></ul>
   <div class="empty" id="empty" hidden></div>
+  </div>
 
   <footer class="note">
     <p>Lista compartida en tiempo real. Si no hay conexión, ves la última copia guardada en este dispositivo y no se puede añadir ni editar hasta que vuelva.</p>
@@ -1686,6 +1743,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=41"></script>
+<script src="app.js?v=42"></script>
 </body>
 </html>

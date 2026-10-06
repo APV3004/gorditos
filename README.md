@@ -75,11 +75,11 @@ entráis los dos.
 Cambies `index.html` o `app.js`, sube el mismo número en dos sitios:
 ```html
 <!-- index.html, al final -->
-<script src="app.js?v=41"></script>   <!-- -> ?v=42 -->
+<script src="app.js?v=42"></script>   <!-- -> ?v=43 -->
 ```
 ```js
 // sw.js
-var CACHE = "gorditos-v41";   // -> "gorditos-v42"
+var CACHE = "gorditos-v42";   // -> "gorditos-v43"
 ```
 Cada vez que la app vuelve a primer plano mira qué versión hay
 publicada. Si es otra, se recarga sola (o, si tienes un formulario a
@@ -168,7 +168,8 @@ tus marcas («Quiere ir: adrian») pero solo tú puedes cambiarlas: lo
 garantizan las políticas de `supabase-migracion-marcas.sql`, no la app.
 Sin esa migración, los botones y el filtro simplemente no aparecen.
 En la tarjeta son dos iconos junto al precio: el marcador («Quiero ir»)
-y el check («Ya he ido»).
+y el check («Ya he ido»). «Quiero ir» también se marca (o se quita)
+deslizando la tarjeta hacia la derecha.
 
 ## Zonas
 

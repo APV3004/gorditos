@@ -1,7 +1,7 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · Pantalla de entrar (v40) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · Pantalla de entrar (v40) · Más táctil (v42) · 6 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -85,6 +85,9 @@ Fila de acciones rápidas (se desliza en horizontal)
 Barra de resultados
 - Se queda fija arriba al bajar por la lista y es translúcida. Muestra
   cuántos restaurantes se ven y el selector Lista / Mapa.
+- Lista / Mapa (nuevo en la v42): el fondo blanco se desliza de un lado
+  al otro en vez de saltar, y se puede arrastrar con el dedo, como en
+  los controles del iPhone. Lo mismo en Automático / Claro / Oscuro.
 - Un indicador pequeño que gira avisa de que están llegando datos
   nuevos.
 
@@ -96,9 +99,13 @@ Carga
 
 Transiciones
 - Al filtrar u ordenar, las tarjetas que siguen se deslizan a su nuevo
-  sitio y las nuevas aparecen con un fundido.
-- Cambiar entre Lista y Mapa, o entre tema claro y oscuro, hace un
-  fundido de toda la pantalla en lugar de un salto brusco.
+  sitio y las nuevas aparecen con un fundido. Si escribes deprisa en la
+  búsqueda, cada tarjeta sigue desde donde está, sin frenazos (v42).
+- Cambiar entre tema claro y oscuro hace un fundido de toda la pantalla
+  en lugar de un salto brusco.
+- Al pasar de Lista a Mapa, el mapa entra por la derecha y la lista sale
+  por la izquierda; al volver, al revés (v42). Con "Reducir
+  movimiento", un fundido.
 
 
 3. TARJETAS DE RESTAURANTE
@@ -132,6 +139,15 @@ Deslizar a la izquierda (como en Mail)
 - Si vuelves a agarrar una tarjeta mientras rebota, sigue desde donde
   la ves, sin dar un saltito (nuevo en la v38). Lo mismo con las hojas,
   la ficha del mapa y el aviso de abajo.
+
+Deslizar a la derecha: "Quiero ir" (nuevo en la v42)
+- Aparece un botón naranja, "Quiero ir" (o "Ya no", si ya lo tenías
+  marcado). Se puede dejar abierto y tocarlo.
+- Si llevas la tarjeta más allá de la mitad, el icono crece y se pega
+  al borde: al soltar, se marca sin más. Si te arrepientes, vuelve
+  atrás antes de soltar.
+- Al borrar desde los botones, las tarjetas de debajo suben a ocupar
+  el hueco con suavidad.
 
 Borrar pide siempre dos pasos (nuevo en la v32)
 - Botón rojo al deslizar: el primer toque lo ensancha y pregunta
@@ -232,6 +248,8 @@ Listas y ajustes
   tipo, la distancia y los botones (Carta, Llamar o Reservar, Cómo
   llegar).
     · Se cierra con su ✕, tocando el mapa o deslizándola hacia abajo.
+    · El cristal se forma a medida que sube y se deshace al bajarla
+      (v42).
     · La chincheta elegida se agranda, y si la ficha la iba a tapar, el
       mapa se mueve un poco para que se vea.
 - Controles de zoom con el mismo estilo translúcido. La atribución del
@@ -256,11 +274,17 @@ Listas y ajustes
   sólidas.
 - Aumentar contraste: textos secundarios más oscuros y bordes en los
   controles.
-- Texto grande: la app crece con el tamaño de letra del sistema. Con
+- Texto grande: la app crece con el tamaño de letra del sistema
+  (Ajustes → Pantalla y brillo → Tamaño del texto; en el iPhone, desde
+  la v42; se aplica al volver a la app). Con
   tamaños muy grandes, las etiquetas de los formularios se ponen
   encima del campo y los títulos de las hojas bajan a su propia línea,
   como en iOS.
 - Todo se puede usar con teclado, y el foco siempre se ve.
+- Vibración (v42): un toque breve cuando sale el menú de mantener
+  pulsada, cuando una hoja cambia de altura, al pasar el punto de
+  "Quiero ir" deslizando, al cambiar de segmento arrastrando y si la
+  contraseña no es correcta. En el iPhone necesita iOS 18 o posterior.
 
 
 8. A TENER EN CUENTA
