@@ -1,0 +1,57 @@
+# Gorditos — prueba y publica en GitHub Pages.
+# Cada push a main ejecuta las pruebas (pruebas/ejecutar.js). Solo si pasan
+# se publica la web. Requiere: Settings → Pages → Source: «GitHub Actions».
+name: Probar y publicar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pruebas/package-lock.json
+      - run: npm ci
+        working-directory: pruebas
+      - run: node ejecutar.js
+        working-directory: pruebas
+
+  publicar:
+    needs: probar
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # Solo la web: sin pruebas, sin la parte de Supabase, sin .github
+      - name: Preparar la web
+        run: |
+          mkdir _site
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'pruebas' \
+                   --exclude 'supabase' --exclude '_site' ./ _site/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: despliegue
+        uses: actions/deploy-pages@v4

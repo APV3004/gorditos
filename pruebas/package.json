@@ -1,0 +1,7 @@
+{
+  "name": "gorditos-pruebas",
+  "private": true,
+  "description": "Pruebas automáticas de Gorditos (jsdom, sin red).",
+  "scripts": { "test": "node ejecutar.js" },
+  "devDependencies": { "acorn": "8.14.0", "jsdom": "24.1.3" }
+}

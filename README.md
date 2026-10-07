@@ -16,15 +16,23 @@ real, con Supabase como backend. Funciona sin conexión en modo lectura
 | `icon-512.png` | El icono |
 | `icon-maskable-512.png` | El icono para Android, con el dibujo al 80 % para que la máscara no lo recorte |
 | `config.js` | Tu URL y tu clave de Supabase — se sube una vez y no se vuelve a tocar |
-| `supabase.sql` | Crea la tabla, la seguridad y el tiempo real — se pega una vez en el SQL Editor de Supabase |
+| `supabase/000-supabase-INICIAL-no-volver-a-ejecutar.sql` | Cómo se creó la base al principio: tabla, seguridad y tiempo real |
+| `supabase/migraciones/` | Los cambios posteriores de la base, numerados en el orden en que se aplicaron |
+| `supabase/functions/asistente/index.ts` | La función de Supabase que habla con Gemini |
+| `pruebas/` | Pruebas automáticas (jsdom, sin red); GitHub las pasa antes de publicar |
+| `.github/workflows/publicar.yml` | Prueba y, si todo va bien, publica en GitHub Pages |
 
-Los primeros van juntos en el mismo hosting. `supabase.sql` no se
-sube a ningún sitio: se pega en el panel de Supabase.
+Los de la raíz son la web y van juntos en el mismo hosting. Lo de
+`supabase/` no se publica: se pega en el panel de Supabase.
 
 ## Puesta en marcha (una vez)
 
 1. **Crea un proyecto en [supabase.com](https://supabase.com)** (gratis).
-2. **SQL Editor → New query** → pega el contenido de `supabase.sql` entero → Run.
+2. **SQL Editor → New query** → pega el contenido de
+   `supabase/000-supabase-INICIAL-no-volver-a-ejecutar.sql` entero → Run.
+   Después, uno por uno y en orden, cada archivo de `supabase/migraciones/`
+   (`01-sedes.sql`, `02-mapa.sql`…). Solo en un proyecto nuevo: en el que ya
+   funciona, el inicial no se vuelve a ejecutar.
 3. **Authentication → Users → Add user** → crea una cuenta para ti y otra
    para tu hermano (email + contraseña cada una).
 4. **Project Settings → API** → copia el "Project URL" y la clave
@@ -90,6 +98,19 @@ Si cambias de versión de Supabase o Leaflet, el `integrity` del
 `<script>` tiene que ser el de ese archivo exacto: si no coincide, el
 navegador bloquea la librería y la app se queda en blanco.
 
+## Pruebas antes de publicar
+
+Cada push a `main` pasa las pruebas de `pruebas/` en GitHub Actions y solo
+si salen bien publica la web (sin `pruebas/`, `supabase/` ni `.github/`).
+Requiere **Settings → Pages → Source: «GitHub Actions»**. En local:
+
+    cd pruebas && npm ci && node ejecutar.js   # → «✓ Todo bien»
+
+Cada cambio de la base va en una migración nueva y repetible
+(`if not exists`) en `supabase/migraciones/`, con el número siguiente.
+Los secretos de servidor (`GEMINI_API_KEY`, la clave `service_role`) no se
+suben nunca: viven en Supabase → Edge Functions → Secrets.
+
 ## Los datos
 
 Viven en Supabase, no en el teléfono. El `localStorage` de cada móvil
@@ -106,7 +127,7 @@ si tiene varios) que tengan **dirección** puesta, y tu posición.
 - Las direcciones se convierten en coordenadas con Nominatim
   (OpenStreetMap) la primera vez que alguno abre el mapa, y se guardan
   en Supabase: cada dirección se busca una sola vez para los dos.
-  Necesita la columna `geo` (`supabase-migracion-mapa.sql`).
+  Necesita la columna `geo` (`supabase/migraciones/02-mapa.sql`).
 - Si cambias una dirección, se vuelve a situar sola.
 - Tu ubicación no sale del móvil: las distancias se calculan en local.
   El GPS solo está encendido con el mapa abierto o al ordenar por
@@ -116,7 +137,7 @@ si tiene varios) que tengan **dirección** puesta, y tu posición.
 
 Cada restaurante pertenece a una lista (Familia, Amigos…). Cada persona
 solo ve las listas de las que es miembro: lo garantiza la base de datos
-(las políticas de `supabase-migracion-listas.sql`), no la app.
+(las políticas de `supabase/migraciones/03-listas.sql`), no la app.
 
 - **Crear cuentas:** Authentication → Users → Add user, con «Auto Confirm
   User» marcado. El registro público debe estar DESACTIVADO
@@ -154,7 +175,7 @@ lo dice. Gratis con la clave de Gemini que ya tienes; necesita la función
 situado en el mapa, se busca un local de comida con ese mismo nombre a
 menos de 80 m y se toma su horario publicado. Se guarda en Supabase y
 se refresca cada mes. Necesita la columna `horario`
-(`supabase-migracion-horarios.sql`).
+(`supabase/migraciones/04-horarios.sql`).
 
 - Si un horario no se entiende (meses, festivos concretos, texto
   libre), no se dice si está abierto: mejor callar que acertar mal.
@@ -165,7 +186,7 @@ se refresca cada mes. Necesita la columna `horario`
 
 Cada persona marca por su cuenta. Los demás miembros de la lista ven
 tus marcas («Quiere ir: adrian») pero solo tú puedes cambiarlas: lo
-garantizan las políticas de `supabase-migracion-marcas.sql`, no la app.
+garantizan las políticas de `supabase/migraciones/05-marcas.sql`, no la app.
 Sin esa migración, los botones y el filtro simplemente no aparecen.
 En la tarjeta son dos iconos junto al precio: el marcador («Quiero ir»)
 y el check («Ya he ido»). «Quiero ir» también se marca (o se quita)
@@ -199,10 +220,8 @@ que faltan.
   PDF o una foto de la carta.
 
 Si la columna no existiera, la app lo dice en Ajustes y no lo intenta.
-Se crea así (se puede ejecutar más de una vez):
-```sql
-alter table public.restaurantes add column if not exists carta_info jsonb;
-```
+Se crea con `supabase/migraciones/06-cartas.sql` (se puede ejecutar más
+de una vez).
 
 ## Asistente (rellenar desde un enlace y buscar con una frase)
 
