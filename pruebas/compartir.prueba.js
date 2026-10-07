@@ -16,7 +16,7 @@ module.exports = async function () {
   }
   const aviso = (t) => { const x = t.d.getElementById("toast"); return x && !x.hidden ? t.d.getElementById("toast-text").textContent : ""; };
 
-  // 1. Con navigator.share: título, texto con tipo · zona · precio, dirección, carta y el mapa como url
+  // 1. Con navigator.share: todo en el texto y cada enlace con su etiqueta
   {
     const t = await E.montar([E.fila({ carta: "https://casadani.es/carta", reserva: "91 575 02 20" })]);
     let datos = null;
@@ -26,10 +26,14 @@ module.exports = async function () {
     b.click(); await E.espera(30);
     k.c(datos && datos.title === "Casa Dani", "1: título = nombre");
     k.c(datos && /Española · Salamanca · €€/.test(datos.text), "1: tipo · zona · precio: " + (datos && datos.text));
-    k.c(datos && datos.text.includes("Calle Ayala, 28"), "1: con la dirección");
-    k.c(datos && datos.text.includes("Carta: https://casadani.es/carta"), "1: con la carta");
-    k.c(datos && datos.text.includes("Reservas: 91 575 02 20"), "1: con el teléfono de reservas");
-    k.c(datos && /maps\.apple\.com|google\.com\/maps/.test(datos.url) && datos.url.includes(encodeURIComponent("Calle Ayala, 28")), "1: url = Cómo llegar");
+    k.c(datos && datos.text.startsWith("🍽️ Casa Dani\n"), "1: empieza por el nombre");
+    k.c(datos && datos.text.includes("📍 Calle Ayala, 28"), "1: con la dirección");
+    k.c(datos && datos.text.includes("📖 Carta: https://casadani.es/carta"), "1: la carta, etiquetada");
+    k.c(datos && datos.text.includes("📞 Reservas: 91 575 02 20"), "1: el teléfono de reservas, etiquetado");
+    const llegar = datos && (datos.text.match(/🗺️ Cómo llegar: (\S+)/) || [])[1];
+    k.c(llegar && /maps\.apple\.com|google\.com\/maps/.test(llegar) && llegar.includes(encodeURIComponent("Calle Ayala, 28")), "1: «Cómo llegar» con su enlace de mapa");
+    k.c(datos && !datos.url, "1: sin url suelta, que saldría sin etiqueta");
+    k.c(datos && !/^https?:/m.test(datos.text), "1: ninguna línea es un enlace sin etiqueta:\n" + (datos && datos.text));
     k.c(!t.errores.length, "1: sin errores: " + t.errores.join(" | "));
   }
 
@@ -51,11 +55,11 @@ module.exports = async function () {
     delete t.w.navigator.share;
     Object.defineProperty(t.w.navigator, "clipboard", { value: { writeText: (s) => { copiado = s; return Promise.resolve(); } }, configurable: true });
     (await pulsarLargo(t, "Casa Dani")).click(); await E.espera(30);
-    k.c(copiado && copiado.startsWith("Casa Dani\n") && /maps\.apple\.com|google\.com\/maps/.test(copiado), "3: copia el texto y el enlace: " + copiado);
+    k.c(copiado && copiado.startsWith("🍽️ Casa Dani\n") && /Cómo llegar: \S*(maps\.apple\.com|google\.com\/maps)/.test(copiado), "3: copia el texto con el enlace: " + copiado);
     k.c(aviso(t) === "Copiado", "3: avisa «Copiado»: " + aviso(t));
   }
 
-  // 4. Cadena: desde la tarjeta, todos los locales con su dirección y sin url
+  // 4. Cadena: desde la tarjeta, todos los locales con su dirección y su mapa
   {
     const t = await E.montar([E.fila({ id: "r2", nombre: "Cadena", direccion: "", sedes: [
       { nombre: "Sol", zona: "Centro", direccion: "Calle Mayor 1", carta: "", reserva: "", geo: null, horario: null },
@@ -63,8 +67,9 @@ module.exports = async function () {
     let datos = null;
     t.w.navigator.share = (d) => { datos = d; return Promise.resolve(); };
     (await pulsarLargo(t, "Cadena")).click(); await E.espera(30);
-    k.c(datos && datos.text.includes("• Sol: Calle Mayor 1") && datos.text.includes("• Retiro: Calle Ibiza 3"), "4: lista los locales: " + (datos && datos.text));
-    k.c(datos && !datos.url, "4: sin un único enlace de mapa");
+    k.c(datos && datos.text.includes("📍 Sol: Calle Mayor 1") && datos.text.includes("📍 Retiro: Calle Ibiza 3"), "4: lista los locales: " + (datos && datos.text));
+    k.c(datos && (datos.text.match(/Cómo llegar: /g) || []).length === 2, "4: un «Cómo llegar» por local");
+    k.c(datos && datos.text.includes("2 locales"), "4: dice cuántos locales");
   }
 
   return k.fin();

@@ -130,8 +130,8 @@ Valorar (nuevo en la v43)
 Compartir (nuevo en la v43)
 - "Compartir" en el menú de mantener pulsada y en la ficha del mapa.
   Abre la hoja de compartir del iPhone con el nombre, tipo, zona,
-  precio, dirección, carta o reservas, y el enlace de "Cómo llegar"
-  (en WhatsApp se abre el mapa).
+  precio y dirección, y cada enlace con su nombre delante: Carta,
+  Reservar o Reservas, y Cómo llegar (v46).
 - En una cadena, desde la tarjeta van todos los locales con su
   dirección; desde la ficha del mapa, solo el local elegido.
 - En un navegador sin hoja de compartir, se copia el texto y avisa

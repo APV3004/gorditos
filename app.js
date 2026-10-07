@@ -4769,36 +4769,47 @@
      del sistema. El enlace es el de «Cómo llegar», para que en WhatsApp se
      abra el mapa. Sin p y con varios locales, van todos con su dirección.
      Sin navigator.share se copia el texto; cancelar la hoja no es un error. */
+  /* El mensaje va entero en «text», sin «url» aparte: así cada enlace lleva
+     delante qué es (si no, WhatsApp y Mensajes pegan el del mapa suelto). */
   function datosCompartir(d, p) {
-    var lineas = [], url = "";
     var titulo = d.nombre + (p && p.nombreSede ? " (" + p.nombreSede + ")" : "");
     var puntos = p ? [p] : puntosDe(d, false);
     var varios = puntos.length > 1;
+    function mapaDe(q) {
+      return urlMapa(q.direccion ? { nombre: d.nombre, zona: "", direccion: q.direccion } : { nombre: d.nombre, zona: q.zona, direccion: "" });
+    }
+    function enlaces(q, sangria) {
+      var l = [];
+      if (q.carta && analizarUrl(q.carta).valida) l.push(sangria + "📖 Carta: " + analizarUrl(q.carta).href);
+      var res = analizarReserva(q.reserva);
+      if (!res.vacia && res.valida) l.push(sangria + (res.tipo === "tel" ? "📞 Reservas: " + texto(q.reserva) : "📅 Reservar: " + res.href));
+      l.push(sangria + "🗺️ Cómo llegar: " + mapaDe(q));
+      return l;
+    }
+
     var sub = [d.tipo || "Sin especificar"];
     if (!varios && texto(puntos[0].zona)) sub.push(puntos[0].zona);
     sub.push(etiquetaPrecio[d.precio] || "");
-    lineas.push(titulo, sub.filter(Boolean).join(" · "));
+    if (varios) sub.push(puntos.length + " locales");
+    var lineas = ["🍽️ " + titulo, sub.filter(Boolean).join(" · ")];
+
     if (varios) {
       puntos.forEach(function (q) {
-        lineas.push("• " + (q.nombreSede || q.zona || d.nombre) + (q.direccion ? ": " + q.direccion : (q.zona && q.nombreSede ? " (" + q.zona + ")" : "")));
+        lineas.push("", "📍 " + (q.nombreSede || q.zona || d.nombre) + (q.direccion ? ": " + q.direccion : ""));
+        lineas.push.apply(lineas, enlaces(q, "    "));
       });
     } else {
-      var u = puntos[0];
-      if (u.direccion) lineas.push(u.direccion);
-      if (u.carta && analizarUrl(u.carta).valida) lineas.push("Carta: " + analizarUrl(u.carta).href);
-      var res = analizarReserva(u.reserva);
-      if (!res.vacia && res.valida) lineas.push(res.tipo === "tel" ? "Reservas: " + texto(u.reserva) : "Reservar: " + res.href);
-      url = urlMapa(u.direccion ? { nombre: d.nombre, zona: "", direccion: u.direccion } : { nombre: d.nombre, zona: u.zona, direccion: "" });
+      lineas.push("");
+      if (puntos[0].direccion) lineas.push("📍 " + puntos[0].direccion);
+      lineas.push.apply(lineas, enlaces(puntos[0], ""));
     }
-    var datos = { title: titulo, text: lineas.join("\n") };
-    if (url) datos.url = url;
-    return datos;
+    return { title: titulo, text: lineas.join("\n") };
   }
 
   function compartir(d, p) {
     var datos = datosCompartir(d, p);
     function copiar() {
-      var todo = datos.text + (datos.url ? "\n" + datos.url : "");
+      var todo = datos.text;
       if (!(navigator.clipboard && navigator.clipboard.writeText)) { avisar("Este navegador no deja compartir ni copiar."); return; }
       navigator.clipboard.writeText(todo).then(function () { avisar("Copiado"); },
         function () { avisar("No se ha podido copiar."); });
