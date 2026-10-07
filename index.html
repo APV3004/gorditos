@@ -1180,9 +1180,9 @@
   .marcador-aprox { fill-opacity: 0.55; stroke-dasharray: 3 3; }
   .popup-aprox { margin: var(--s2) 0 0; font-size: var(--t-caption); line-height: 1.4; color: var(--orange); background: var(--orange-fill); padding: var(--s1) var(--s2); border-radius: 6px; }
 
-  /* Si fallan los mapas de CARTO se usa OpenStreetMap, que solo tiene
-     versión clara: en tema oscuro se invierte. Con CARTO, el mapa oscuro ya
-     viene oscuro y esta clase no se pone. */
+  /* Sin clave de CARTO se usa OpenStreetMap, que solo tiene versión clara:
+     en tema oscuro se invierte. Con clave, el mapa oscuro ya viene oscuro
+     y esta clase no se pone. */
   .mapa.osm-oscuro .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
 
   /* ---- Aviso flotante ---- */
@@ -1787,6 +1787,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=44"></script>
+<script src="app.js?v=43"></script>
 </body>
 </html>
