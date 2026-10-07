@@ -15,7 +15,6 @@
   // la "API URL" con /rest/v1 al final, o una barra final de más.
   var SUPABASE_URL = texto(CONFIG.supabaseUrl).replace(/\/rest\/v1\/?$/i, "").replace(/\/+$/, "");
   var SUPABASE_ANON_KEY = texto(CONFIG.supabaseAnonKey);
-  var CARTO_KEY = texto(CONFIG.cartoApiKey);     // opcional: mapas de CARTO (ver config.js)
 
   var SUPABASE_CONFIGURADO = /^https:\/\/[^\s]+$/.test(SUPABASE_URL) &&
                               SUPABASE_URL.indexOf("TU-PROYECTO") === -1 &&
@@ -3017,18 +3016,18 @@
 
   var mapa = null, capaRest = null, capaTeselas = null, marcadorYo = null, circuloYo = null;
 
-  /* Mapas base. Por defecto, OpenStreetMap: no necesita clave ni cuenta de
-     nadie, así que no se puede romper solo. Para el tema oscuro se invierten
-     sus colores por CSS, que es un apaño pero no depende de terceros.
-     Si pones una clave de CARTO en config.js, se usan sus mapas, que tienen
-     un claro y un oscuro de verdad. Ojo: CARTO exige clave desde agosto de
-     2026 y está retirando estos mapas de imagen, así que puede volver a
-     romperse; por eso no es lo predeterminado. */
+  /* Mapas base: los de CARTO, que tienen un claro y un oscuro de verdad. Son
+     públicos: no necesitan clave ni cuenta (comprobado el 7/10/2026). CARTO
+     está retirando estos mapas de imagen, así que si sus teselas empiezan a
+     fallar se pasa solo a OpenStreetMap, y el oscuro se consigue invirtiendo
+     sus colores por CSS: un apaño, pero el mapa no se queda en blanco. */
   var TESELAS = {
     osm: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    cartoClaro: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=",   // el más parecido a Mapas
-    cartoOscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key="
+    cartoClaro: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",   // el más parecido a Mapas
+    cartoOscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
   };
+  var FALLOS_CARTO = 4;          // teselas fallidas sin ninguna buena → OpenStreetMap
+  var cartoFalla = false;
   var ATRIB_OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
   var ATRIB_CARTO = ATRIB_OSM + ' · &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
 
@@ -3042,10 +3041,8 @@
   function ponerTeselas() {
     if (!mapa || !window.L) return;
     var oscuro = temaOscuro();
-    var conCarto = !!CARTO_KEY;
-    var url = conCarto
-      ? (oscuro ? TESELAS.cartoOscuro : TESELAS.cartoClaro) + encodeURIComponent(CARTO_KEY)
-      : TESELAS.osm;
+    var conCarto = !cartoFalla;
+    var url = conCarto ? (oscuro ? TESELAS.cartoOscuro : TESELAS.cartoClaro) : TESELAS.osm;
 
     // Sin CARTO, el oscuro se consigue invirtiendo el mapa claro.
     var contenedor = $("map");
@@ -3057,6 +3054,16 @@
       ? { maxZoom: 20, subdomains: "abcd", attribution: ATRIB_CARTO }
       : { maxZoom: 19, attribution: ATRIB_OSM });
     capaTeselas._urlGorditos = url;
+    if (conCarto && capaTeselas.on) {
+      // Con una sola tesela buena, CARTO funciona: los fallos sueltos no cuentan
+      var fallos = 0, alguna = false, capa = capaTeselas;
+      capa.on("tileload", function () { alguna = true; });
+      capa.on("tileerror", function () {
+        if (alguna || cartoFalla || capa !== capaTeselas || ++fallos < FALLOS_CARTO) return;
+        cartoFalla = true;
+        ponerTeselas();
+      });
+    }
     capaTeselas.addTo(mapa);
   }
 
