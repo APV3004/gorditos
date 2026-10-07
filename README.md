@@ -192,6 +192,19 @@ En la tarjeta son dos iconos junto al precio: el marcador («Quiero ir»)
 y el check («Ya he ido»). «Quiero ir» también se marca (o se quita)
 deslizando la tarjeta hacia la derecha.
 
+**Valoraciones.** Al marcar «Ya he ido» se puede poner de 1 a 5
+estrellas y una nota corta (280 caracteres). Van en la misma fila de
+`marcas` (columnas `puntuacion` y `nota`), así que las mismas políticas
+hacen que los demás las vean y solo tú las cambies. Quitar «Ya he ido»
+borra la valoración, por eso la app pide confirmarlo. Necesita
+`supabase/migraciones/07-valoraciones.sql`; sin ella, no aparece.
+
+## Compartir
+
+«Compartir» en el menú de mantener pulsada y en la ficha del mapa abre
+la hoja de compartir del sistema (`navigator.share`) con los datos del
+restaurante y el enlace de «Cómo llegar». Sin ella, copia el texto.
+
 ## Zonas
 
 El filtro agrupa por distrito (o municipio) y la tarjeta enseña lo que

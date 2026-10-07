@@ -896,6 +896,7 @@
     text-decoration: none;
     white-space: nowrap;
   }
+  button.card-link { font-family: inherit; cursor: pointer; }
   .card-link svg { width: 1rem; height: 1rem; flex: 0 0 auto; color: var(--tint); }
   /* …pero se toca en 44 pt de alto */
   .card-link::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
@@ -1155,6 +1156,23 @@
   .marca-btn[aria-pressed="true"] .relleno { fill: currentColor; }
   .marca-btn[aria-pressed="true"] .trazo { stroke: var(--surface); }
   .card-otros { margin: var(--s2) 0 0; font-size: var(--t-footnote); color: var(--label-2); }
+  /* Tu valoración en la tarjeta: «★ 4 · tu nota»; sin valorar, «Valorar» */
+  .card-valoracion {
+    display: block; max-width: 100%; margin: var(--s2) 0 0; padding: 0;
+    background: none; border: none; cursor: pointer; text-align: left;
+    font-size: var(--t-footnote); color: var(--orange);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-valoracion.vacia { color: var(--tint); }
+  /* Estrellas de la hoja «Valorar»: grandes, de 44 pt o más */
+  .estrellas { display: flex; justify-content: center; gap: var(--s2); padding: var(--s2) 0 var(--s4); }
+  .estrella {
+    width: 3rem; height: 3rem; padding: 0.375rem;
+    background: none; border: none; cursor: pointer; color: var(--label-3);
+  }
+  .estrella svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+  .estrella.llena { color: var(--orange); }
+  .estrella.llena svg { fill: currentColor; }
   .card-horario.abierto { color: var(--green); }
   .card-horario.cerrado { color: var(--label-2); font-weight: 400; }
   .msg-ia { background: var(--tint-fill); color: var(--tint); padding: var(--s2) var(--s3); border-radius: var(--r-sm); }
@@ -1484,6 +1502,7 @@
           <option value="tipo">Tipo de cocina</option>
           <option value="precio">Precio (menor a mayor)</option>
           <option value="recientes">Añadidos recientemente</option>
+          <option value="valoracion" hidden disabled>Mejor valorados</option>
           <option value="cerca">Más cerca de mí</option>
         </select>
       </div>
@@ -1730,6 +1749,31 @@
   </div>
 </form>
 
+<section class="hoja" id="panel-valorar" role="dialog" aria-modal="true" aria-labelledby="pv-titulo" hidden>
+  <div class="hoja-cabeza">
+    <span class="hoja-asa" aria-hidden="true"></span>
+    <button class="hoja-boton" id="pv-cancelar" type="button">Cancelar</button>
+    <h2 id="pv-titulo">Valorar</h2>
+    <button class="hoja-boton fuerte" id="pv-guardar" type="button">Guardar</button>
+  </div>
+  <div class="hoja-cuerpo">
+    <h3 class="grupo-titulo" id="pv-nombre"></h3>
+    <div class="estrellas" id="pv-estrellas" role="radiogroup" aria-label="Puntuación"></div>
+    <h3 class="grupo-titulo">Tu nota</h3>
+    <div class="grupo">
+      <div class="fila-g">
+        <label for="pv-nota" class="sr-only">Tu nota</label>
+        <input type="text" id="pv-nota" placeholder="Opcional, ej. pedir el cachopo"
+               autocapitalize="sentences" enterkeyhint="done" maxlength="280">
+      </div>
+    </div>
+    <p class="grupo-pie">La ven los demás de la lista; solo tú puedes cambiarla.</p>
+    <div class="grupo grupo-separado" id="pv-quitar-bloque" hidden>
+      <button class="fila-g fila-boton destructivo" id="pv-quitar" type="button">Quitar valoración</button>
+    </div>
+  </div>
+</section>
+
 <!-- Menú contextual de las tarjetas (mantener pulsada) -->
 <div class="menu-capa" id="menu-capa" hidden></div>
 <div class="menu-contextual" id="menu-contextual" role="menu" hidden></div>
@@ -1743,6 +1787,6 @@
 <!-- VERSIÓN: sube el número de ?v= (y CACHE en sw.js) cada vez que
      publiques, cambie index.html o app.js. Así el navegador no puede
      reutilizar un app.js viejo y el iPhone detecta que hay versión nueva. -->
-<script src="app.js?v=42"></script>
+<script src="app.js?v=43"></script>
 </body>
 </html>

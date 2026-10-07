@@ -18,11 +18,11 @@ function contador(nombre) {
   };
 }
 
-function crearSb(tablas, registro, respuestaFuncion, oyentes) {
+function crearSb(tablas, registro, respuestaFuncion, oyentes, errorSelect) {
   function consulta(tabla) {
     const q = { op: "select", filtros: [], cuerpo: null, unico: false };
     const api = {
-      select() { return api; }, order() { return api; }, single() { q.unico = true; return api; },
+      select(c) { q.columnas = c || "*"; return api; }, order() { return api; }, single() { q.unico = true; return api; },
       eq(k, v) { q.filtros.push([k, v]); return api; },
       update(b) { q.op = "update"; q.cuerpo = b; return api; },
       insert(b) { q.op = "insert"; q.cuerpo = b; return api; },
@@ -32,7 +32,9 @@ function crearSb(tablas, registro, respuestaFuncion, oyentes) {
         const filas = tablas[tabla] || (tablas[tabla] = []);
         const casa = (r) => q.filtros.every(([k, v]) => r[k] === v);
         let res;
-        if (q.op === "select") res = { data: filas.filter(casa), error: null };
+        const err = q.op === "select" && errorSelect && errorSelect(tabla, q.columnas);
+        if (err) res = { data: null, error: err };
+        else if (q.op === "select") res = { data: filas.filter(casa), error: null };
         else if (q.op === "update") {
           registro.push({ tabla, op: "update", cuerpo: JSON.parse(JSON.stringify(q.cuerpo)) });
           const fila = filas.find(casa);
@@ -69,7 +71,9 @@ function crearSb(tablas, registro, respuestaFuncion, oyentes) {
 /** Arranca la app con esas filas. Opciones:
  *  - respuestaFuncion(cuerpo): lo que devuelve la función «asistente».
  *  - versionPublicada: si se da, fetch(no-store) devuelve un index con ese ?v=.
- *  - marcas: filas de la tabla «marcas». */
+ *  - marcas: filas de la tabla «marcas».
+ *  - miembros: filas de «miembros» (por defecto, solo tú).
+ *  - errorSelect(tabla, columnas): si devuelve algo, ese select falla con ese error. */
 async function montar(filas, o = {}) {
   const errores = [], registro = [], oyentes = [];
   const vc = new VirtualConsole(); vc.on("jsdomError", (e) => errores.push(e.message));
@@ -82,9 +86,9 @@ async function montar(filas, o = {}) {
     ? Promise.resolve({ ok: true, text: () => Promise.resolve('<script src="app.js?v=' + o.versionPublicada + '"></script>') })
     : Promise.reject(new Error("sin red en la prueba"));
   w.GORDITOS_CONFIG = { supabaseUrl: "https://abc.supabase.co", supabaseAnonKey: "sb_publishable_clave_de_prueba_larga" };
-  const tablas = { listas: [{ id: LISTA, nombre: "Familia" }], miembros: [{ lista_id: LISTA, user_id: "u1", rol: "admin", email: "yo@x.com" }],
+  const tablas = { listas: [{ id: LISTA, nombre: "Familia" }], miembros: o.miembros || [{ lista_id: LISTA, user_id: "u1", rol: "admin", email: "yo@x.com" }],
                    restaurantes: filas, marcas: o.marcas || [] };
-  w.supabase = { createClient: () => crearSb(tablas, registro, o.respuestaFuncion || (() => ({})), oyentes) };
+  w.supabase = { createClient: () => crearSb(tablas, registro, o.respuestaFuncion || (() => ({})), oyentes, o.errorSelect) };
   // location.reload() no existe en jsdom: se cuenta en su lugar
   const app = leer("app.js").replace(/location\.reload\(\)/g, "window.__recargar()");
   try { w.eval(app); } catch (e) { errores.push("eval: " + e.message); }

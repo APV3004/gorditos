@@ -1,7 +1,8 @@
 GORDITOS — NOVEDADES
 Rediseño al estilo Apple (versiones v26 a v30) · 5 de octubre de 2026
 Borrar con intención (v31 y v32) · Tarjetas compactas y zonas por
-distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · Pantalla de entrar (v40) · Más táctil (v42) · 6 de octubre de 2026
+distrito (v33) · Locales con animación (v34) · Buscar por platos (v35) · Gestos más finos (v38) · Barra pegada arriba (v39) · Pantalla de entrar (v40) · Más táctil (v42) · 6 de octubre de 2026 ·
+Valorar y compartir (v43) · 7 de octubre de 2026
 =====================================================================
 
 La app se ha rediseñado siguiendo cómo Apple diseña sus interfaces:
@@ -110,6 +111,31 @@ Transiciones
 
 3. TARJETAS DE RESTAURANTE
 --------------------------
+
+Valorar (nuevo en la v43)
+- Al marcar "Ya he ido", el aviso ofrece "Valorar": de 1 a 5 estrellas
+  y una nota corta ("pedir el cachopo; la terraza es ruidosa").
+  Tocar la misma estrella otra vez la quita: la nota puede ir sola.
+- En la tarjeta sale tu valoración ("★ 4 · pedir el cachopo");
+  tocándola se cambia. Si has ido y no has valorado, pone "Valorar".
+- Los demás de la lista ven tu puntuación y tu nota, y tú las suyas
+  ("Ya ha ido: ana ★5"), pero cada uno solo cambia la suya.
+- Quitar "Ya he ido" (o pasar a "Quiero ir") borraría tu valoración:
+  antes la app pregunta, y hay que confirmarlo en el aviso.
+- Filtros → Ordenar por → "Mejor valorados": por la media de la lista.
+- Necesita un cambio en la base de datos
+  (supabase/migraciones/07-valoraciones.sql). Sin él, todo sigue como
+  antes y simplemente no aparece.
+
+Compartir (nuevo en la v43)
+- "Compartir" en el menú de mantener pulsada y en la ficha del mapa.
+  Abre la hoja de compartir del iPhone con el nombre, tipo, zona,
+  precio, dirección, carta o reservas, y el enlace de "Cómo llegar"
+  (en WhatsApp se abre el mapa).
+- En una cadena, desde la tarjeta van todos los locales con su
+  dirección; desde la ficha del mapa, solo el local elegido.
+- En un navegador sin hoja de compartir, se copia el texto y avisa
+  "Copiado".
 
 Locales de una cadena (nuevo en la v34)
 - "Ver los N locales" se despliega con suavidad: la tarjeta crece y

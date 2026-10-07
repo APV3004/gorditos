@@ -32,6 +32,7 @@
   var CLAVE_LISTAS = "gorditos-listas-v1";         // tus listas y sus miembros, para poder abrir sin red
   var CLAVE_LISTA_ACTUAL = "gorditos-lista-actual-v1";
   var CLAVE_MARCAS = "gorditos-marcas-v1-";          // + id de lista: marcas vistas por última vez
+  var CLAVE_VALORACIONES = "gorditos-valoraciones-v1"; // "1" si la base tiene puntuación y nota
   var CLAVE_FILTROS = "gorditos-filtros-v1";
   var CLAVE_TEMA = "gorditos-tema-v1";
 
@@ -347,8 +348,9 @@
 
   // Marcas personales («quiero ir» / «ya he ido») de los restaurantes de
   // la lista actual: las tuyas y las de los demás miembros.
-  var marcas = [];                 // [{ restaurante_id, user_id, estado }]
+  var marcas = [];                 // [{ restaurante_id, user_id, estado, puntuacion, nota }]
   var marcasDisponibles = false;   // falta la tabla en Supabase → no se enseñan
+  var valoracionesDisponibles = false;   // faltan las columnas (07-valoraciones.sql) → tampoco
   var ETIQUETA_MARCA = { quiero: "Quiero ir", visitado: "Ya he ido" };
 
   function leerCache() {
@@ -434,13 +436,16 @@
     });
   }
 
-  function cargarMarcas(lista) {
-    return sb.from("marcas").select("restaurante_id,user_id,estado").then(function (res) {
+  function cargarMarcas(lista, sinValoraciones) {
+    var columnas = "restaurante_id,user_id,estado" + (sinValoraciones ? "" : ",puntuacion,nota");
+    return sb.from("marcas").select(columnas).then(function (res) {
       if (lista !== listaActual) return;
       if (res.error) {
         // Sin la migración (tabla inexistente): la función se esconde, no falla.
         // Cualquier otro error es pasajero: se conserva lo que había.
         var c = String(res.error.code || "");
+        // Sin las columnas de valoración: las marcas siguen, las valoraciones no
+        if (!sinValoraciones && (c === "42703" || c === "PGRST204")) return cargarMarcas(lista, true);
         if (res.status === 404 || c === "42P01" || c === "PGRST205" || c === "PGRST200") {
           marcasDisponibles = false;
           marcas = [];
@@ -451,6 +456,8 @@
       data.forEach(function (d) { ids[d.id] = true; });
       marcas = (res.data || []).filter(function (m) { return ids[m.restaurante_id]; }).map(normalizarMarca);
       marcasDisponibles = true;
+      valoracionesDisponibles = !sinValoraciones;
+      escribirCrudo(CLAVE_VALORACIONES, valoracionesDisponibles ? "1" : "");
       escribirCrudo(CLAVE_MARCAS + lista, JSON.stringify(marcas));
     }).catch(function () { /* sin red ahora: se conservan las marcas que hubiera */ });
   }
@@ -459,9 +466,24 @@
     marcas = marcas.filter(function (m) { return !(m.restaurante_id === restId && m.user_id === userId); });
   }
 
+  function miFilaMarca(d) {
+    return marcas.filter(function (x) { return x.restaurante_id === d.id && x.user_id === miId; })[0] || null;
+  }
   function miMarca(d) {
-    var m = marcas.filter(function (x) { return x.restaurante_id === d.id && x.user_id === miId; })[0];
+    var m = miFilaMarca(d);
     return m ? m.estado : "";
+  }
+  function tieneValoracion(m) { return !!(m && (m.puntuacion || m.nota)); }
+
+  /** Media de las puntuaciones de quienes están ahora en la lista (0 = nadie la ha puntuado). */
+  function mediaValoracion(d) {
+    var suma = 0, n = 0;
+    marcas.forEach(function (m) {
+      if (m.restaurante_id !== d.id || !m.puntuacion) return;
+      if (m.user_id !== miId && !miembros.some(function (x) { return x.lista_id === listaActual && x.user_id === m.user_id; })) return;
+      suma += m.puntuacion; n++;
+    });
+    return n ? suma / n : 0;
   }
 
   /** Marcas de los DEMÁS miembros actuales de la lista (alguien que ya se
@@ -472,23 +494,37 @@
       if (m.lista_id === listaActual && m.user_id !== miId) nombres[m.user_id] = m.email.split("@")[0] || m.email;
     });
     return marcas.filter(function (x) { return x.restaurante_id === d.id && nombres[x.user_id]; })
-      .map(function (x) { return { quien: nombres[x.user_id], estado: x.estado }; });
+      .map(function (x) { return { quien: nombres[x.user_id], estado: x.estado, puntuacion: x.puntuacion, nota: x.nota }; });
   }
 
-  /** Pulsar un botón ya marcado lo desmarca; si no, marca ese estado. */
-  function cambiarMarca(d, estado) {
+  /** Pulsar un botón ya marcado lo desmarca; si no, marca ese estado.
+   *  Dejar «Ya he ido» borra tu valoración: si la hay, se pide confirmarlo. */
+  function cambiarMarca(d, estado, confirmado) {
     if (requiereConexion()) return;
-    var antes = miMarca(d);
+    var fila = miFilaMarca(d);
+    var antes = fila ? fila.estado : "";
     var nuevo = antes === estado ? "" : estado;
     var lista = listaActual;
 
+    if (antes === "visitado" && tieneValoracion(fila) && !confirmado) {
+      avisar((nuevo ? "Pasar a «Quiero ir»" : "Quitar «Ya he ido»") + " borra tu valoración.",
+             { etiqueta: "Borrar", alPulsar: function () { cambiarMarca(d, estado, true); } });
+      return;
+    }
+
     // Se ve al instante; si el servidor dice que no, se deshace.
     quitarMarcaLocal(d.id, miId);
-    if (nuevo) marcas.push({ restaurante_id: d.id, user_id: miId, estado: nuevo });
+    if (nuevo) marcas.push({ restaurante_id: d.id, user_id: miId, estado: nuevo, puntuacion: null, nota: "" });
     render();
+    if (nuevo === "visitado" && valoracionesDisponibles) {
+      avisar("Marcado «Ya he ido».", { etiqueta: "Valorar", alPulsar: function () { abrirValorar(d); } });
+    }
 
+    var cuerpo = { restaurante_id: d.id, user_id: miId, estado: nuevo };
+    // Sin «Ya he ido» no queda valoración (sin las columnas, ni se mandan)
+    if (valoracionesDisponibles) { cuerpo.puntuacion = null; cuerpo.nota = null; }
     var peticion = nuevo
-      ? sb.from("marcas").upsert({ restaurante_id: d.id, user_id: miId, estado: nuevo }, { onConflict: "restaurante_id,user_id" })
+      ? sb.from("marcas").upsert(cuerpo, { onConflict: "restaurante_id,user_id" })
       : sb.from("marcas").delete().eq("restaurante_id", d.id).eq("user_id", miId);
     peticion.then(function (r) {
       if (r && r.error) throw r.error;
@@ -497,16 +533,41 @@
       // Solo se deshace esta marca, y solo si seguimos en la misma lista.
       if (lista === listaActual) {
         quitarMarcaLocal(d.id, miId);
-        if (antes) marcas.push({ restaurante_id: d.id, user_id: miId, estado: antes });
+        if (fila) marcas.push(fila);
         render();
       }
       avisar("No se pudo guardar la marca. Revisa la conexión.");
     });
   }
 
+  /** Tu puntuación (1–5 o null) y nota de un restaurante: lo marca «Ya he ido». */
+  function guardarValoracion(d, puntuacion, nota) {
+    if (requiereConexion()) return;
+    var fila = miFilaMarca(d);
+    var lista = listaActual;
+    quitarMarcaLocal(d.id, miId);
+    marcas.push({ restaurante_id: d.id, user_id: miId, estado: "visitado", puntuacion: puntuacion || null, nota: nota || "" });
+    render();
+    sb.from("marcas").upsert({ restaurante_id: d.id, user_id: miId, estado: "visitado", puntuacion: puntuacion || null, nota: nota || null },
+                             { onConflict: "restaurante_id,user_id" })
+      .then(function (r) {
+        if (r && r.error) throw r.error;
+        escribirCrudo(CLAVE_MARCAS + listaActual, JSON.stringify(marcas));
+      }).catch(function () {
+        if (lista === listaActual) {
+          quitarMarcaLocal(d.id, miId);
+          if (fila) marcas.push(fila);
+          render();
+        }
+        avisar("No se pudo guardar la valoración. Revisa la conexión.");
+      });
+  }
+
   function normalizarMarca(m) {
+    var p = parseInt(m.puntuacion, 10);
     return { restaurante_id: texto(m.restaurante_id), user_id: texto(m.user_id),
-             estado: m.estado === "visitado" ? "visitado" : "quiero" };
+             estado: m.estado === "visitado" ? "visitado" : "quiero",
+             puntuacion: p >= 1 && p <= 5 ? p : null, nota: texto(m.nota).slice(0, 280) };
   }
 
   function suscribirTiempoReal() {
@@ -561,6 +622,7 @@
     var guardadas = listaActual ? parsearJson(leerCrudo(CLAVE_MARCAS + listaActual)) : null;
     marcas = Array.isArray(guardadas) ? guardadas.map(normalizarMarca) : [];
     marcasDisponibles = Array.isArray(guardadas);
+    valoracionesDisponibles = marcasDisponibles && leerCrudo(CLAVE_VALORACIONES) === "1";
     soloLectura = true;
   }
 
@@ -1594,6 +1656,8 @@
     $("marcas-bloque").hidden = !marcasDisponibles;
     if (marcasDisponibles) construirChips("marca-chips", "lbl-marcas", "Todas", ["Quiero ir", "Ya he ido", "Sin marcar"], "marcas");
     else state.marcas = [];
+    var optValoracion = selectOrden.querySelector('option[value="valoracion"]');
+    if (optValoracion) optValoracion.hidden = optValoracion.disabled = !valoracionesDisponibles;
     rellenarDatalist("zonas-sugeridas", zonas);
     rellenarDatalist("tipos-sugeridos", tipos);
   }
@@ -2328,6 +2392,7 @@
     lapiz:   svgBase + '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"></path><path d="m13.5 6.5 4 4"></path></svg>',
     marcador: svgBase + '<path class="relleno" d="M6.5 3.5h11a1 1 0 0 1 1 1V21l-6.5-4.6L5.5 21V4.5a1 1 0 0 1 1-1Z"></path></svg>',
     hecho:    svgBase + '<circle class="relleno" cx="12" cy="12" r="9"></circle><path class="trazo" d="m8 12.3 2.7 2.7L16.2 9.5"></path></svg>',
+    compartir: svgBase + '<path d="M12 3v12M8 7l4-4 4 4"></path><path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2"></path></svg>',
     papelera: svgBase + '<path d="M4 7h16M10 11v6M14 11v6"></path><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"></path><path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"></path></svg>'
   };
 
@@ -2392,6 +2457,8 @@
       if (s === "tipo") return comparar(a.tipo, b.tipo) || comparar(a.nombre, b.nombre);
       if (s === "precio") return (a.precio - b.precio) || comparar(a.nombre, b.nombre);
       if (s === "recientes") return (b.creado - a.creado) || comparar(a.nombre, b.nombre);
+      // Sin puntuar, al final; entre iguales, por nombre
+      if (s === "valoracion" && valoracionesDisponibles) return (mediaValoracion(b) - mediaValoracion(a)) || comparar(a.nombre, b.nombre);
       if (s === "cerca") {
         // Sin ubicación o sin dirección = Infinity: al final, en orden alfabético.
         var da = distanciaMin(a), db = distanciaMin(b);
@@ -2574,6 +2641,22 @@
       li.appendChild(lineaCarta);
     }
 
+    // Tu valoración, si has ido: «★ 4 · tu nota». Tocarla la cambia.
+    if (valoracionesDisponibles && miMarca(d) === "visitado") {
+      var mia = miFilaMarca(d);
+      var bVal = document.createElement("button");
+      bVal.type = "button";
+      bVal.className = "card-valoracion" + (tieneValoracion(mia) ? "" : " vacia");
+      bVal.textContent = tieneValoracion(mia)
+        ? [mia.puntuacion ? "★ " + mia.puntuacion : "", mia.nota].filter(Boolean).join(" · ")
+        : "Valorar";
+      bVal.setAttribute("aria-label", tieneValoracion(mia)
+        ? "Tu valoración de " + d.nombre + ": " + (mia.puntuacion ? mia.puntuacion + " de 5" : "sin puntuación") + (mia.nota ? ". " + mia.nota : "") + ". Cambiarla"
+        : "Valorar " + d.nombre);
+      bVal.addEventListener("click", function () { abrirValorar(d); });
+      li.appendChild(bVal);
+    }
+
     if (d.flag) {
       var nota = document.createElement("p");
       nota.className = "flag";
@@ -2705,7 +2788,11 @@
       var otros = otrasMarcas(d);
       if (otros.length) {
         var porEstado = { quiero: [], visitado: [] };
-        otros.forEach(function (o) { porEstado[o.estado].push(o.quien); });
+        var notasOtros = [];
+        otros.forEach(function (o) {
+          porEstado[o.estado].push(o.quien + (valoracionesDisponibles && o.estado === "visitado" && o.puntuacion ? " ★" + o.puntuacion : ""));
+          if (valoracionesDisponibles && o.estado === "visitado" && o.nota) notasOtros.push(o.quien + ": «" + o.nota + "»");
+        });
         var frases = [];
         if (porEstado.quiero.length) frases.push((porEstado.quiero.length === 1 ? "Quiere ir: " : "Quieren ir: ") + porEstado.quiero.join(", "));
         if (porEstado.visitado.length) frases.push((porEstado.visitado.length === 1 ? "Ya ha ido: " : "Ya han ido: ") + porEstado.visitado.join(", "));
@@ -2713,6 +2800,12 @@
         lineaOtros.className = "card-otros";
         lineaOtros.textContent = frases.join(" · ");
         li.appendChild(lineaOtros);
+        notasOtros.forEach(function (t) {
+          var lineaNota = document.createElement("p");
+          lineaNota.className = "card-otros";
+          lineaNota.textContent = t;
+          li.appendChild(lineaNota);
+        });
       }
     }
 
@@ -4085,6 +4178,16 @@
     var etiqueta = d.nombre + (p.nombreSede ? " (" + p.nombreSede + ")" : "");
     var destino = p.direccion ? { nombre: d.nombre, zona: "", direccion: p.direccion } : { nombre: d.nombre, zona: p.zona, direccion: "" };
     construirPildoras(etiqueta, p.carta, p.reserva, urlMapa(destino)).forEach(function (x) { enlaces.appendChild(x); });
+    var boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "card-link";
+    boton.innerHTML = ICONOS.compartir;
+    var txt = document.createElement("span");
+    txt.textContent = "Compartir";
+    boton.appendChild(txt);
+    boton.setAttribute("aria-label", "Compartir " + etiqueta);
+    boton.addEventListener("click", function () { compartir(d, p); });
+    enlaces.appendChild(boton);
     caja.appendChild(enlaces);
     return caja;
   }
@@ -4662,6 +4765,55 @@
   });
   muelleMenu.fijar(0);
 
+  /* Compartir un restaurante (o uno de sus locales) con la hoja de compartir
+     del sistema. El enlace es el de «Cómo llegar», para que en WhatsApp se
+     abra el mapa. Sin p y con varios locales, van todos con su dirección.
+     Sin navigator.share se copia el texto; cancelar la hoja no es un error. */
+  function datosCompartir(d, p) {
+    var lineas = [], url = "";
+    var titulo = d.nombre + (p && p.nombreSede ? " (" + p.nombreSede + ")" : "");
+    var puntos = p ? [p] : puntosDe(d, false);
+    var varios = puntos.length > 1;
+    var sub = [d.tipo || "Sin especificar"];
+    if (!varios && texto(puntos[0].zona)) sub.push(puntos[0].zona);
+    sub.push(etiquetaPrecio[d.precio] || "");
+    lineas.push(titulo, sub.filter(Boolean).join(" · "));
+    if (varios) {
+      puntos.forEach(function (q) {
+        lineas.push("• " + (q.nombreSede || q.zona || d.nombre) + (q.direccion ? ": " + q.direccion : (q.zona && q.nombreSede ? " (" + q.zona + ")" : "")));
+      });
+    } else {
+      var u = puntos[0];
+      if (u.direccion) lineas.push(u.direccion);
+      if (u.carta && analizarUrl(u.carta).valida) lineas.push("Carta: " + analizarUrl(u.carta).href);
+      var res = analizarReserva(u.reserva);
+      if (!res.vacia && res.valida) lineas.push(res.tipo === "tel" ? "Reservas: " + texto(u.reserva) : "Reservar: " + res.href);
+      url = urlMapa(u.direccion ? { nombre: d.nombre, zona: "", direccion: u.direccion } : { nombre: d.nombre, zona: u.zona, direccion: "" });
+    }
+    var datos = { title: titulo, text: lineas.join("\n") };
+    if (url) datos.url = url;
+    return datos;
+  }
+
+  function compartir(d, p) {
+    var datos = datosCompartir(d, p);
+    function copiar() {
+      var todo = datos.text + (datos.url ? "\n" + datos.url : "");
+      if (!(navigator.clipboard && navigator.clipboard.writeText)) { avisar("Este navegador no deja compartir ni copiar."); return; }
+      navigator.clipboard.writeText(todo).then(function () { avisar("Copiado"); },
+        function () { avisar("No se ha podido copiar."); });
+    }
+    if (!navigator.share) { copiar(); return; }
+    var hecho;
+    try { hecho = navigator.share(datos); } catch (e) { copiar(); return; }
+    if (hecho && hecho.then) {
+      hecho.then(null, function (e) {
+        if (e && e.name === "AbortError") return;   // ha cancelado la hoja
+        copiar();
+      });
+    }
+  }
+
   function abrirMenu(li, x, y) {
     var d = null;
     for (var i = 0; i < data.length; i++) if (String(data[i].id) === li.dataset.id) { d = data[i]; break; }
@@ -4684,6 +4836,7 @@
           : itemMenu("Reservar", ICONOS.reserva, null, { href: res.href, externo: true }));
       }
     }
+    items.push(itemMenu("Compartir", ICONOS.compartir, function () { compartir(d, null); }));
     var sep = document.createElement("div");
     sep.className = "menu-sep"; sep.setAttribute("role", "separator");
     items.push(sep);
@@ -4960,6 +5113,69 @@
   $("pl-cerrar").addEventListener("click", function () { cerrarPanelListas(true); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !panelListas.hidden) cerrarPanelListas(true);
+  });
+
+  /* ---- Valorar: 1–5 estrellas y una nota corta, solo tuyas ---- */
+  var panelValorar = $("panel-valorar");
+  var valorando = null;            // { d, puntuacion }
+  var estrellasEl = $("pv-estrellas");
+  for (var nEstrella = 1; nEstrella <= 5; nEstrella++) {
+    (function (n) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "estrella";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-label", n + (n === 1 ? " estrella" : " estrellas"));
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9Z"></path></svg>';
+      b.addEventListener("click", function () {
+        if (!valorando) return;
+        // Tocar la misma otra vez la quita: la nota puede ir sin puntuación
+        valorando.puntuacion = valorando.puntuacion === n ? null : n;
+        pintarEstrellas();
+        vibrar();
+      });
+      estrellasEl.appendChild(b);
+    })(nEstrella);
+  }
+  function pintarEstrellas() {
+    var p = (valorando && valorando.puntuacion) || 0;
+    Array.prototype.forEach.call(estrellasEl.children, function (b, i) {
+      b.classList.toggle("llena", i < p);
+      b.setAttribute("aria-checked", i + 1 === p ? "true" : "false");
+    });
+  }
+  function abrirValorar(d) {
+    if (requiereConexion() || !valoracionesDisponibles) return;
+    var fila = miFilaMarca(d);
+    var mia = fila && fila.estado === "visitado" ? fila : null;
+    valorando = { d: d, puntuacion: mia ? mia.puntuacion : null };
+    $("pv-nombre").textContent = d.nombre;
+    $("pv-nota").value = mia ? mia.nota : "";
+    $("pv-quitar-bloque").hidden = !tieneValoracion(mia);
+    pintarEstrellas();
+    hojaValorar.abrir();
+    try { $("pv-guardar").focus({ preventScroll: true }); } catch (e) {}
+  }
+  function cerrarValorar() {
+    hojaValorar.cerrar(function () { valorando = null; });
+  }
+  var hojaValorar = crearHoja(panelValorar, { medio: true, alDescartar: cerrarValorar });
+  $("pv-cancelar").addEventListener("click", cerrarValorar);
+  $("pv-guardar").addEventListener("click", function () {
+    if (!valorando) return;
+    guardarValoracion(valorando.d, valorando.puntuacion, texto($("pv-nota").value).slice(0, 280));
+    cerrarValorar();
+  });
+  $("pv-nota").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); $("pv-guardar").click(); }
+  });
+  $("pv-quitar").addEventListener("click", function () {
+    if (!valorando) return;
+    guardarValoracion(valorando.d, null, "");
+    cerrarValorar();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !panelValorar.hidden) cerrarValorar();
   });
 
   var MENSAJES_GESTION = {

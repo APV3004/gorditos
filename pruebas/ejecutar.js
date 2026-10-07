@@ -1,7 +1,7 @@
 /* Ejecuta todas las pruebas. Sale con código 1 si alguna falla, para que
    GitHub Actions no publique. Uso: node pruebas/ejecutar.js
    (GORDITOS_DIR=/otra/carpeta para probar otra copia de la web). */
-const pruebas = ["basicas", "sw", "horarios", "actualizaciones", "formulario", "borrar"];
+const pruebas = ["basicas", "sw", "horarios", "actualizaciones", "formulario", "borrar", "compartir", "valoraciones"];
 
 (async () => {
   let fallos = 0;
